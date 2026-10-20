@@ -14,6 +14,7 @@ import * as element from './renderers/element.ts';
 import * as grid from './renderers/grid.ts';
 import { measure } from './scale.ts';
 import { format, parse } from './si.ts';
+import { Toolbar } from './toolbar.ts';
 import { erase } from './tools/eraser.ts';
 import { PlaceTool } from './tools/place.ts';
 import type { Point } from './types/point.ts';
@@ -28,9 +29,9 @@ const STEPS_PER_FRAME = 100;
 const canvas = document.querySelector( 'canvas' )!;
 const context = canvas.getContext( '2d' )!;
 const status = document.querySelector( 'output' )!;
-const buttons = document.querySelectorAll<HTMLButtonElement>( 'nav button' );
 const circuit = new Circuit();
 const tool = new PlaceTool( circuit );
+const toolbar = new Toolbar( document.querySelector( 'nav' )!, select );
 const clock = new Clock( STEPS_PER_SECOND, STEPS_PER_FRAME );
 const drift = new Drift();
 
@@ -43,7 +44,7 @@ function select( kind : Kind ) : void
 {
 	tool.kind = kind;
 
-	buttons.forEach( button => button.classList.toggle( 'active', Number( button.dataset.kind ) === kind ) );
+	toolbar.select( kind );
 }
 
 function report( text : string, error : boolean ) : void
@@ -157,8 +158,6 @@ canvas.addEventListener( 'dblclick', ( event : MouseEvent ) =>
 } );
 
 canvas.addEventListener( 'contextmenu', ( event : MouseEvent ) => event.preventDefault() );
-
-buttons.forEach( button => button.addEventListener( 'click', () => select( Number( button.dataset.kind ) ) ) );
 
 addEventListener( 'keydown', ( event : KeyboardEvent ) =>
 {

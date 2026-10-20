@@ -1,18 +1,7 @@
-import { Kind, UNITS } from './enums/kind.ts';
+import { Kind, NAMES, UNITS } from './enums/kind.ts';
 import { format } from './si.ts';
 import type { Branch } from './types/branch.ts';
 import type { Element } from './types/element.ts';
-
-
-const NAMES : Record<Kind, string> = {
-	[ Kind.Wire ] : 'Wire',
-	[ Kind.Resistor ] : 'Resistor',
-	[ Kind.Battery ] : 'Battery',
-	[ Kind.Ground ] : 'Ground',
-	[ Kind.Capacitor ] : 'Capacitor',
-	[ Kind.Inductor ] : 'Inductor',
-	[ Kind.Switch ] : 'Switch',
-};
 
 
 function detail( element : Element ) : string | undefined

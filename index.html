@@ -9,6 +9,14 @@
 			canvas { display : block; width : 100vw; height : 100vh; cursor : crosshair; touch-action : none; }
 			nav { position : fixed; top : 12px; left : 12px; right : 12px; display : flex; flex-wrap : wrap; gap : 6px; pointer-events : none; }
 			nav button { pointer-events : auto; }
+			.group { position : relative; display : flex; }
+			.pick { display : flex; justify-content : space-between; min-width : 104px; }
+			.pick:not( :last-of-type ) { border-radius : 4px 0 0 4px; }
+			.open { padding : 6px 8px; border-left : none; border-radius : 0 4px 4px 0; }
+			.menu { position : absolute; top : 100%; left : 0; display : flex; flex-direction : column; min-width : 140px; margin-top : 4px; padding : 4px; border : 1px solid #2a2a2a; border-radius : 4px; background : #0c0c0c; }
+			.menu[ hidden ] { display : none; }
+			.menu button { display : flex; justify-content : space-between; border : none; }
+			.menu button:hover { color : #e6e6e6; }
 			button { padding : 6px 10px; border : 1px solid #2a2a2a; border-radius : 4px; background : #0c0c0c; color : inherit; font : inherit; cursor : pointer; }
 			button.active { border-color : #5c5c5c; color : #e6e6e6; }
 			kbd { margin-left : 6px; color : #5c5c5c; font : inherit; }
@@ -19,15 +27,7 @@
 	</head>
 	<body>
 		<canvas></canvas>
-		<nav>
-			<button data-kind="0">Wire<kbd>W</kbd></button>
-			<button data-kind="1">Resistor<kbd>R</kbd></button>
-			<button data-kind="2">Battery<kbd>B</kbd></button>
-			<button data-kind="3">Ground<kbd>G</kbd></button>
-			<button data-kind="4">Capacitor<kbd>C</kbd></button>
-			<button data-kind="5">Inductor<kbd>L</kbd></button>
-			<button data-kind="6">Switch<kbd>S</kbd></button>
-		</nav>
+		<nav></nav>
 		<output></output>
 		<script type="module" src="/src/main.ts"></script>
 	</body>
