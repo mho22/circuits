@@ -38,6 +38,7 @@ impl Circuit
 			4 => Kind::Capacitor { farads : value },
 			5 => Kind::Inductor { henries : value },
 			6 => Kind::Switch { closed : false },
+			7 => Kind::Diode,
 			_ => return Err( JsError::new( "Unknown part kind." ) ),
 		};
 
@@ -103,6 +104,7 @@ impl Circuit
 				Kind::Capacitor { farads } => ( 4.0, farads ),
 				Kind::Inductor { henries } => ( 5.0, henries ),
 				Kind::Switch { closed } => ( 6.0, if closed { 1.0 } else { 0.0 } ),
+				Kind::Diode => ( 7.0, 0.0 ),
 			};
 
 			let ( from, to, current ) = readings.get( index ).map_or( ( 0.0, 0.0, f64::NAN ), | reading | ( reading.from, reading.to, reading.current ) );

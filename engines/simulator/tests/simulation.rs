@@ -212,3 +212,16 @@ fn it_leaves_the_wire_whole_when_the_part_is_invalid()
 	assert_eq!( simulation.document().elements(), before.as_slice() );
 	assert_eq!( simulation.undo(), Ok( Some( 4 ) ) );
 }
+
+#[test]
+fn it_keeps_the_drop_of_a_diode_while_time_runs()
+{
+	let mut simulation = series( Kind::Diode );
+	let drop = | simulation : &Simulation | { let reading = &simulation.solution().unwrap().readings[ 2 ]; reading.from - reading.to };
+	let before = drop( &simulation );
+
+	simulation.advance( 100 );
+
+	assert!( before > 0.6 && before < 0.7 );
+	assert!( near( drop( &simulation ), before, 1e-6 ) );
+}

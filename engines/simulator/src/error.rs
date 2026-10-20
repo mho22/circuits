@@ -14,6 +14,7 @@ pub enum Error
 	Singular,
 	Switchless,
 	Taken,
+	Unsettled,
 	Valueless,
 	Voltage,
 }
@@ -34,6 +35,7 @@ impl fmt::Display for Error
 			Error::Singular => "The circuit has no single solution: a battery is shorted, or batteries form a loop.",
 			Error::Switchless => "This part is not a switch.",
 			Error::Taken => "A part already has this id.",
+			Error::Unsettled => "The diodes do not settle: no stable voltage found after 100 tries.",
 			Error::Valueless => "This part has no value.",
 			Error::Voltage => "A voltage must be a finite number.",
 		};

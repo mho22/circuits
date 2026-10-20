@@ -31,7 +31,7 @@ describe( 'place tool', () =>
 		tool.move( { x : 6, y : 1 } );
 		tool.release();
 
-		for( const kind of [ Kind.Battery, Kind.Capacitor, Kind.Inductor, Kind.Switch ] )
+		for( const kind of [ Kind.Battery, Kind.Capacitor, Kind.Inductor, Kind.Switch, Kind.Diode ] )
 		{
 			tool.kind = kind;
 			tool.press( { x : 0, y : 0 } );
@@ -45,6 +45,7 @@ describe( 'place tool', () =>
 			[ Kind.Capacitor, 1e-5, { x : 0, y : 3 } ],
 			[ Kind.Inductor, 1, { x : 0, y : 3 } ],
 			[ Kind.Switch, 0, { x : 0, y : 3 } ],
+			[ Kind.Diode, 0, { x : 0, y : 3 } ],
 		] );
 
 		expect( tool.preview() ).toBeNull();

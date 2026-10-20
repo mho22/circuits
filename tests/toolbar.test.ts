@@ -26,7 +26,7 @@ describe( 'toolbar', () =>
 	{
 		new Toolbar( parent, () => {} );
 
-		expect( picks().map( pick => pick.textContent ) ).toEqual( [ 'WireW', 'ResistorR', 'BatteryB' ] );
+		expect( picks().map( pick => pick.textContent ) ).toEqual( [ 'WireW', 'ResistorR', 'BatteryB', 'DiodeD' ] );
 	} );
 
 	it( 'lists the parts of a group in its menu', () =>
@@ -83,7 +83,7 @@ describe( 'toolbar', () =>
 
 		toolbar.select( Kind.Inductor );
 
-		expect( picks().map( pick => [ pick.textContent, pick.classList.contains( 'active' ) ] ) ).toEqual( [ [ 'WireW', false ], [ 'InductorL', true ], [ 'BatteryB', false ] ] );
+		expect( picks().map( pick => [ pick.textContent, pick.classList.contains( 'active' ) ] ) ).toEqual( [ [ 'WireW', false ], [ 'InductorL', true ], [ 'BatteryB', false ], [ 'DiodeD', false ] ] );
 
 		picks()[ 1 ].click();
 

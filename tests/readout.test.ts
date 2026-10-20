@@ -40,6 +40,11 @@ describe( 'readout', () =>
 		expect( read( element( { kind : Kind.Switch, value : 1, potentials : [ 0, 0 ], current : 0.005 } ), undefined ) ).toBe( 'Switch closed · 0 V across · 5 mA' );
 	} );
 
+	it( 'describes a diode with its drop', () =>
+	{
+		expect( read( element( { kind : Kind.Diode, potentials : [ 5, 4.35 ], current : 0.00435 } ), undefined ) ).toBe( 'Diode · 650 mV across · 4.35 mA' );
+	} );
+
 	it( 'describes a ground', () =>
 	{
 		expect( read( element( { kind : Kind.Ground, current : -0.02 } ), undefined ) ).toBe( 'Ground · 0 V · 20 mA' );

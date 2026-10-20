@@ -17,6 +17,7 @@ impl History
 		{
 			Kind::Capacitor { .. } => Some( ( element.id, reading.from - reading.to ) ),
 			Kind::Inductor { .. } => Some( ( element.id, reading.current ) ),
+			Kind::Diode => Some( ( element.id, reading.from - reading.to ) ),
 			_ => None,
 		} ).collect();
 

@@ -1,10 +1,12 @@
 mod branch;
+mod companion;
 mod document;
 mod element;
 mod error;
 mod flow;
 mod gauss;
 mod history;
+mod junction;
 mod kind;
 mod netlist;
 mod operation;
@@ -18,12 +20,14 @@ mod solver;
 mod union_find;
 
 pub use branch::Branch;
+pub use companion::companion;
 pub use document::Document;
 pub use element::Element;
 pub use error::Error;
 pub use flow::distribute;
 pub use gauss::eliminate;
 pub use history::History;
+pub use junction::{ limit, linearize };
 pub use kind::Kind;
 pub use netlist::Netlist;
 pub use operation::Operation;

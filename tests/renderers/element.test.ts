@@ -27,5 +27,6 @@ describe( 'element renderer', () =>
 		expect( drawn( Kind.Capacitor ).filter( call => call[ 0 ] === 'stroke' ) ).toHaveLength( 4 );
 		expect( drawn( Kind.Inductor ).filter( call => call[ 0 ] === 'arc' ) ).toHaveLength( 4 );
 		expect( drawn( Kind.Switch ).filter( call => call[ 0 ] === 'stroke' ) ).toHaveLength( 3 );
+		expect( drawn( Kind.Diode ).filter( call => call[ 0 ] === 'fill' ) ).toHaveLength( 1 );
 	} );
 } );

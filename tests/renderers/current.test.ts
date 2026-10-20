@@ -41,6 +41,12 @@ describe( 'current renderer', () =>
 		expect( dots( 1, 0, 0 ) ).toEqual( [] );
 	} );
 
+	it( 'draws no dot for a leak below 1 nA', () =>
+	{
+		expect( dots( 5e-12, 5e-12, 0 ) ).toEqual( [] );
+		expect( dots( 2e-9, 2e-9, 0 ) ).toEqual( [ 0, 16, 32 ] );
+	} );
+
 	it( 'stays within the path length', () =>
 	{
 		expect( Math.max( ... dots( 1, 1, 15.2 ) ) ).toBeLessThan( SPACING * 2 );

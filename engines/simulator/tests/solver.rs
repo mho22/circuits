@@ -256,3 +256,61 @@ fn it_rejects_a_battery_shorted_by_a_closed_switch()
 
 	assert_eq!( solve( &elements, &History::default(), STEP ), Err( Error::Singular ) );
 }
+
+#[test]
+fn it_drops_about_0_65_v_across_a_diode_in_the_forward_direction()
+{
+	let solution = solve( &loop_with( &[
+		element( Kind::Diode, ( 4, 0 ), ( 4, 2 ) ),
+		element( Kind::Resistor { ohms : 1000.0 }, ( 4, 2 ), ( 4, 4 ) ),
+	] ), &History::default(), STEP ).unwrap();
+
+	let diode = solution.readings[ 4 ];
+	let drop = diode.from - diode.to;
+
+	assert!( drop > 0.6 && drop < 0.7 );
+	assert!( ( diode.current - ( 5.0 - drop ) / 1000.0 ).abs() < 1e-9 );
+	assert!( ( diode.current - 1e-14 * ( ( drop / 0.025852 ).exp() - 1.0 ) ).abs() < 1e-7 );
+}
+
+#[test]
+fn it_blocks_the_current_through_a_diode_in_the_reverse_direction()
+{
+	let solution = solve( &loop_with( &[
+		element( Kind::Diode, ( 4, 2 ), ( 4, 0 ) ),
+		element( Kind::Resistor { ohms : 1000.0 }, ( 4, 2 ), ( 4, 4 ) ),
+	] ), &History::default(), STEP ).unwrap();
+
+	let diode = solution.readings[ 4 ];
+
+	assert!( diode.current.abs() < 1e-9 );
+	assert!( ( diode.to - diode.from - 5.0 ).abs() < 1e-6 );
+}
+
+#[test]
+fn it_carries_the_current_through_two_diodes_in_series()
+{
+	let solution = solve( &loop_with( &[
+		element( Kind::Diode, ( 4, 0 ), ( 4, 1 ) ),
+		element( Kind::Diode, ( 4, 1 ), ( 4, 2 ) ),
+		element( Kind::Resistor { ohms : 1000.0 }, ( 4, 2 ), ( 4, 4 ) ),
+	] ), &History::default(), STEP ).unwrap();
+
+	let drop = solution.readings[ 4 ].from - solution.readings[ 5 ].to;
+
+	assert!( drop > 1.2 && drop < 1.4 );
+	assert!( ( solution.readings[ 6 ].current - ( 5.0 - drop ) / 1000.0 ).abs() < 1e-9 );
+}
+
+#[test]
+fn it_gives_up_on_diodes_that_do_not_settle()
+{
+	let elements = loop_with( &[
+		Element { id : 1, ..element( Kind::Diode, ( 4, 0 ), ( 4, 2 ) ) },
+		element( Kind::Resistor { ohms : 1000.0 }, ( 4, 2 ), ( 4, 4 ) ),
+	] );
+
+	let broken = Solution { readings : vec![ Reading { from : f64::NAN, to : 0.0, current : 0.0 }; 6 ], branches : vec![] };
+
+	assert_eq!( solve( &elements, &History::record( &elements, &broken ), STEP ), Err( Error::Unsettled ) );
+}

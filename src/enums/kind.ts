@@ -7,6 +7,7 @@ export enum Kind
 	Capacitor = 4,
 	Inductor = 5,
 	Switch = 6,
+	Diode = 7,
 }
 
 
@@ -18,6 +19,7 @@ export const NAMES : Record<Kind, string> = {
 	[ Kind.Capacitor ] : 'Capacitor',
 	[ Kind.Inductor ] : 'Inductor',
 	[ Kind.Switch ] : 'Switch',
+	[ Kind.Diode ] : 'Diode',
 };
 
 export const UNITS : Partial<Record<Kind, string>> = { [ Kind.Resistor ] : 'Ω', [ Kind.Battery ] : 'V', [ Kind.Capacitor ] : 'F', [ Kind.Inductor ] : 'H' };

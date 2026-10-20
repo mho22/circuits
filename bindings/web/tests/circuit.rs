@@ -166,3 +166,20 @@ fn it_splits_a_wire_under_a_new_part()
 	assert_eq!( circuit.elements_at( 3, 0 ), vec![ 3 ] );
 	assert_eq!( circuit.elements_at( 5, 0 ), vec![ 2 ] );
 }
+
+#[wasm_bindgen_test]
+fn it_lists_a_diode_with_its_forward_drop()
+{
+	let mut circuit = Circuit::new();
+
+	circuit.add( 2, 5.0, 0, 2, 0, 0 ).ok();
+	circuit.add( 7, 0.0, 0, 0, 2, 0 ).ok();
+	circuit.add( 1, 1000.0, 2, 0, 2, 2 ).ok();
+	circuit.add( 0, 0.0, 2, 2, 0, 2 ).ok();
+
+	let elements = circuit.elements();
+	let drop = elements[ 17 ] - elements[ 18 ];
+
+	assert_eq!( elements[ 11 ], 7.0 );
+	assert!( drop > 0.6 && drop < 0.7 );
+}

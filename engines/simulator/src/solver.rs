@@ -1,18 +1,10 @@
 use std::collections::HashMap;
 
-use crate::{ distribute, eliminate, Branch, Element, Error, History, Kind, Netlist, Reading, Segment, Solution, UnionFind };
+use crate::{ companion, distribute, eliminate, limit, Branch, Element, Error, History, Kind, Netlist, Reading, Segment, Solution, UnionFind };
 
 
-fn companion( element : &Element, history : &History, step : f64 ) -> Option<( f64, f64 )>
-{
-	match element.kind
-	{
-		Kind::Resistor { ohms } => Some( ( 1.0 / ohms, 0.0 ) ),
-		Kind::Capacitor { farads } => Some( ( farads / step, farads / step * history.get( element.id ) ) ),
-		Kind::Inductor { henries } => Some( ( step / henries, - history.get( element.id ) ) ),
-		_ => None,
-	}
-}
+const ITERATIONS : usize = 100;
+const TOLERANCE : f64 = 1e-6;
 
 
 pub fn solve( elements : &[ Element ], history : &History, step : f64 ) -> Result<Solution, Error>
@@ -50,57 +42,84 @@ pub fn solve( elements : &[ Element ], history : &History, step : f64 ) -> Resul
 
 	size += batteries.len();
 
-	let mut matrix = vec![ 0.0; size * size ];
-	let mut rhs = vec![ 0.0; size ];
-
-	let mut stamp = | row : Option<usize>, column : Option<usize>, value : f64 |
+	let assemble = | guesses : &[ f64 ] | -> Result<Vec<f64>, Error>
 	{
-		if let ( Some( row ), Some( column ) ) = ( row, column ) { matrix[ row * size + column ] += value; }
+		let mut matrix = vec![ 0.0; size * size ];
+		let mut rhs = vec![ 0.0; size ];
+
+		let mut stamp = | row : Option<usize>, column : Option<usize>, value : f64 |
+		{
+			if let ( Some( row ), Some( column ) ) = ( row, column ) { matrix[ row * size + column ] += value; }
+		};
+
+		for ( element, &guess ) in elements.iter().zip( guesses )
+		{
+			let Some( ( conductance, source ) ) = companion( element, history, step, guess ) else { continue; };
+
+			let a = unknowns[ netlist.net( element.segment.from ) ];
+			let b = unknowns[ netlist.net( element.segment.to ) ];
+
+			stamp( a, a, conductance );
+			stamp( b, b, conductance );
+			stamp( a, b, - conductance );
+			stamp( b, a, - conductance );
+
+			if let Some( a ) = a { rhs[ a ] += source; }
+
+			if let Some( b ) = b { rhs[ b ] -= source; }
+		}
+
+		for ( offset, &index ) in batteries.iter().enumerate()
+		{
+			let Kind::Battery { volts } = elements[ index ].kind else { continue; };
+
+			let row = Some( nodes + offset );
+			let negative = unknowns[ netlist.net( elements[ index ].segment.from ) ];
+			let positive = unknowns[ netlist.net( elements[ index ].segment.to ) ];
+
+			stamp( negative, row, 1.0 );
+			stamp( positive, row, -1.0 );
+			stamp( row, positive, 1.0 );
+			stamp( row, negative, -1.0 );
+
+			rhs[ nodes + offset ] = volts;
+		}
+
+		eliminate( matrix, rhs )
 	};
 
-	for element in elements
+	let mut guesses : Vec<f64> = elements.iter().map( | element | history.get( element.id ) ).collect();
+	let mut iteration = 0;
+
+	let solution = loop
 	{
-		let Some( ( conductance, source ) ) = companion( element, history, step ) else { continue; };
+		let solution = assemble( &guesses )?;
 
-		let a = unknowns[ netlist.net( element.segment.from ) ];
-		let b = unknowns[ netlist.net( element.segment.to ) ];
+		let voltage = | net : usize | unknowns[ net ].map_or( 0.0, | unknown : usize | solution[ unknown ] );
 
-		stamp( a, a, conductance );
-		stamp( b, b, conductance );
-		stamp( a, b, - conductance );
-		stamp( b, a, - conductance );
+		let next : Vec<f64> = elements.iter().zip( &guesses ).map( | ( element, &guess ) | match element.kind
+		{
+			Kind::Diode => limit( voltage( netlist.net( element.segment.from ) ) - voltage( netlist.net( element.segment.to ) ), guess ),
+			_ => guess,
+		} ).collect();
 
-		if let Some( a ) = a { rhs[ a ] += source; }
+		if next.iter().zip( &guesses ).all( | ( a, b ) | ( a - b ).abs() <= TOLERANCE ) { break solution; }
 
-		if let Some( b ) = b { rhs[ b ] -= source; }
-	}
+		iteration += 1;
 
-	for ( offset, &index ) in batteries.iter().enumerate()
-	{
-		let Kind::Battery { volts } = elements[ index ].kind else { continue; };
+		if iteration == ITERATIONS { return Err( Error::Unsettled ); }
 
-		let row = Some( nodes + offset );
-		let negative = unknowns[ netlist.net( elements[ index ].segment.from ) ];
-		let positive = unknowns[ netlist.net( elements[ index ].segment.to ) ];
-
-		stamp( negative, row, 1.0 );
-		stamp( positive, row, -1.0 );
-		stamp( row, positive, 1.0 );
-		stamp( row, negative, -1.0 );
-
-		rhs[ nodes + offset ] = volts;
-	}
-
-	let solution = eliminate( matrix, rhs )?;
+		guesses = next;
+	};
 
 	let voltage = | net : usize | unknowns[ net ].map_or( 0.0, | unknown | solution[ unknown ] );
 
-	let mut readings : Vec<Reading> = elements.iter().map( | element |
+	let mut readings : Vec<Reading> = elements.iter().zip( &guesses ).map( | ( element, &guess ) |
 	{
 		let from = voltage( netlist.net( element.segment.from ) );
 		let to = voltage( netlist.net( element.segment.to ) );
 
-		let current = match ( element.kind, companion( element, history, step ) )
+		let current = match ( element.kind, companion( element, history, step, guess ) )
 		{
 			( _, Some( ( conductance, source ) ) ) => conductance * ( from - to ) - source,
 			( Kind::Battery { .. }, _ ) => solution[ nodes + batteries.iter().position( | &index | elements[ index ].id == element.id ).unwrap() ],

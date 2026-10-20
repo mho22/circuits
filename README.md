@@ -17,7 +17,7 @@ Requires Rust through `rustup`. `rust-toolchain.toml` pins the version and the `
 
 ## Use
 
-- Pick a part in the toolbar, or press its key: `W` wire, `G` ground, `S` switch, `R` resistor, `C` capacitor, `L` inductor, `B` battery. The toolbar groups the parts by role: wiring, passive parts and sources. The arrow next to a group lists its parts.
+- Pick a part in the toolbar, or press its key: `W` wire, `G` ground, `S` switch, `R` resistor, `C` capacitor, `L` inductor, `B` battery, `D` diode. The toolbar groups the parts by role: wiring, passive parts, sources and semiconductors. The arrow next to a group lists its parts.
 - Drag to draw a part. A part runs at 0°, 45° or 90°. Click to place a ground.
 - Double-click a resistor, a battery, a capacitor or an inductor to change its value. Write a number in the unit at the end of the input: `Ω`, `V`, `µF` or `mH`. A comma or a dot separates the decimals: `4700` Ω, `4,7` µF.
 - Double-click a switch to open or close it.
@@ -30,6 +30,8 @@ Requires Rust through `rustup`. `rust-toolchain.toml` pins the version and the `
 Two parts connect where their ends meet, or where an end touches a wire. Two wires that cross do not connect. Every ground is the same 0 V node.
 
 A part drawn along a wire replaces the wire under it. The wire keeps its pieces on each side, and they connect to the ends of the part.
+
+A diode lets the current pass from the start of the drag to its end, where the bar is drawn. It blocks the current the other way. A diode that conducts drops about 0.7 V.
 
 The color of a wire shows its voltage: green is positive, red is negative, gray is 0 V. The yellow dots show the current.
 

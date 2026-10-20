@@ -12,6 +12,7 @@ fn it_accepts_valid_values()
 	assert_eq!( Kind::Capacitor { farads : 1e-6 }.check(), Ok( () ) );
 	assert_eq!( Kind::Inductor { henries : 1e-3 }.check(), Ok( () ) );
 	assert_eq!( Kind::Switch { closed : true }.check(), Ok( () ) );
+	assert_eq!( Kind::Diode.check(), Ok( () ) );
 }
 
 #[test]
@@ -56,6 +57,7 @@ fn it_reads_the_value_of_a_part()
 	assert_eq!( Kind::Wire.value(), None );
 	assert_eq!( Kind::Ground.value(), None );
 	assert_eq!( Kind::Switch { closed : true }.value(), None );
+	assert_eq!( Kind::Diode.value(), None );
 }
 
 #[test]
@@ -82,6 +84,7 @@ fn it_rejects_a_value_for_a_part_without_one()
 	assert_eq!( Kind::Wire.with_value( 1.0 ), Err( Error::Valueless ) );
 	assert_eq!( Kind::Ground.with_value( 1.0 ), Err( Error::Valueless ) );
 	assert_eq!( Kind::Switch { closed : false }.with_value( 1.0 ), Err( Error::Valueless ) );
+	assert_eq!( Kind::Diode.with_value( 1.0 ), Err( Error::Valueless ) );
 }
 
 #[test]

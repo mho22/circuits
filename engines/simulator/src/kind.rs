@@ -11,6 +11,7 @@ pub enum Kind
 	Capacitor { farads : f64 },
 	Inductor { henries : f64 },
 	Switch { closed : bool },
+	Diode,
 }
 
 impl Kind

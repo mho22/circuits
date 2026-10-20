@@ -3,6 +3,7 @@ import type { Element } from '../types/element.ts';
 import type { Scale } from '../types/scale.ts';
 import * as battery from './battery.ts';
 import * as capacitor from './capacitor.ts';
+import * as diode from './diode.ts';
 import * as ground from './ground.ts';
 import * as inductor from './inductor.ts';
 import * as resistor from './resistor.ts';
@@ -18,6 +19,7 @@ const RENDERERS : Record<Kind, ( context : CanvasRenderingContext2D, element : E
 	[ Kind.Capacitor ] : capacitor.draw,
 	[ Kind.Inductor ] : inductor.draw,
 	[ Kind.Switch ] : toggle.draw,
+	[ Kind.Diode ] : diode.draw,
 };
 
 

@@ -14,6 +14,7 @@ fn it_describes_each_error()
 	assert_eq!( Error::Singular.to_string(), "The circuit has no single solution: a battery is shorted, or batteries form a loop." );
 	assert_eq!( Error::Switchless.to_string(), "This part is not a switch." );
 	assert_eq!( Error::Taken.to_string(), "A part already has this id." );
+	assert_eq!( Error::Unsettled.to_string(), "The diodes do not settle: no stable voltage found after 100 tries." );
 	assert_eq!( Error::Valueless.to_string(), "This part has no value." );
 	assert_eq!( Error::Voltage.to_string(), "A voltage must be a finite number." );
 }
