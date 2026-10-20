@@ -10,7 +10,11 @@ const TOLERANCE : f64 = 1e-6;
 pub fn solve( elements : &[ Element ], history : &History, step : f64 ) -> Result<Solution, Error>
 {
 	let netlist = Netlist::build( elements );
-	let terminals : Vec<Vec<usize>> = elements.iter().map( | element | element.terminals().into_iter().map( | point | netlist.net( point ) ).collect() ).collect();
+	let terminals : Vec<Vec<usize>> = elements.iter().map( | element | match element.kind
+	{
+		Kind::Supply { .. } => vec![ netlist.earth.unwrap(), netlist.net( element.segment.from ) ],
+		_ => element.terminals().into_iter().map( | point | netlist.net( point ) ).collect(),
+	} ).collect();
 	let mut islands = UnionFind::new( netlist.count );
 
 	for ( element, nets ) in elements.iter().zip( &terminals )
@@ -39,7 +43,7 @@ pub fn solve( elements : &[ Element ], history : &History, step : f64 ) -> Resul
 	}
 
 	let nodes = size;
-	let batteries : Vec<usize> = ( 0 .. elements.len() ).filter( | &index | matches!( elements[ index ].kind, Kind::Battery { .. } ) ).collect();
+	let batteries : Vec<usize> = ( 0 .. elements.len() ).filter( | &index | matches!( elements[ index ].kind, Kind::Battery { .. } | Kind::Supply { .. } ) ).collect();
 
 	size += batteries.len();
 
@@ -76,7 +80,7 @@ pub fn solve( elements : &[ Element ], history : &History, step : f64 ) -> Resul
 
 		for ( offset, &index ) in batteries.iter().enumerate()
 		{
-			let Kind::Battery { volts } = elements[ index ].kind else { continue; };
+			let ( Kind::Battery { volts } | Kind::Supply { volts } ) = elements[ index ].kind else { continue; };
 
 			let row = Some( nodes + offset );
 			let negative = unknowns[ terminals[ index ][ 0 ] ];
@@ -139,7 +143,7 @@ pub fn solve( elements : &[ Element ], history : &History, step : f64 ) -> Resul
 		let currents = match element.kind
 		{
 			_ if ! parts.is_empty() => ( 0 .. potentials.len() ).map( | terminal | parts.iter().map( | part | part.weights[ terminal ] * part.current( &potentials ) ).sum() ).collect(),
-			Kind::Battery { .. } =>
+			Kind::Battery { .. } | Kind::Supply { .. } =>
 			{
 				let current = solution[ nodes + batteries.iter().position( | &battery | battery == index ).unwrap() ];
 
@@ -159,7 +163,13 @@ pub fn solve( elements : &[ Element ], history : &History, step : f64 ) -> Resul
 	{
 		if matches!( element.kind, Kind::Wire | Kind::Ground | Kind::Switch { .. } ) { continue; }
 
-		for ( point, current ) in element.terminals().into_iter().zip( &reading.currents ) { injections[ netlist.index( point ) ] -= current; }
+		let points : Vec<usize> = match element.kind
+		{
+			Kind::Supply { .. } => vec![ earth, netlist.index( element.segment.from ) ],
+			_ => element.terminals().into_iter().map( | point | netlist.index( point ) ).collect(),
+		};
+
+		for ( &point, current ) in points.iter().zip( &reading.currents ) { injections[ point ] -= current; }
 	}
 
 	let switches : Vec<usize> = ( 0 .. elements.len() ).filter( | &index | elements[ index ].kind == Kind::Switch { closed : true } ).collect();

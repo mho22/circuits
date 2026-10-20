@@ -26,10 +26,10 @@ impl fmt::Display for Error
 		let message = match self
 		{
 			Error::Capacitance => "A capacitance must be greater than 0 F.",
-			Error::Crooked => "A part must run at 0°, 45° or 90°.",
+			Error::Crooked => "A part must run at 0° or 90°.",
 			Error::Empty => "A part must have a length.",
 			Error::Inductance => "An inductance must be greater than 0 H.",
-			Error::Misplaced => "A ground sits on one point.",
+			Error::Misplaced => "A ground or a VCC sits on one point.",
 			Error::Missing => "No part has this id.",
 			Error::Resistance => "A resistance must be greater than 0 Ω.",
 			Error::Singular => "The circuit has no single solution: a battery is shorted, or batteries form a loop.",

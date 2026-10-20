@@ -97,6 +97,24 @@ fn it_has_no_earth_without_a_ground()
 }
 
 #[test]
+fn it_adds_an_earth_for_a_vcc_without_a_ground()
+{
+	let netlist = Netlist::build( &[ element( Kind::Supply { volts : 5.0 }, ( 0, 0 ), ( 0, 0 ) ) ] );
+
+	assert_eq!( netlist.count, 2 );
+	assert_eq!( netlist.earth, Some( 1 ) );
+}
+
+#[test]
+fn it_keeps_the_ground_as_the_earth_of_a_vcc()
+{
+	let netlist = Netlist::build( &[ element( Kind::Supply { volts : 5.0 }, ( 0, 0 ), ( 0, 0 ) ), element( Kind::Ground, ( 4, 0 ), ( 4, 0 ) ) ] );
+
+	assert_eq!( netlist.count, 2 );
+	assert_eq!( netlist.earth, Some( netlist.net( point( 4, 0 ) ) ) );
+}
+
+#[test]
 fn it_joins_the_collector_and_the_emitter_of_a_transistor_to_their_wires()
 {
 	let netlist = Netlist::build( &[

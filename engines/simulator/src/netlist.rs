@@ -55,9 +55,11 @@ impl Netlist
 
 		let nets : Vec<usize> = ( 0 .. points.len() ).map( | index | { let count = roots.len(); *roots.entry( forest.find( index ) ).or_insert( count ) } ).collect();
 
-		let earth = grounds.first().map( | &ground | nets[ ground ] );
+		let mut count = roots.len();
+		let supplied = elements.iter().any( | element | matches!( element.kind, Kind::Supply { .. } ) );
+		let earth = grounds.first().map( | &ground | nets[ ground ] ).or_else( || supplied.then( || { count += 1; count - 1 } ) );
 
-		Netlist { points, nets, count : roots.len(), earth, edges, links, indices }
+		Netlist { points, nets, count, earth, edges, links, indices }
 	}
 
 	pub fn index( &self, point : Point ) -> usize

@@ -57,6 +57,11 @@ describe( 'readout', () =>
 		expect( read( element( { kind : Kind.Pmos, potentials : [ 3, 2.5, 5 ], currents : [ 0, -2.5e-3, 2.5e-3 ] } ), undefined ) ).toBe( 'PMOS · Vgs 2 V · Vds 2.5 V · Id 2.5 mA' );
 	} );
 
+	it( 'describes a vcc with its voltage and its current', () =>
+	{
+		expect( read( element( { kind : Kind.Supply, value : 5, potentials : [ 0, 5 ], currents : [ 0.005, -0.005 ] } ), undefined ) ).toBe( 'VCC 5 V · 5 mA' );
+	} );
+
 	it( 'describes a ground', () =>
 	{
 		expect( read( element( { kind : Kind.Ground, currents : [ -0.02, 0.02 ] } ), undefined ) ).toBe( 'Ground · 0 V · 20 mA' );

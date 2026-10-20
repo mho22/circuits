@@ -17,8 +17,8 @@ Requires Rust through `rustup`. `rust-toolchain.toml` pins the version and the `
 
 ## Use
 
-- Pick a part in the toolbar, or press its key: `W` wire, `G` ground, `S` switch, `R` resistor, `C` capacitor, `L` inductor, `B` battery, `D` diode, `N` NPN transistor, `P` PNP transistor, `M` NMOS transistor, `F` PMOS transistor. The toolbar groups the parts by role: wiring, passive parts, semiconductors and sources. The arrow next to a group lists its parts.
-- Drag to draw a part. A part runs at 0°, 45° or 90°. Click to place a ground.
+- Pick a part in the toolbar, or press its key: `W` wire, `S` switch, `R` resistor, `C` capacitor, `L` inductor, `D` diode, `N` NPN transistor, `P` PNP transistor, `M` NMOS transistor, `F` PMOS transistor, `B` battery, `V` VCC, `G` ground. The toolbar groups the parts by role: wiring, passive parts, semiconductors and sources. The arrow next to a group lists its parts.
+- Drag to draw a part. A part runs at 0° or 90°. Click to place a VCC or a ground.
 - Double-click a resistor, a battery, a capacitor or an inductor to change its value. Write a number in the unit at the end of the input: `Ω`, `V`, `µF` or `mH`. A comma or a dot separates the decimals: `4700` Ω, `4,7` µF.
 - Double-click a switch to open or close it.
 - Right-click a part to delete it.
@@ -28,7 +28,7 @@ Requires Rust through `rustup`. `rust-toolchain.toml` pins the version and the `
 - Click the target button in the bottom right to bring the view back to the start.
 - Click `Save` or press `Ctrl S` (`⌘ S`) to save the drawing as a `.circuit` file. Chrome and Edge ask for the name and the folder. The other browsers download the file. Click `Open` or press `Ctrl O` (`⌘ O`) to replace the drawing with a file. Undo brings the previous drawing back.
 
-Two parts connect where their ends meet, or where an end touches a wire. Two wires that cross do not connect. Every ground is the same 0 V node.
+Two parts connect where their ends meet, or where an end touches a wire. Two wires that cross do not connect. Every ground is the same 0 V node. A VCC holds its point at its voltage above that node, 5 V by default.
 
 A part drawn along a wire replaces the wire under it. The wire keeps its pieces on each side, and they connect to the ends of the part.
 
@@ -44,7 +44,7 @@ A `.circuit` file is JSON. It lists each part with its kind, its value, and the 
 }
 ```
 
-The kinds are `wire`, `ground`, `switch`, `resistor`, `capacitor`, `inductor`, `battery`, `diode`, `npn`, `pnp`, `nmos` and `pmos`. The values are `ohms`, `farads`, `henries` and `volts`, in base units.
+The kinds are `wire`, `ground`, `switch`, `resistor`, `capacitor`, `inductor`, `battery`, `diode`, `npn`, `pnp`, `nmos`, `pmos` and `vcc`. The values are `ohms`, `farads`, `henries` and `volts`, in base units.
 
 A diode lets the current pass from the start of the drag to its end, where the bar is drawn. It blocks the current the other way. A diode that conducts drops about 0.7 V.
 

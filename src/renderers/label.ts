@@ -18,8 +18,8 @@ export function draw( context : CanvasRenderingContext2D, element : Element ) : 
 	const dx = element.to.x - element.from.x;
 	const dy = element.to.y - element.from.y;
 	const length = Math.hypot( dx, dy );
-	const normalX = dy / length;
-	const normalY = - dx / length;
+	const normalX = length ? dy / length : 0;
+	const normalY = length ? - dx / length : -1;
 
 	context.fillStyle = COLOR;
 	context.font = '11px ui-monospace, monospace';

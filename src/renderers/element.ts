@@ -8,6 +8,7 @@ import * as ground from './ground.ts';
 import * as inductor from './inductor.ts';
 import * as mosfet from './mosfet.ts';
 import * as resistor from './resistor.ts';
+import * as supply from './supply.ts';
 import * as toggle from './switch.ts';
 import * as transistor from './transistor.ts';
 import * as wire from './wire.ts';
@@ -26,6 +27,7 @@ const RENDERERS : Record<Kind, ( context : CanvasRenderingContext2D, element : E
 	[ Kind.Pnp ] : transistor.draw,
 	[ Kind.Nmos ] : mosfet.draw,
 	[ Kind.Pmos ] : mosfet.draw,
+	[ Kind.Supply ] : supply.draw,
 };
 
 

@@ -481,3 +481,33 @@ fn it_turns_on_both_halves_of_a_cmos_inverter_at_half_the_supply()
 	assert!( ( solution.readings[ 5 ].currents[ 1 ] - current ).abs() < 1e-6 );
 	assert!( ( solution.readings[ 3 ].currents[ 1 ] + current ).abs() < 1e-6 );
 }
+
+#[test]
+fn it_feeds_a_circuit_from_a_vcc_back_to_the_ground()
+{
+	let solution = solve( &[
+		element( Kind::Supply { volts : 5.0 }, ( 0, 0 ), ( 0, 0 ) ),
+		element( Kind::Wire, ( 0, 0 ), ( 2, 0 ) ),
+		element( Kind::Resistor { ohms : 1000.0 }, ( 2, 0 ), ( 2, 4 ) ),
+		element( Kind::Wire, ( 2, 4 ), ( 4, 4 ) ),
+		element( Kind::Ground, ( 4, 4 ), ( 4, 4 ) ),
+	], &History::default(), STEP ).unwrap();
+
+	assert_eq!( solution.readings[ 0 ].potentials, vec![ 0.0, 5.0 ] );
+	assert!( near( solution.readings[ 0 ].currents[ 0 ], 0.005 ) && near( solution.readings[ 0 ].currents[ 1 ], -0.005 ) );
+	assert!( near( solution.readings[ 2 ].currents[ 0 ], 0.005 ) );
+	assert!( near( solution.readings[ 4 ].currents[ 0 ], 0.005 ) );
+	assert!( solution.branches.iter().all( | branch | near( branch.current.abs(), 0.005 ) ) );
+}
+
+#[test]
+fn it_holds_a_vcc_without_a_ground_at_its_voltage()
+{
+	let solution = solve( &[
+		element( Kind::Supply { volts : 5.0 }, ( 0, 0 ), ( 0, 0 ) ),
+		element( Kind::Resistor { ohms : 1000.0 }, ( 0, 0 ), ( 4, 0 ) ),
+	], &History::default(), STEP ).unwrap();
+
+	assert_eq!( solution.readings[ 1 ].potentials, vec![ 5.0, 5.0 ] );
+	assert_eq!( solution.readings[ 0 ].currents, vec![ 0.0, -0.0 ] );
+}

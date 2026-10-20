@@ -19,7 +19,7 @@ fn powered() -> Circuit
 #[wasm_bindgen_test]
 fn it_snaps_a_cursor_to_a_straight_end()
 {
-	assert_eq!( Circuit::snap( 0, 0, 4, 5 ), vec![ 5, 5 ] );
+	assert_eq!( Circuit::snap( 0, 0, 4, 5 ), vec![ 0, 5 ] );
 }
 
 #[wasm_bindgen_test]
@@ -257,4 +257,19 @@ fn it_rejects_parts_it_cannot_place()
 	assert!( circuit.open( &[ 12.0, 0.0, 0.0, 0.0, 2.0, 0.0 ] ).is_err() );
 	assert!( circuit.open( &[ 1.0, 0.0, 0.0, 0.0, 2.0, 0.0 ] ).is_err() );
 	assert_eq!( circuit.elements().len(), 65 );
+}
+
+#[wasm_bindgen_test]
+fn it_lists_a_vcc_with_its_voltage_and_its_current()
+{
+	let mut circuit = Circuit::new();
+
+	circuit.add( 12, 5.0, 0, 0, 0, 0 ).ok();
+	circuit.add( 1, 1000.0, 0, 0, 0, 2 ).ok();
+	circuit.add( 3, 0.0, 0, 2, 0, 2 ).ok();
+
+	let elements = circuit.elements();
+
+	assert_eq!( [ elements[ 1 ], elements[ 6 ], elements[ 7 ], elements[ 8 ] ], [ 12.0, 5.0, 0.0, 5.0 ] );
+	assert!( ( elements[ 10 ] - 0.005 ).abs() < 1e-12 );
 }

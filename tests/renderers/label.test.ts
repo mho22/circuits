@@ -30,6 +30,17 @@ describe( 'label renderer', () =>
 		expect( calls ).toContainEqual( [ 'fillText', '5 V', SPACING * 2 - 14, SPACING * 2 ] );
 	} );
 
+	it( 'writes the value above a part on one point', () =>
+	{
+		const { context, calls } = record();
+
+		draw( context, element( { kind : Kind.Supply, value : 5, from : { x : 2, y : 2 }, to : { x : 2, y : 2 } } ) );
+
+		expect( calls ).toContainEqual( [ 'set', 'textAlign', 'center' ] );
+		expect( calls ).toContainEqual( [ 'set', 'textBaseline', 'bottom' ] );
+		expect( calls ).toContainEqual( [ 'fillText', '5 V', SPACING * 2, SPACING * 2 - 14 ] );
+	} );
+
 	it( 'writes nothing for a part without a value', () =>
 	{
 		const { context, calls } = record();

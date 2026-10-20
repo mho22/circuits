@@ -47,6 +47,15 @@ fn it_rejects_a_ground_with_length()
 }
 
 #[test]
+fn it_puts_a_vcc_on_one_point()
+{
+	let mut document = Document::default();
+
+	assert_eq!( document.apply( add( Kind::Supply { volts : 5.0 }, FOO, FOO ) ), Ok( 0 ) );
+	assert_eq!( document.apply( add( Kind::Supply { volts : 5.0 }, FOO, BAR ) ), Err( Error::Misplaced ) );
+}
+
+#[test]
 fn it_rejects_a_crooked_part()
 {
 	let mut document = Document::default();
@@ -175,7 +184,7 @@ fn it_inserts_a_part_back_at_its_place_with_its_id()
 
 	assert_eq!( document.apply( Operation::Insert { element : foo, index : 0 } ), Ok( 0 ) );
 	assert_eq!( document.elements()[ 0 ], foo );
-	assert_eq!( document.apply( add( Kind::Wire, FOO, BAZ ) ), Ok( 2 ) );
+	assert_eq!( document.apply( add( Kind::Wire, BAZ, Point { x : 0, y : 4 } ) ), Ok( 2 ) );
 }
 
 #[test]

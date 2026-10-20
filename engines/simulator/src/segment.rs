@@ -12,19 +12,9 @@ impl Segment
 {
 	pub fn snap( from : Point, cursor : Point ) -> Point
 	{
-		let dx = cursor.x - from.x;
-		let dy = cursor.y - from.y;
-		let diagonal = ( dx.abs() + dy.abs() + 1 ) / 2;
+		if ( cursor.x - from.x ).abs() >= ( cursor.y - from.y ).abs() { return Point { x : cursor.x, y : from.y }; }
 
-		let candidates = [
-			Point { x : cursor.x, y : from.y },
-			Point { x : from.x, y : cursor.y },
-			Point { x : from.x + diagonal * dx.signum(), y : from.y + diagonal * dy.signum() },
-		];
-
-		let distance = | point : &Point | ( point.x - cursor.x ).pow( 2 ) + ( point.y - cursor.y ).pow( 2 );
-
-		candidates.into_iter().min_by_key( distance ).unwrap()
+		Point { x : from.x, y : cursor.y }
 	}
 
 	pub fn is_empty( &self ) -> bool
@@ -34,10 +24,7 @@ impl Segment
 
 	pub fn is_straight( &self ) -> bool
 	{
-		let dx = ( self.to.x - self.from.x ).abs();
-		let dy = ( self.to.y - self.from.y ).abs();
-
-		dx == 0 || dy == 0 || dx == dy
+		self.from.x == self.to.x || self.from.y == self.to.y
 	}
 
 	pub fn length( &self ) -> i32

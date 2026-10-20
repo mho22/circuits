@@ -5,10 +5,10 @@ use simulator::Error;
 fn it_describes_each_error()
 {
 	assert_eq!( Error::Capacitance.to_string(), "A capacitance must be greater than 0 F." );
-	assert_eq!( Error::Crooked.to_string(), "A part must run at 0°, 45° or 90°." );
+	assert_eq!( Error::Crooked.to_string(), "A part must run at 0° or 90°." );
 	assert_eq!( Error::Empty.to_string(), "A part must have a length." );
 	assert_eq!( Error::Inductance.to_string(), "An inductance must be greater than 0 H." );
-	assert_eq!( Error::Misplaced.to_string(), "A ground sits on one point." );
+	assert_eq!( Error::Misplaced.to_string(), "A ground or a VCC sits on one point." );
 	assert_eq!( Error::Missing.to_string(), "No part has this id." );
 	assert_eq!( Error::Resistance.to_string(), "A resistance must be greater than 0 Ω." );
 	assert_eq!( Error::Singular.to_string(), "The circuit has no single solution: a battery is shorted, or batteries form a loop." );

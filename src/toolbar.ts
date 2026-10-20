@@ -3,10 +3,10 @@ import { SHORTCUTS } from './keyboard.ts';
 
 
 const GROUPS : { name : string, kinds : Kind[] }[] = [
-	{ name : 'Wiring', kinds : [ Kind.Wire, Kind.Ground, Kind.Switch ] },
+	{ name : 'Wiring', kinds : [ Kind.Wire, Kind.Switch ] },
 	{ name : 'Passive', kinds : [ Kind.Resistor, Kind.Capacitor, Kind.Inductor ] },
 	{ name : 'Semiconductors', kinds : [ Kind.Diode, Kind.Npn, Kind.Pnp, Kind.Nmos, Kind.Pmos ] },
-	{ name : 'Sources', kinds : [ Kind.Battery ] },
+	{ name : 'Sources', kinds : [ Kind.Battery, Kind.Supply, Kind.Ground ] },
 ];
 
 

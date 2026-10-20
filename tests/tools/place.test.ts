@@ -11,14 +11,14 @@ beforeAll( load );
 
 describe( 'place tool', () =>
 {
-	it( 'previews a wire snapped to the nearest straight angle', () =>
+	it( 'previews a wire snapped to the longer axis', () =>
 	{
 		const tool = new PlaceTool( new Circuit() );
 
 		tool.press( { x : 0, y : 0 } );
 		tool.move( { x : 4, y : 5 } );
 
-		expect( tool.preview() ).toEqual( { id : -1, kind : Kind.Wire, from : { x : 0, y : 0 }, to : { x : 5, y : 5 }, value : 0, potentials : [ 0, 0 ], currents : [ NaN, NaN ] } );
+		expect( tool.preview() ).toEqual( { id : -1, kind : Kind.Wire, from : { x : 0, y : 0 }, to : { x : 0, y : 5 }, value : 0, potentials : [ 0, 0 ], currents : [ NaN, NaN ] } );
 	} );
 
 	it( 'previews a transistor with one voltage and one current per terminal', () =>
@@ -76,6 +76,34 @@ describe( 'place tool', () =>
 		tool.release();
 
 		expect( decode( circuit.elements() ).map( element => [ element.kind, element.from, element.to ] ) ).toEqual( [ [ Kind.Ground, { x : 2, y : 2 }, { x : 2, y : 2 } ] ] );
+	} );
+
+	it( 'places a vcc of 5 V with a click', () =>
+	{
+		const circuit = new Circuit();
+		const tool = new PlaceTool( circuit );
+
+		tool.kind = Kind.Supply;
+		tool.press( { x : 2, y : 2 } );
+		tool.move( { x : 2, y : 5 } );
+		tool.release();
+
+		expect( decode( circuit.elements() ).map( element => [ element.kind, element.value, element.from, element.to ] ) ).toEqual( [ [ Kind.Supply, 5, { x : 2, y : 2 }, { x : 2, y : 2 } ] ] );
+	} );
+
+	it( 'places no second ground or vcc on a point that holds one', () =>
+	{
+		const circuit = new Circuit();
+		const tool = new PlaceTool( circuit );
+
+		for( const kind of [ Kind.Supply, Kind.Supply, Kind.Ground, Kind.Ground ] )
+		{
+			tool.kind = kind;
+			tool.press( { x : 2, y : 2 } );
+			tool.release();
+		}
+
+		expect( decode( circuit.elements() ).map( element => element.kind ) ).toEqual( [ Kind.Supply, Kind.Ground ] );
 	} );
 
 	it( 'adds nothing for a click without a drag', () =>

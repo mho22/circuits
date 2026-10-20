@@ -16,9 +16,9 @@ describe( 'file decoder', () =>
 
 	it( 'reads back every kind of part', () =>
 	{
-		const kinds = [ Kind.Wire, Kind.Resistor, Kind.Battery, Kind.Ground, Kind.Capacitor, Kind.Inductor, Kind.Switch, Kind.Diode, Kind.Npn, Kind.Pnp, Kind.Nmos, Kind.Pmos ];
+		const kinds = [ Kind.Wire, Kind.Resistor, Kind.Battery, Kind.Ground, Kind.Capacitor, Kind.Inductor, Kind.Switch, Kind.Diode, Kind.Npn, Kind.Pnp, Kind.Nmos, Kind.Pmos, Kind.Supply ];
 		const elements = kinds.map( ( kind, index ) => element( { kind, value : kind === Kind.Switch ? 0 : 4.7, from : { x : index, y : 0 }, to : { x : index, y : -2 } } ) );
-		const values = ( kind : Kind ) => [ Kind.Resistor, Kind.Battery, Kind.Capacitor, Kind.Inductor ].includes( kind ) ? 4.7 : 0;
+		const values = ( kind : Kind ) => [ Kind.Resistor, Kind.Battery, Kind.Capacitor, Kind.Inductor, Kind.Supply ].includes( kind ) ? 4.7 : 0;
 
 		expect( Array.from( decode( encode( elements ) ) ) ).toEqual( elements.flatMap( item => [ item.kind, values( item.kind ), item.from.x, item.from.y, item.to.x, item.to.y ] ) );
 	} );

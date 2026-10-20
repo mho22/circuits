@@ -25,6 +25,8 @@ export function describe( element : Element, branch : Branch | undefined ) : str
 
 	if( element.kind === Kind.Wire ) return [ title, format( element.potentials[ 0 ], 'V' ), format( Math.abs( branch?.current ?? NaN ), 'A' ) ].join( ' · ' );
 
+	if( element.kind === Kind.Supply ) return [ title, format( Math.abs( element.currents[ 0 ] ), 'A' ) ].join( ' · ' );
+
 	if( element.kind === Kind.Ground ) return [ title, format( element.potentials[ 0 ], 'V' ), format( Math.abs( element.currents[ 0 ] ), 'A' ) ].join( ' · ' );
 
 	if( MOSFETS.includes( element.kind ) )

@@ -38,12 +38,6 @@ fn it_splits_a_wire_under_a_part_drawn_the_other_way()
 }
 
 #[test]
-fn it_splits_a_diagonal_wire()
-{
-	assert_eq!( place( &[ wire( 3, ( 0, 0 ), ( 6, 6 ) ) ], RESISTOR, segment( ( 2, 2 ), ( 4, 4 ) ) )[ 1 .. 3 ], [ piece( ( 0, 0 ), ( 2, 2 ) ), piece( ( 4, 4 ), ( 6, 6 ) ) ] );
-}
-
-#[test]
 fn it_keeps_one_piece_when_the_part_starts_at_the_end_of_the_wire()
 {
 	assert_eq!( place( &[ wire( 3, ( 0, 0 ), ( 8, 0 ) ) ], RESISTOR, segment( ( 0, 0 ), ( 3, 0 ) ) ).len(), 3 );
@@ -81,7 +75,6 @@ fn it_leaves_a_wire_that_the_part_does_not_run_along()
 
 	assert!( alone( ( 2, 1 ), ( 5, 1 ) ) );
 	assert!( alone( ( 4, -2 ), ( 4, 2 ) ) );
-	assert!( alone( ( 2, 0 ), ( 4, 2 ) ) );
 	assert!( alone( ( 8, 0 ), ( 10, 0 ) ) );
 	assert!( alone( ( 9, 0 ), ( 12, 0 ) ) );
 }

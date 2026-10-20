@@ -12,6 +12,7 @@ export enum Kind
 	Pnp = 9,
 	Nmos = 10,
 	Pmos = 11,
+	Supply = 12,
 }
 
 
@@ -28,10 +29,13 @@ export const NAMES : Record<Kind, string> = {
 	[ Kind.Pnp ] : 'PNP',
 	[ Kind.Nmos ] : 'NMOS',
 	[ Kind.Pmos ] : 'PMOS',
+	[ Kind.Supply ] : 'VCC',
 };
 
-export const FIELDS : Partial<Record<Kind, string>> = { [ Kind.Resistor ] : 'ohms', [ Kind.Battery ] : 'volts', [ Kind.Capacitor ] : 'farads', [ Kind.Inductor ] : 'henries' };
+export const POINTS = [ Kind.Ground, Kind.Supply ];
 
-export const UNITS : Partial<Record<Kind, string>> = { [ Kind.Resistor ] : 'Ω', [ Kind.Battery ] : 'V', [ Kind.Capacitor ] : 'F', [ Kind.Inductor ] : 'H' };
+export const FIELDS : Partial<Record<Kind, string>> = { [ Kind.Resistor ] : 'ohms', [ Kind.Battery ] : 'volts', [ Kind.Capacitor ] : 'farads', [ Kind.Inductor ] : 'henries', [ Kind.Supply ] : 'volts' };
 
-export const INPUTS : Partial<Record<Kind, [ string, number ]>> = { [ Kind.Resistor ] : [ 'Ω', 1 ], [ Kind.Battery ] : [ 'V', 1 ], [ Kind.Capacitor ] : [ 'µF', 1e-6 ], [ Kind.Inductor ] : [ 'mH', 1e-3 ] };
+export const UNITS : Partial<Record<Kind, string>> = { [ Kind.Resistor ] : 'Ω', [ Kind.Battery ] : 'V', [ Kind.Capacitor ] : 'F', [ Kind.Inductor ] : 'H', [ Kind.Supply ] : 'V' };
+
+export const INPUTS : Partial<Record<Kind, [ string, number ]>> = { [ Kind.Resistor ] : [ 'Ω', 1 ], [ Kind.Battery ] : [ 'V', 1 ], [ Kind.Capacitor ] : [ 'µF', 1e-6 ], [ Kind.Inductor ] : [ 'mH', 1e-3 ], [ Kind.Supply ] : [ 'V', 1 ] };

@@ -16,6 +16,7 @@ pub enum Kind
 	Pnp,
 	Nmos,
 	Pmos,
+	Supply { volts : f64 },
 }
 
 impl Kind
@@ -27,7 +28,7 @@ impl Kind
 		match *self
 		{
 			Kind::Resistor { ohms } if ! positive( ohms ) => Err( Error::Resistance ),
-			Kind::Battery { volts } if ! volts.is_finite() => Err( Error::Voltage ),
+			Kind::Battery { volts } | Kind::Supply { volts } if ! volts.is_finite() => Err( Error::Voltage ),
 			Kind::Capacitor { farads } if ! positive( farads ) => Err( Error::Capacitance ),
 			Kind::Inductor { henries } if ! positive( henries ) => Err( Error::Inductance ),
 			_ => Ok( () ),
@@ -52,7 +53,7 @@ impl Kind
 		match *self
 		{
 			Kind::Resistor { ohms } => Some( ohms ),
-			Kind::Battery { volts } => Some( volts ),
+			Kind::Battery { volts } | Kind::Supply { volts } => Some( volts ),
 			Kind::Capacitor { farads } => Some( farads ),
 			Kind::Inductor { henries } => Some( henries ),
 			_ => None,
@@ -65,6 +66,7 @@ impl Kind
 		{
 			Kind::Resistor { .. } => Kind::Resistor { ohms : value },
 			Kind::Battery { .. } => Kind::Battery { volts : value },
+			Kind::Supply { .. } => Kind::Supply { volts : value },
 			Kind::Capacitor { .. } => Kind::Capacitor { farads : value },
 			Kind::Inductor { .. } => Kind::Inductor { henries : value },
 			_ => return Err( Error::Valueless ),

@@ -105,6 +105,7 @@ impl Circuit
 				Kind::Pnp => ( 9.0, 0.0 ),
 				Kind::Nmos => ( 10.0, 0.0 ),
 				Kind::Pmos => ( 11.0, 0.0 ),
+				Kind::Supply { volts } => ( 12.0, volts ),
 			};
 
 			let mut potentials = [ 0.0, 0.0, f64::NAN ];
@@ -160,6 +161,7 @@ impl Circuit
 			9 => Kind::Pnp,
 			10 => Kind::Nmos,
 			11 => Kind::Pmos,
+			12 => Kind::Supply { volts : value },
 			_ => return Err( JsError::new( "Unknown part kind." ) ),
 		};
 

@@ -61,9 +61,11 @@ impl Document
 
 	fn check( kind : Kind, segment : Segment ) -> Result<(), Error>
 	{
-		if kind == Kind::Ground && ! segment.is_empty() { return Err( Error::Misplaced ); }
+		let point = matches!( kind, Kind::Ground | Kind::Supply { .. } );
 
-		if kind != Kind::Ground && segment.is_empty() { return Err( Error::Empty ); }
+		if point && ! segment.is_empty() { return Err( Error::Misplaced ); }
+
+		if ! point && segment.is_empty() { return Err( Error::Empty ); }
 
 		if ! segment.is_straight() { return Err( Error::Crooked ); }
 

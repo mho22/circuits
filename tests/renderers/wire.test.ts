@@ -12,11 +12,11 @@ describe( 'wire renderer', () =>
 	{
 		const { context, calls } = record();
 
-		draw( context, element( { from : { x : 1, y : 1 }, to : { x : 3, y : 3 }, potentials : [ 5, 5 ] } ), { voltage : 5, current : 0 } );
+		draw( context, element( { from : { x : 1, y : 1 }, to : { x : 3, y : 1 }, potentials : [ 5, 5 ] } ), { voltage : 5, current : 0 } );
 
 		expect( calls ).toContainEqual( [ 'set', 'strokeStyle', color( 5, 5 ) ] );
 		expect( calls ).toContainEqual( [ 'moveTo', SPACING, SPACING ] );
-		expect( calls ).toContainEqual( [ 'lineTo', SPACING * 3, SPACING * 3 ] );
+		expect( calls ).toContainEqual( [ 'lineTo', SPACING * 3, SPACING ] );
 		expect( calls.at( -1 ) ).toEqual( [ 'stroke' ] );
 	} );
 } );
