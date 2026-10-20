@@ -2,7 +2,7 @@ import { Kind } from './enums/kind.ts';
 import type { Point } from './types/point.ts';
 
 
-const TRANSISTORS = [ Kind.Npn, Kind.Pnp ];
+const TRANSISTORS = [ Kind.Npn, Kind.Pnp, Kind.Nmos, Kind.Pmos ];
 
 
 export function terminals( kind : Kind, from : Point, to : Point ) : Point[]

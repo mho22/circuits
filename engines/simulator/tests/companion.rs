@@ -1,4 +1,4 @@
-use simulator::{ companion, linearize, Element, History, Kind, Point, Reading, Segment, Solution, Stamp };
+use simulator::{ companion, conduct, linearize, Element, History, Kind, Point, Reading, Segment, Solution, Stamp };
 
 
 const STEP : f64 = 1e-3;
@@ -71,9 +71,32 @@ fn it_turns_a_pnp_transistor_into_two_reversed_junctions()
 }
 
 #[test]
+fn it_turns_an_nmos_transistor_into_a_channel_from_the_drain_to_the_source()
+{
+	let ( current, transconductance, output ) = conduct( 3.0, 0.5 );
+	let stamps = companion( &element( Kind::Nmos ), &History::default(), STEP, [ 3.0, 0.5 ] );
+
+	assert_eq!( stamps.iter().map( | stamp | stamp.across ).collect::<Vec<_>>(), vec![ ( 0, 2 ), ( 1, 2 ), ( 0, 2 ) ] );
+	assert_eq!( stamps.iter().map( | stamp | stamp.weights ).collect::<Vec<_>>(), vec![ [ 0.0, 1.0, -1.0 ], [ 0.0, 1.0, -1.0 ], [ 1.0, 0.0, -1.0 ] ] );
+	assert_eq!( stamps[ 0 ].conductance, transconductance );
+	assert_eq!( stamps[ 1 ].conductance, output + 1e-11 );
+	assert!( ( stamps[ 0 ].current( &[ 3.0, 0.5, 0.0 ] ) + stamps[ 1 ].current( &[ 3.0, 0.5, 0.0 ] ) - current - 0.5e-11 ).abs() < 1e-15 );
+	assert_eq!( stamps[ 2 ].conductance, 1e-11 );
+}
+
+#[test]
+fn it_turns_a_pmos_transistor_into_a_reversed_channel()
+{
+	let stamps = companion( &element( Kind::Pmos ), &History::default(), STEP, [ 3.0, 0.5 ] );
+
+	assert_eq!( stamps.iter().map( | stamp | stamp.across ).collect::<Vec<_>>(), vec![ ( 2, 0 ), ( 2, 1 ), ( 2, 0 ) ] );
+	assert_eq!( stamps.iter().map( | stamp | stamp.weights ).collect::<Vec<_>>(), vec![ [ 0.0, -1.0, 1.0 ], [ 0.0, -1.0, 1.0 ], [ -1.0, 0.0, 1.0 ] ] );
+}
+
+#[test]
 fn it_keeps_the_weights_of_every_junction_balanced()
 {
-	for kind in [ Kind::Diode, Kind::Npn, Kind::Pnp ]
+	for kind in [ Kind::Diode, Kind::Npn, Kind::Pnp, Kind::Nmos, Kind::Pmos ]
 	{
 		for stamp in companion( &element( kind ), &History::default(), STEP, [ 0.0; 2 ] ) { assert!( stamp.weights.iter().sum::<f64>().abs() < 1e-12 ); }
 	}

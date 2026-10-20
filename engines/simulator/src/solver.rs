@@ -106,7 +106,16 @@ pub fn solve( elements : &[ Element ], history : &History, step : f64 ) -> Resul
 		{
 			let mut next = guess;
 
-			for ( index, &( a, b ) ) in element.kind.junctions().iter().enumerate() { next[ index ] = limit( voltage( nets[ a ] ) - voltage( nets[ b ] ), guess[ index ] ); }
+			for ( index, &( a, b ) ) in element.kind.controls().iter().enumerate()
+			{
+				let across = voltage( nets[ a ] ) - voltage( nets[ b ] );
+
+				next[ index ] = match element.kind
+				{
+					Kind::Nmos | Kind::Pmos => across,
+					_ => limit( across, guess[ index ] ),
+				};
+			}
 
 			next
 		} ).collect();

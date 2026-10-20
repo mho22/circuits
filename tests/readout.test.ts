@@ -51,6 +51,12 @@ describe( 'readout', () =>
 		expect( read( element( { kind : Kind.Pnp, potentials : [ -0.7, -3, 0 ], currents : [ -2e-5, -2e-3, 2.02e-3 ] } ), undefined ) ).toBe( 'PNP · Vbe 700 mV · Vce 3 V · Ib 20 µA · Ic 2 mA' );
 	} );
 
+	it( 'describes a mosfet with its gate and drain voltages and its drain current', () =>
+	{
+		expect( read( element( { kind : Kind.Nmos, potentials : [ 2, 2.5, 0 ], currents : [ 0, 2.5e-3, -2.5e-3 ] } ), undefined ) ).toBe( 'NMOS · Vgs 2 V · Vds 2.5 V · Id 2.5 mA' );
+		expect( read( element( { kind : Kind.Pmos, potentials : [ 3, 2.5, 5 ], currents : [ 0, -2.5e-3, 2.5e-3 ] } ), undefined ) ).toBe( 'PMOS · Vgs 2 V · Vds 2.5 V · Id 2.5 mA' );
+	} );
+
 	it( 'describes a ground', () =>
 	{
 		expect( read( element( { kind : Kind.Ground, currents : [ -0.02, 0.02 ] } ), undefined ) ).toBe( 'Ground · 0 V · 20 mA' );

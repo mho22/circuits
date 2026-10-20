@@ -15,7 +15,7 @@ impl Element
 	{
 		let Segment { from, to } = self.segment;
 
-		if ! matches!( self.kind, Kind::Npn | Kind::Pnp ) { return vec![ from, to ]; }
+		if ! matches!( self.kind, Kind::Npn | Kind::Pnp | Kind::Nmos | Kind::Pmos ) { return vec![ from, to ]; }
 
 		let dx = ( to.x - from.x ).signum();
 		let dy = ( to.y - from.y ).signum();

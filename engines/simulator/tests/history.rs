@@ -48,3 +48,19 @@ fn it_records_both_junction_voltages_of_a_transistor()
 	assert!( ( history.get( 3 )[ 0 ] - 0.7 ).abs() < 1e-12 && ( history.get( 3 )[ 1 ] + 2.3 ).abs() < 1e-12 );
 	assert!( ( history.get( 5 )[ 0 ] - 0.7 ).abs() < 1e-12 && ( history.get( 5 )[ 1 ] + 2.3 ).abs() < 1e-12 );
 }
+
+#[test]
+fn it_records_the_gate_and_the_drain_voltages_of_a_mosfet()
+{
+	let elements = [ element( 3, Kind::Nmos ), element( 5, Kind::Pmos ) ];
+
+	let solution = Solution { readings : vec![
+		Reading { potentials : vec![ 2.0, 3.0, 0.5 ], currents : vec![ 0.0; 3 ] },
+		Reading { potentials : vec![ 3.0, 2.0, 5.0 ], currents : vec![ 0.0; 3 ] },
+	], branches : vec![] };
+
+	let history = History::record( &elements, &solution );
+
+	assert_eq!( history.get( 3 ), [ 1.5, 2.5 ] );
+	assert_eq!( history.get( 5 ), [ 2.0, 3.0 ] );
+}

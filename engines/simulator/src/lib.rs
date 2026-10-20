@@ -1,4 +1,5 @@
 mod branch;
+mod channel;
 mod companion;
 mod document;
 mod element;
@@ -21,6 +22,7 @@ mod stamp;
 mod union_find;
 
 pub use branch::Branch;
+pub use channel::conduct;
 pub use companion::companion;
 pub use document::Document;
 pub use element::Element;

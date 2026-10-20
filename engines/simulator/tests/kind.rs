@@ -15,6 +15,8 @@ fn it_accepts_valid_values()
 	assert_eq!( Kind::Diode.check(), Ok( () ) );
 	assert_eq!( Kind::Npn.check(), Ok( () ) );
 	assert_eq!( Kind::Pnp.check(), Ok( () ) );
+	assert_eq!( Kind::Nmos.check(), Ok( () ) );
+	assert_eq!( Kind::Pmos.check(), Ok( () ) );
 }
 
 #[test]
@@ -61,6 +63,7 @@ fn it_reads_the_value_of_a_part()
 	assert_eq!( Kind::Switch { closed : true }.value(), None );
 	assert_eq!( Kind::Diode.value(), None );
 	assert_eq!( Kind::Npn.value(), None );
+	assert_eq!( Kind::Nmos.value(), None );
 }
 
 #[test]
@@ -89,6 +92,7 @@ fn it_rejects_a_value_for_a_part_without_one()
 	assert_eq!( Kind::Switch { closed : false }.with_value( 1.0 ), Err( Error::Valueless ) );
 	assert_eq!( Kind::Diode.with_value( 1.0 ), Err( Error::Valueless ) );
 	assert_eq!( Kind::Pnp.with_value( 1.0 ), Err( Error::Valueless ) );
+	assert_eq!( Kind::Pmos.with_value( 1.0 ), Err( Error::Valueless ) );
 }
 
 #[test]
@@ -106,11 +110,13 @@ fn it_rejects_a_closed_state_for_a_part_that_is_not_a_switch()
 }
 
 #[test]
-fn it_lists_the_junctions_of_each_part_from_anode_to_cathode()
+fn it_lists_the_voltages_that_control_each_part()
 {
-	assert_eq!( Kind::Diode.junctions(), &[ ( 0, 1 ) ] );
-	assert_eq!( Kind::Npn.junctions(), &[ ( 0, 2 ), ( 0, 1 ) ] );
-	assert_eq!( Kind::Pnp.junctions(), &[ ( 2, 0 ), ( 1, 0 ) ] );
-	assert!( Kind::Resistor { ohms : 1.0 }.junctions().is_empty() );
-	assert!( Kind::Wire.junctions().is_empty() );
+	assert_eq!( Kind::Diode.controls(), &[ ( 0, 1 ) ] );
+	assert_eq!( Kind::Npn.controls(), &[ ( 0, 2 ), ( 0, 1 ) ] );
+	assert_eq!( Kind::Pnp.controls(), &[ ( 2, 0 ), ( 1, 0 ) ] );
+	assert_eq!( Kind::Nmos.controls(), &[ ( 0, 2 ), ( 1, 2 ) ] );
+	assert_eq!( Kind::Pmos.controls(), &[ ( 2, 0 ), ( 2, 1 ) ] );
+	assert!( Kind::Resistor { ohms : 1.0 }.controls().is_empty() );
+	assert!( Kind::Wire.controls().is_empty() );
 }

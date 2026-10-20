@@ -41,6 +41,8 @@ impl Circuit
 			7 => Kind::Diode,
 			8 => Kind::Npn,
 			9 => Kind::Pnp,
+			10 => Kind::Nmos,
+			11 => Kind::Pmos,
 			_ => return Err( JsError::new( "Unknown part kind." ) ),
 		};
 
@@ -109,6 +111,8 @@ impl Circuit
 				Kind::Diode => ( 7.0, 0.0 ),
 				Kind::Npn => ( 8.0, 0.0 ),
 				Kind::Pnp => ( 9.0, 0.0 ),
+				Kind::Nmos => ( 10.0, 0.0 ),
+				Kind::Pmos => ( 11.0, 0.0 ),
 			};
 
 			let mut potentials = [ 0.0, 0.0, f64::NAN ];

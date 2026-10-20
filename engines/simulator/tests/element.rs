@@ -28,3 +28,10 @@ fn it_puts_the_collector_left_and_the_emitter_right_one_step_past_the_bar()
 	assert_eq!( element( Kind::Npn, ( 2, 0 ), ( 0, 0 ) ).terminals(), points( &[ ( 2, 0 ), ( -1, 1 ), ( -1, -1 ) ] ) );
 	assert_eq!( element( Kind::Npn, ( 0, 0 ), ( 2, 2 ) ).terminals(), points( &[ ( 0, 0 ), ( 4, 2 ), ( 2, 4 ) ] ) );
 }
+
+#[test]
+fn it_puts_the_drain_left_and_the_source_right_one_step_past_the_bar()
+{
+	assert_eq!( element( Kind::Nmos, ( 0, 0 ), ( 2, 0 ) ).terminals(), points( &[ ( 0, 0 ), ( 3, -1 ), ( 3, 1 ) ] ) );
+	assert_eq!( element( Kind::Pmos, ( 0, 0 ), ( 0, 2 ) ).terminals(), points( &[ ( 0, 0 ), ( 1, 3 ), ( -1, 3 ) ] ) );
+}

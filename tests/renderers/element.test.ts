@@ -30,5 +30,7 @@ describe( 'element renderer', () =>
 		expect( drawn( Kind.Diode ).filter( call => call[ 0 ] === 'fill' ) ).toHaveLength( 1 );
 		expect( drawn( Kind.Npn ).filter( call => call[ 0 ] === 'stroke' ) ).toHaveLength( 4 );
 		expect( drawn( Kind.Pnp ).filter( call => call[ 0 ] === 'fill' ) ).toHaveLength( 1 );
+		expect( drawn( Kind.Nmos ).filter( call => call[ 0 ] === 'stroke' ) ).toHaveLength( 5 );
+		expect( drawn( Kind.Pmos ).filter( call => call[ 0 ] === 'fill' ) ).toHaveLength( 1 );
 	} );
 } );

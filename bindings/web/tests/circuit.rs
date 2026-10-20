@@ -79,7 +79,7 @@ fn it_rejects_an_invalid_part()
 {
 	let mut circuit = Circuit::new();
 
-	assert!( circuit.add( 10, 0.0, 0, 0, 1, 0 ).is_err() );
+	assert!( circuit.add( 12, 0.0, 0, 0, 1, 0 ).is_err() );
 	assert!( circuit.add( 0, 0.0, 0, 0, 2, 1 ).is_err() );
 	assert!( circuit.elements().is_empty() );
 }
@@ -210,3 +210,28 @@ fn it_lists_a_transistor_with_the_voltage_and_the_current_of_each_terminal()
 	assert!( elements[ 9 ].is_nan() && elements[ 12 ].is_nan() );
 	assert_eq!( circuit.elements_at( 7, 2 ), vec![ 4, 3 ] );
 }
+
+#[wasm_bindgen_test]
+fn it_lists_a_mosfet_with_its_drain_current()
+{
+	let mut circuit = Circuit::new();
+
+	circuit.add( 2, 5.0, 0, 6, 0, 0 ).ok();
+	circuit.add( 0, 0.0, 0, 0, 8, 0 ).ok();
+	circuit.add( 2, 2.0, 4, 6, 4, 3 ).ok();
+	circuit.add( 1, 1000.0, 7, 0, 7, 2 ).ok();
+	circuit.add( 10, 0.0, 4, 3, 6, 3 ).ok();
+	circuit.add( 0, 0.0, 7, 4, 7, 6 ).ok();
+	circuit.add( 0, 0.0, 0, 6, 7, 6 ).ok();
+	circuit.add( 3, 0.0, 0, 6, 0, 6 ).ok();
+	circuit.add( 11, 0.0, 10, 3, 12, 3 ).ok();
+
+	let elements = circuit.elements();
+	let transistor = &elements[ 52 .. 65 ];
+
+	assert_eq!( transistor[ 1 ], 10.0 );
+	assert_eq!( elements[ 105 ], 11.0 );
+	assert!( ( transistor[ 11 ] - 0.0025 ).abs() < 1e-9 );
+	assert!( transistor[ 10 ].abs() < 1e-9 );
+}
+

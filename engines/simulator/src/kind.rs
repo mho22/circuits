@@ -14,6 +14,8 @@ pub enum Kind
 	Diode,
 	Npn,
 	Pnp,
+	Nmos,
+	Pmos,
 }
 
 impl Kind
@@ -32,13 +34,15 @@ impl Kind
 		}
 	}
 
-	pub fn junctions( &self ) -> &'static [ ( usize, usize ) ]
+	pub fn controls( &self ) -> &'static [ ( usize, usize ) ]
 	{
 		match self
 		{
 			Kind::Diode => &[ ( 0, 1 ) ],
 			Kind::Npn => &[ ( 0, 2 ), ( 0, 1 ) ],
 			Kind::Pnp => &[ ( 2, 0 ), ( 1, 0 ) ],
+			Kind::Nmos => &[ ( 0, 2 ), ( 1, 2 ) ],
+			Kind::Pmos => &[ ( 2, 0 ), ( 2, 1 ) ],
 			_ => &[],
 		}
 	}

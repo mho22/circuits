@@ -10,6 +10,8 @@ export enum Kind
 	Diode = 7,
 	Npn = 8,
 	Pnp = 9,
+	Nmos = 10,
+	Pmos = 11,
 }
 
 
@@ -24,6 +26,8 @@ export const NAMES : Record<Kind, string> = {
 	[ Kind.Diode ] : 'Diode',
 	[ Kind.Npn ] : 'NPN',
 	[ Kind.Pnp ] : 'PNP',
+	[ Kind.Nmos ] : 'NMOS',
+	[ Kind.Pmos ] : 'PMOS',
 };
 
 export const UNITS : Partial<Record<Kind, string>> = { [ Kind.Resistor ] : 'Ω', [ Kind.Battery ] : 'V', [ Kind.Capacitor ] : 'F', [ Kind.Inductor ] : 'H' };

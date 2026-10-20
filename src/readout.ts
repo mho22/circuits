@@ -4,6 +4,9 @@ import type { Branch } from './types/branch.ts';
 import type { Element } from './types/element.ts';
 
 
+const MOSFETS = [ Kind.Nmos, Kind.Pmos ];
+
+
 function detail( element : Element ) : string | undefined
 {
 	const unit = UNITS[ element.kind ];
@@ -23,6 +26,13 @@ export function describe( element : Element, branch : Branch | undefined ) : str
 	if( element.kind === Kind.Wire ) return [ title, format( element.potentials[ 0 ], 'V' ), format( Math.abs( branch?.current ?? NaN ), 'A' ) ].join( ' · ' );
 
 	if( element.kind === Kind.Ground ) return [ title, format( element.potentials[ 0 ], 'V' ), format( Math.abs( element.currents[ 0 ] ), 'A' ) ].join( ' · ' );
+
+	if( MOSFETS.includes( element.kind ) )
+	{
+		const [ gate, drain, source ] = element.potentials;
+
+		return [ title, `Vgs ${ format( Math.abs( gate - source ), 'V' ) }`, `Vds ${ format( Math.abs( drain - source ), 'V' ) }`, `Id ${ format( Math.abs( element.currents[ 1 ] ), 'A' ) }` ].join( ' · ' );
+	}
 
 	if( element.potentials.length === 3 )
 	{

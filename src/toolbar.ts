@@ -6,7 +6,7 @@ const GROUPS : { name : string, kinds : Kind[] }[] = [
 	{ name : 'Wiring', kinds : [ Kind.Wire, Kind.Ground, Kind.Switch ] },
 	{ name : 'Passive', kinds : [ Kind.Resistor, Kind.Capacitor, Kind.Inductor ] },
 	{ name : 'Sources', kinds : [ Kind.Battery ] },
-	{ name : 'Semiconductors', kinds : [ Kind.Diode, Kind.Npn, Kind.Pnp ] },
+	{ name : 'Semiconductors', kinds : [ Kind.Diode, Kind.Npn, Kind.Pnp, Kind.Nmos, Kind.Pmos ] },
 ];
 
 

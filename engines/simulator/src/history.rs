@@ -21,11 +21,11 @@ impl History
 			{
 				Kind::Capacitor { .. } => [ across( ( 0, 1 ) ), 0.0 ],
 				Kind::Inductor { .. } => [ reading.currents[ 0 ], 0.0 ],
-				kind if ! kind.junctions().is_empty() =>
+				kind if ! kind.controls().is_empty() =>
 				{
 					let mut voltages = [ 0.0; 2 ];
 
-					for ( index, &junction ) in kind.junctions().iter().enumerate() { voltages[ index ] = across( junction ); }
+					for ( index, &pair ) in kind.controls().iter().enumerate() { voltages[ index ] = across( pair ); }
 
 					voltages
 				},

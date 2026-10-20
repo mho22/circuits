@@ -21,4 +21,15 @@ describe( 'leads', () =>
 			{ from : { x : 2, y : 0 }, to : { x : 3, y : 1 }, current : 2.02e-3 },
 		] );
 	} );
+
+	it( 'runs the current of a mosfet from the drain across the channel to the source', () =>
+	{
+		const transistor = element( { kind : Kind.Nmos, to : { x : 2, y : 0 }, currents : [ 0, 2.5e-3, -2.5e-3 ] } );
+
+		expect( leads( transistor ) ).toEqual( [
+			{ from : { x : 3, y : -1 }, to : { x : 2, y : -1 }, current : 2.5e-3 },
+			{ from : { x : 2, y : -1 }, to : { x : 2, y : 1 }, current : 2.5e-3 },
+			{ from : { x : 2, y : 1 }, to : { x : 3, y : 1 }, current : 2.5e-3 },
+		] );
+	} );
 } );

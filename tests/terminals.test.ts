@@ -17,4 +17,10 @@ describe( 'terminals', () =>
 		expect( terminals( Kind.Pnp, { x : 0, y : 0 }, { x : 0, y : 2 } ) ).toEqual( [ { x : 0, y : 0 }, { x : 1, y : 3 }, { x : -1, y : 3 } ] );
 		expect( terminals( Kind.Npn, { x : 0, y : 0 }, { x : 2, y : 2 } ) ).toEqual( [ { x : 0, y : 0 }, { x : 4, y : 2 }, { x : 2, y : 4 } ] );
 	} );
+
+	it( 'puts the drain left and the source right one step past the bar', () =>
+	{
+		expect( terminals( Kind.Nmos, { x : 0, y : 0 }, { x : 2, y : 0 } ) ).toEqual( [ { x : 0, y : 0 }, { x : 3, y : -1 }, { x : 3, y : 1 } ] );
+		expect( terminals( Kind.Pmos, { x : 0, y : 0 }, { x : 0, y : 2 } ) ).toEqual( [ { x : 0, y : 0 }, { x : 1, y : 3 }, { x : -1, y : 3 } ] );
+	} );
 } );

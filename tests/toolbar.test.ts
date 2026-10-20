@@ -36,7 +36,7 @@ describe( 'toolbar', () =>
 		expect( menus().map( menu => Array.from( menu.children ).map( item => item.textContent ) ) ).toEqual( [
 			[ 'WireW', 'GroundG', 'SwitchS' ],
 			[ 'ResistorR', 'CapacitorC', 'InductorL' ],
-			[ 'DiodeD', 'NPNN', 'PNPP' ],
+			[ 'DiodeD', 'NPNN', 'PNPP', 'NMOSM', 'PMOSF' ],
 		] );
 	} );
 

@@ -390,3 +390,94 @@ fn it_carries_the_transistor_currents_through_the_wires()
 	assert!( ( solution.branches[ branch ].current.abs() - emitter.abs() ).abs() < 1e-12 );
 	assert!( ( solution.readings[ 0 ].currents[ 0 ] + emitter ).abs() < 1e-12 );
 }
+
+fn switch( kind : Kind, gate : f64 ) -> Vec<Element>
+{
+	vec![
+		element( Kind::Battery { volts : 5.0 }, ( 0, 6 ), ( 0, 0 ) ),
+		element( Kind::Wire, ( 0, 0 ), ( 8, 0 ) ),
+		element( Kind::Battery { volts : gate }, ( 4, 6 ), ( 4, 3 ) ),
+		element( Kind::Resistor { ohms : 1000.0 }, ( 7, 0 ), ( 7, 2 ) ),
+		element( kind, ( 4, 3 ), ( 6, 3 ) ),
+		element( Kind::Wire, ( 7, 4 ), ( 7, 6 ) ),
+		element( Kind::Wire, ( 0, 6 ), ( 7, 6 ) ),
+		element( Kind::Ground, ( 0, 6 ), ( 0, 6 ) ),
+	]
+}
+
+fn inverter( input : f64 ) -> Vec<Element>
+{
+	vec![
+		element( Kind::Battery { volts : 5.0 }, ( 0, 10 ), ( 0, 0 ) ),
+		element( Kind::Wire, ( 0, 0 ), ( 7, 0 ) ),
+		element( Kind::Wire, ( 7, 0 ), ( 7, 2 ) ),
+		element( Kind::Pmos, ( 10, 3 ), ( 8, 3 ) ),
+		element( Kind::Wire, ( 7, 4 ), ( 7, 6 ) ),
+		element( Kind::Nmos, ( 4, 7 ), ( 6, 7 ) ),
+		element( Kind::Wire, ( 7, 8 ), ( 7, 10 ) ),
+		element( Kind::Wire, ( 0, 10 ), ( 12, 10 ) ),
+		element( Kind::Ground, ( 0, 10 ), ( 0, 10 ) ),
+		element( Kind::Battery { volts : input }, ( 12, 10 ), ( 12, 1 ) ),
+		element( Kind::Wire, ( 12, 1 ), ( 2, 1 ) ),
+		element( Kind::Wire, ( 10, 1 ), ( 10, 3 ) ),
+		element( Kind::Wire, ( 2, 1 ), ( 2, 7 ) ),
+		element( Kind::Wire, ( 2, 7 ), ( 4, 7 ) ),
+	]
+}
+
+#[test]
+fn it_follows_the_square_law_in_a_saturated_nmos_transistor()
+{
+	let solution = solve( &switch( Kind::Nmos, 2.0 ), &History::default(), STEP ).unwrap();
+	let transistor = &solution.readings[ 4 ];
+	let [ gate, drain, source ] = transistor.currents[ .. ] else { panic!() };
+
+	assert!( ( drain - 0.02 / 2.0 * 0.5_f64.powi( 2 ) ).abs() < 1e-9 );
+	assert!( ( transistor.potentials[ 1 ] - 2.5 ).abs() < 1e-6 );
+	assert!( gate.abs() < 1e-9 );
+	assert!( ( gate + drain + source ).abs() < 1e-15 );
+}
+
+#[test]
+fn it_turns_off_an_nmos_transistor_below_its_threshold()
+{
+	let solution = solve( &switch( Kind::Nmos, 1.0 ), &History::default(), STEP ).unwrap();
+
+	assert!( solution.readings[ 4 ].currents[ 1 ].abs() < 1e-9 );
+	assert!( ( solution.readings[ 4 ].potentials[ 1 ] - 5.0 ).abs() < 1e-6 );
+}
+
+#[test]
+fn it_solves_a_mosfet_with_a_floating_gate()
+{
+	let mut elements = switch( Kind::Nmos, 5.0 );
+
+	elements.remove( 2 );
+
+	let solution = solve( &elements, &History::default(), STEP ).unwrap();
+
+	assert!( solution.readings[ 3 ].currents[ 1 ].abs() < 1e-9 );
+}
+
+#[test]
+fn it_inverts_the_input_of_a_cmos_inverter()
+{
+	for ( input, output ) in [ ( 0.0, 5.0 ), ( 5.0, 0.0 ) ]
+	{
+		let solution = solve( &inverter( input ), &History::default(), STEP ).unwrap();
+
+		assert!( ( solution.readings[ 5 ].potentials[ 1 ] - output ).abs() < 1e-6 );
+		assert!( ( solution.readings[ 3 ].potentials[ 1 ] - output ).abs() < 1e-6 );
+		assert!( solution.readings[ 5 ].currents[ 1 ].abs() < 1e-9 );
+	}
+}
+
+#[test]
+fn it_turns_on_both_halves_of_a_cmos_inverter_at_half_the_supply()
+{
+	let solution = solve( &inverter( 2.5 ), &History::default(), STEP ).unwrap();
+	let current = 0.02 / 2.0 * 1.0_f64.powi( 2 );
+
+	assert!( ( solution.readings[ 5 ].currents[ 1 ] - current ).abs() < 1e-6 );
+	assert!( ( solution.readings[ 3 ].currents[ 1 ] + current ).abs() < 1e-6 );
+}
