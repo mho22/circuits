@@ -19,7 +19,7 @@ Requires Rust through `rustup`. `rust-toolchain.toml` pins the version and the `
 
 - Pick a part in the toolbar, or press its key: `W` wire, `G` ground, `S` switch, `R` resistor, `C` capacitor, `L` inductor, `B` battery. The toolbar groups the parts by role: wiring, passive parts and sources. The arrow next to a group lists its parts.
 - Drag to draw a part. A part runs at 0°, 45° or 90°. Click to place a ground.
-- Double-click a resistor, a battery, a capacitor or an inductor to change its value. Write `4.7k`, `220`, `9 V`, `10u`.
+- Double-click a resistor, a battery, a capacitor or an inductor to change its value. Write a number in the unit at the end of the input: `Ω`, `V`, `µF` or `mH`. A comma or a dot separates the decimals: `4700` Ω, `4,7` µF.
 - Double-click a switch to open or close it.
 - Right-click a part to delete it.
 - Press `Ctrl Z` (`⌘ Z` on a Mac) to undo, and `Ctrl Shift Z` or `Ctrl Y` (`⌘ Shift Z`) to redo.

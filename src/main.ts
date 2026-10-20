@@ -1,10 +1,11 @@
 import init, { Circuit } from '../bindings/web/pkg/web.js';
 import { Clock } from './clock.ts';
+import { parse, write } from './decimal.ts';
 import { decode as decodeBranches } from './decoders/branch.ts';
 import { decode as decodeElements } from './decoders/element.ts';
 import { Drift } from './drift.ts';
 import { edit } from './editors/value.ts';
-import { Kind, UNITS } from './enums/kind.ts';
+import { INPUTS, Kind } from './enums/kind.ts';
 import { toGrid } from './grid.ts';
 import { read } from './keyboard.ts';
 import { describe } from './readout.ts';
@@ -13,7 +14,6 @@ import * as cursor from './renderers/cursor.ts';
 import * as element from './renderers/element.ts';
 import * as grid from './renderers/grid.ts';
 import { measure } from './scale.ts';
-import { format, parse } from './si.ts';
 import { Toolbar } from './toolbar.ts';
 import { erase } from './tools/eraser.ts';
 import { PlaceTool } from './tools/place.ts';
@@ -25,6 +25,7 @@ await init();
 
 const STEPS_PER_SECOND = 1000;
 const STEPS_PER_FRAME = 100;
+const SEPARATOR = ( 1.5 ).toLocaleString().charAt( 1 );
 
 const canvas = document.querySelector( 'canvas' )!;
 const context = canvas.getContext( '2d' )!;
@@ -137,19 +138,19 @@ canvas.addEventListener( 'dblclick', ( event : MouseEvent ) =>
 	const point = toGrid( event.clientX, event.clientY );
 	const ids = Array.from( circuit.elementsAt( point.x, point.y ) );
 	const elements = decodeElements( circuit.elements() );
-	const target = ids.map( id => elements.find( item => item.id === id )! ).find( item => UNITS[ item.kind ] || item.kind === Kind.Switch );
+	const target = ids.map( id => elements.find( item => item.id === id )! ).find( item => INPUTS[ item.kind ] || item.kind === Kind.Switch );
 
 	if( ! target ) return;
 
 	if( target.kind === Kind.Switch ) { circuit.setClosed( target.id, ! target.value ); return; }
 
-	const unit = UNITS[ target.kind ]!;
+	const [ unit, scale ] = INPUTS[ target.kind ]!;
 
-	edit( document.body, { x : event.clientX, y : event.clientY }, format( target.value, unit ), text =>
+	edit( document.body, { x : event.clientX, y : event.clientY }, write( target.value / scale, SEPARATOR ), unit, text =>
 	{
-		const value = parse( text );
+		const value = parse( text ) * scale;
 
-		if( Number.isNaN( value ) ) { notice = `"${ text }" is not a value. Write a number such as 4.7k or 9.`; return; }
+		if( Number.isNaN( value ) ) { notice = `"${ text }" is not a value. Write a number such as 4700 or 4,7.`; return; }
 
 		try { circuit.setValue( target.id, value ); }
 

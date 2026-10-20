@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { format, parse } from '../src/si.ts';
+import { format } from '../src/si.ts';
 
 
 describe( 'si', () =>
@@ -35,28 +35,5 @@ describe( 'si', () =>
 		expect( format( 0, 'V' ) ).toBe( '0 V' );
 		expect( format( NaN, 'A' ) ).toBe( '— A' );
 		expect( format( Infinity, 'A' ) ).toBe( '— A' );
-	} );
-
-	it( 'parses a number with an optional prefix and unit', () =>
-	{
-		expect( parse( '4.7k' ) ).toBe( 4700 );
-		expect( parse( '4.7 kΩ' ) ).toBe( 4700 );
-		expect( parse( '2.2M' ) ).toBe( 2200000 );
-		expect( parse( '220' ) ).toBe( 220 );
-		expect( parse( ' 9 V ' ) ).toBe( 9 );
-		expect( parse( '-1.5' ) ).toBe( -1.5 );
-		expect( parse( '.5' ) ).toBe( 0.5 );
-		expect( parse( '10m' ) ).toBe( 0.01 );
-		expect( parse( '3u' ) ).toBe( 0.000003 );
-		expect( parse( '3µ' ) ).toBe( 0.000003 );
-		expect( parse( '1K' ) ).toBe( 1000 );
-	} );
-
-	it( 'rejects text that is not a value', () =>
-	{
-		expect( parse( '' ) ).toBeNaN();
-		expect( parse( 'foo' ) ).toBeNaN();
-		expect( parse( '1.2.3' ) ).toBeNaN();
-		expect( parse( 'k5' ) ).toBeNaN();
 	} );
 } );

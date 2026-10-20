@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Kind, NAMES, UNITS } from '../../src/enums/kind.ts';
+import { INPUTS, Kind, NAMES, UNITS } from '../../src/enums/kind.ts';
 
 
 describe( 'kind', () =>
@@ -17,5 +17,10 @@ describe( 'kind', () =>
 	it( 'gives a unit only to the parts with a value', () =>
 	{
 		expect( UNITS ).toEqual( { [ Kind.Resistor ] : 'Ω', [ Kind.Battery ] : 'V', [ Kind.Capacitor ] : 'F', [ Kind.Inductor ] : 'H' } );
+	} );
+
+	it( 'gives an input unit and its scale to the parts with a value', () =>
+	{
+		expect( INPUTS ).toEqual( { [ Kind.Resistor ] : [ 'Ω', 1 ], [ Kind.Battery ] : [ 'V', 1 ], [ Kind.Capacitor ] : [ 'µF', 1e-6 ], [ Kind.Inductor ] : [ 'mH', 1e-3 ] } );
 	} );
 } );

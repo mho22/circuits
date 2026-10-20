@@ -9,66 +9,89 @@ function press( input : HTMLInputElement, key : string ) : void
 	input.dispatchEvent( new KeyboardEvent( 'keydown', { key } ) );
 }
 
+function type( input : HTMLInputElement, text : string ) : void
+{
+	input.value = text;
+	input.dispatchEvent( new Event( 'input' ) );
+}
+
 
 describe( 'value editor', () =>
 {
-	it( 'opens a focused input with the text at a position', () =>
+	it( 'opens a focused input with the number and its unit at a position', () =>
 	{
-		const input = edit( document.body, { x : 10, y : 20 }, '1 kΩ', () => {} );
+		const input = edit( document.body, { x : 10, y : 20 }, '4700', 'Ω', () => {} );
+		const field = input.parentElement!;
 
-		expect( input.parentElement ).toBe( document.body );
+		expect( field.parentElement ).toBe( document.body );
 		expect( document.activeElement ).toBe( input );
-		expect( input.value ).toBe( '1 kΩ' );
-		expect( [ input.style.left, input.style.top ] ).toEqual( [ '10px', '20px' ] );
+		expect( input.value ).toBe( '4700' );
+		expect( input.inputMode ).toBe( 'decimal' );
+		expect( field.lastElementChild!.textContent ).toBe( 'Ω' );
+		expect( [ field.style.left, field.style.top ] ).toEqual( [ '10px', '20px' ] );
 
-		input.remove();
+		field.remove();
+	} );
+
+	it( 'keeps only a number in the input', () =>
+	{
+		const input = edit( document.body, { x : 0, y : 0 }, '', 'V', () => {} );
+
+		type( input, '4,7k' );
+
+		expect( input.value ).toBe( '4,7' );
+
+		type( input, '-9 V' );
+
+		expect( input.value ).toBe( '-9' );
+
+		input.parentElement!.remove();
 	} );
 
 	it( 'commits the text and closes on Enter', () =>
 	{
 		const commit = vi.fn();
-		const input = edit( document.body, { x : 0, y : 0 }, '1 kΩ', commit );
+		const input = edit( document.body, { x : 0, y : 0 }, '1000', 'Ω', commit );
 
-		input.value = '4.7k';
-
+		type( input, '2,2' );
 		press( input, 'Enter' );
 
-		expect( commit ).toHaveBeenCalledExactlyOnceWith( '4.7k' );
-		expect( input.isConnected ).toBe( false );
+		expect( commit ).toHaveBeenCalledExactlyOnceWith( '2,2' );
+		expect( input.parentElement!.isConnected ).toBe( false );
 	} );
 
 	it( 'closes without a commit on Escape', () =>
 	{
 		const commit = vi.fn();
-		const input = edit( document.body, { x : 0, y : 0 }, '5 V', commit );
+		const input = edit( document.body, { x : 0, y : 0 }, '5', 'V', commit );
 
 		press( input, 'Escape' );
 
 		expect( commit ).not.toHaveBeenCalled();
-		expect( input.isConnected ).toBe( false );
+		expect( input.parentElement!.isConnected ).toBe( false );
 	} );
 
 	it( 'closes without a commit when it loses focus', () =>
 	{
 		const commit = vi.fn();
-		const input = edit( document.body, { x : 0, y : 0 }, '5 V', commit );
+		const input = edit( document.body, { x : 0, y : 0 }, '5', 'V', commit );
 
 		input.blur();
 
 		expect( commit ).not.toHaveBeenCalled();
-		expect( input.isConnected ).toBe( false );
+		expect( input.parentElement!.isConnected ).toBe( false );
 	} );
 
 	it( 'ignores other keys', () =>
 	{
 		const commit = vi.fn();
-		const input = edit( document.body, { x : 0, y : 0 }, '5 V', commit );
+		const input = edit( document.body, { x : 0, y : 0 }, '5', 'V', commit );
 
 		press( input, 'a' );
 
 		expect( commit ).not.toHaveBeenCalled();
-		expect( input.isConnected ).toBe( true );
+		expect( input.parentElement!.isConnected ).toBe( true );
 
-		input.remove();
+		input.parentElement!.remove();
 	} );
 } );

@@ -1,9 +1,12 @@
+import { clean } from '../decimal.ts';
 import type { Point } from '../types/point.ts';
 
 
-export function edit( parent : HTMLElement, position : Point, text : string, commit : ( text : string ) => void ) : HTMLInputElement
+export function edit( parent : HTMLElement, position : Point, text : string, unit : string, commit : ( text : string ) => void ) : HTMLInputElement
 {
+	const field = document.createElement( 'label' );
 	const input = document.createElement( 'input' );
+	const suffix = document.createElement( 'span' );
 
 	let closed = false;
 
@@ -13,13 +16,24 @@ export function edit( parent : HTMLElement, position : Point, text : string, com
 
 		closed = true;
 
-		input.remove();
+		field.remove();
 	};
 
-	input.className = 'editor';
+	field.className = 'editor';
+	field.style.left = `${ position.x }px`;
+	field.style.top = `${ position.y }px`;
+
+	input.inputMode = 'decimal';
 	input.value = text;
-	input.style.left = `${ position.x }px`;
-	input.style.top = `${ position.y }px`;
+
+	suffix.textContent = unit;
+
+	input.addEventListener( 'input', () =>
+	{
+		const cleaned = clean( input.value );
+
+		if( cleaned !== input.value ) input.value = cleaned;
+	} );
 
 	input.addEventListener( 'keydown', ( event : KeyboardEvent ) =>
 	{
@@ -30,7 +44,8 @@ export function edit( parent : HTMLElement, position : Point, text : string, com
 
 	input.addEventListener( 'blur', close );
 
-	parent.append( input );
+	field.append( input, suffix );
+	parent.append( field );
 
 	input.focus();
 	input.select();
