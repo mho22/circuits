@@ -22,8 +22,8 @@ function screen( point : Point ) : Point
 
 export function draw( context : CanvasRenderingContext2D, element : Element, scale : Scale ) : void
 {
-	const [ gate, drain, source ] = terminals( element.kind, element.from, element.to ).map( screen );
-	const [ top, bottom ] = channel( element.from, element.to ).map( screen );
+	const [ gate, drain, source ] = terminals( element.kind, element.from, element.to, element.mirrored ).map( screen );
+	const [ top, bottom ] = channel( element.from, element.to, element.mirrored ).map( screen );
 	const bar = screen( element.to );
 	const length = Math.hypot( bar.x - gate.x, bar.y - gate.y );
 	const alongX = ( bar.x - gate.x ) / length;

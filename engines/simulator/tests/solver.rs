@@ -6,7 +6,7 @@ const STEP : f64 = 1e-3;
 
 fn element( kind : Kind, from : ( i32, i32 ), to : ( i32, i32 ) ) -> Element
 {
-	Element { id : 0, kind, segment : Segment { from : Point { x : from.0, y : from.1 }, to : Point { x : to.0, y : to.1 } } }
+	Element { id : 0, kind, segment : Segment { from : Point { x : from.0, y : from.1 }, to : Point { x : to.0, y : to.1 } }, mirrored : false }
 }
 
 fn near( a : f64, b : f64 ) -> bool

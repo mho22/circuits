@@ -23,6 +23,13 @@ describe( 'file decoder', () =>
 		expect( Array.from( decode( encode( elements ) ) ) ).toEqual( elements.flatMap( item => [ item.kind, values( item.kind ), item.from.x, item.from.y, item.to.x, item.to.y ] ) );
 	} );
 
+	it( 'reads a mirrored transistor as the value 1', () =>
+	{
+		const text = '{ "version" : 1, "parts" : [ { "kind" : "pnp", "mirrored" : true, "from" : [ 0, 0 ], "to" : [ 2, 0 ] }, { "kind" : "resistor", "ohms" : 10, "mirrored" : true, "from" : [ 0, 2 ], "to" : [ 2, 2 ] } ] }';
+
+		expect( Array.from( decode( text ) ) ).toEqual( [ Kind.Pnp, 1, 0, 0, 2, 0, Kind.Resistor, 10, 0, 2, 2, 2 ] );
+	} );
+
 	it( 'rejects a file that is not a circuit', () =>
 	{
 		for( const text of [
@@ -40,6 +47,7 @@ describe( 'file decoder', () =>
 			'{ "version" : 1, "parts" : [ { "kind" : "switch", "closed" : 1, "from" : [ 0, 0 ], "to" : [ 2, 0 ] } ] }',
 			'{ "version" : 1, "parts" : [ { "kind" : "wire", "from" : [ 0 ], "to" : [ 2, 0 ] } ] }',
 			'{ "version" : 1, "parts" : [ { "kind" : "wire", "from" : [ 0.5, 0 ], "to" : [ 2, 0 ] } ] }',
+			'{ "version" : 1, "parts" : [ { "kind" : "npn", "mirrored" : 1, "from" : [ 0, 0 ], "to" : [ 2, 0 ] } ] }',
 		] )
 		{
 			expect( () => decode( text ), text ).toThrow( 'This file is not a circuit.' );

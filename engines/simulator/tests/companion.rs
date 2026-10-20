@@ -7,7 +7,7 @@ const THROUGH : [ f64; 3 ] = [ 1.0, -1.0, 0.0 ];
 
 fn element( kind : Kind ) -> Element
 {
-	Element { id : 1, kind, segment : Segment { from : Point { x : 0, y : 0 }, to : Point { x : 2, y : 0 } } }
+	Element { id : 1, kind, segment : Segment { from : Point { x : 0, y : 0 }, to : Point { x : 2, y : 0 } }, mirrored : false }
 }
 
 fn stored( kind : Kind, reading : Reading ) -> History

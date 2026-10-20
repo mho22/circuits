@@ -18,7 +18,7 @@ describe( 'place tool', () =>
 		tool.press( { x : 0, y : 0 } );
 		tool.move( { x : 4, y : 5 } );
 
-		expect( tool.preview() ).toEqual( { id : -1, kind : Kind.Wire, from : { x : 0, y : 0 }, to : { x : 0, y : 5 }, value : 0, potentials : [ 0, 0 ], currents : [ NaN, NaN ] } );
+		expect( tool.preview() ).toEqual( { id : -1, kind : Kind.Wire, from : { x : 0, y : 0 }, to : { x : 0, y : 5 }, value : 0, mirrored : false, potentials : [ 0, 0 ], currents : [ NaN, NaN ] } );
 	} );
 
 	it( 'previews a transistor with one voltage and one current per terminal', () =>
@@ -29,7 +29,7 @@ describe( 'place tool', () =>
 		tool.press( { x : 0, y : 0 } );
 		tool.move( { x : 2, y : 0 } );
 
-		expect( tool.preview() ).toEqual( { id : -1, kind : Kind.Npn, from : { x : 0, y : 0 }, to : { x : 2, y : 0 }, value : 0, potentials : [ 0, 0, 0 ], currents : [ NaN, NaN, NaN ] } );
+		expect( tool.preview() ).toEqual( { id : -1, kind : Kind.Npn, from : { x : 0, y : 0 }, to : { x : 2, y : 0 }, value : 0, mirrored : false, potentials : [ 0, 0, 0 ], currents : [ NaN, NaN, NaN ] } );
 	} );
 
 	it( 'adds the previewed part with its default value on release', () =>

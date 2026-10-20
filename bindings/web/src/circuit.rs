@@ -1,4 +1,4 @@
-use simulator::{ Kind, Operation, Point, Segment, Simulation };
+use simulator::{ Element, Kind, Operation, Point, Segment, Simulation };
 use wasm_bindgen::prelude::*;
 
 
@@ -36,7 +36,13 @@ impl Circuit
 
 	pub fn open( &mut self, data : &[ f64 ] ) -> Result<u32, JsError>
 	{
-		let parts = data.chunks_exact( 6 ).map( | row | Ok( ( Circuit::kind( row[ 0 ] as u8, row[ 1 ] )?, Segment { from : Point { x : row[ 2 ] as i32, y : row[ 3 ] as i32 }, to : Point { x : row[ 4 ] as i32, y : row[ 5 ] as i32 } } ) ) ).collect::<Result<Vec<_>, JsError>>()?;
+		let parts = data.chunks_exact( 6 ).map( | row |
+		{
+			let kind = Circuit::kind( row[ 0 ] as u8, row[ 1 ] )?;
+			let mirrored = matches!( kind, Kind::Npn | Kind::Pnp | Kind::Nmos | Kind::Pmos ) && row[ 1 ] != 0.0;
+
+			Ok( ( kind, Segment { from : Point { x : row[ 2 ] as i32, y : row[ 3 ] as i32 }, to : Point { x : row[ 4 ] as i32, y : row[ 5 ] as i32 } }, mirrored ) )
+		} ).collect::<Result<Vec<_>, JsError>>()?;
 
 		self.simulation.open( &parts ).map_err( | error | JsError::new( &error.to_string() ) )
 	}
@@ -56,6 +62,27 @@ impl Circuit
 	pub fn set_closed( &mut self, id : u32, closed : bool ) -> Result<u32, JsError>
 	{
 		self.apply( Operation::SetClosed { id, closed } )
+	}
+
+	pub fn translate( &mut self, id : u32, dx : i32, dy : i32 ) -> Result<u32, JsError>
+	{
+		let element = self.element( id )?;
+
+		self.transform( id, element.segment.shifted( dx, dy ), element.mirrored )
+	}
+
+	pub fn rotate( &mut self, id : u32 ) -> Result<u32, JsError>
+	{
+		let element = self.element( id )?;
+
+		self.transform( id, element.segment.turned(), element.mirrored )
+	}
+
+	pub fn mirror( &mut self, id : u32, vertical : bool ) -> Result<u32, JsError>
+	{
+		let element = self.element( id )?;
+
+		self.transform( id, element.segment.mirrored( vertical ), ! element.mirrored )
 	}
 
 	pub fn undo( &mut self ) -> Result<Option<u32>, JsError>
@@ -91,6 +118,8 @@ impl Circuit
 
 		self.simulation.document().elements().iter().enumerate().flat_map( | ( index, element ) |
 		{
+			let mirrored = if element.mirrored { 1.0 } else { 0.0 };
+
 			let ( code, value ) = match element.kind
 			{
 				Kind::Wire => ( 0.0, 0.0 ),
@@ -101,10 +130,10 @@ impl Circuit
 				Kind::Inductor { henries } => ( 5.0, henries ),
 				Kind::Switch { closed } => ( 6.0, if closed { 1.0 } else { 0.0 } ),
 				Kind::Diode => ( 7.0, 0.0 ),
-				Kind::Npn => ( 8.0, 0.0 ),
-				Kind::Pnp => ( 9.0, 0.0 ),
-				Kind::Nmos => ( 10.0, 0.0 ),
-				Kind::Pmos => ( 11.0, 0.0 ),
+				Kind::Npn => ( 8.0, mirrored ),
+				Kind::Pnp => ( 9.0, mirrored ),
+				Kind::Nmos => ( 10.0, mirrored ),
+				Kind::Pmos => ( 11.0, mirrored ),
 				Kind::Supply { volts } => ( 12.0, volts ),
 			};
 
@@ -138,6 +167,16 @@ impl Circuit
 	pub fn error( &self ) -> Option<String>
 	{
 		self.simulation.solution().err().map( | error | error.to_string() )
+	}
+
+	fn element( &self, id : u32 ) -> Result<Element, JsError>
+	{
+		self.simulation.document().elements().iter().find( | element | element.id == id ).copied().ok_or_else( || JsError::new( "No part has this id." ) )
+	}
+
+	fn transform( &mut self, id : u32, segment : Segment, mirrored : bool ) -> Result<u32, JsError>
+	{
+		self.simulation.transform( id, segment, mirrored ).map_err( | error | JsError::new( &error.to_string() ) )
 	}
 
 	fn apply( &mut self, operation : Operation ) -> Result<u32, JsError>

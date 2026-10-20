@@ -8,7 +8,7 @@ const BAZ : Point = Point { x : 4, y : 4 };
 
 fn add( kind : Kind, from : Point, to : Point ) -> Operation
 {
-	Operation::Add { kind, segment : Segment { from, to } }
+	Operation::Add { kind, segment : Segment { from, to }, mirrored : false }
 }
 
 
@@ -22,9 +22,9 @@ fn it_adds_parts_with_new_ids()
 	assert_eq!( document.apply( add( Kind::Ground, FOO, FOO ) ), Ok( 2 ) );
 
 	assert_eq!( document.elements(), &[
-		Element { id : 0, kind : Kind::Wire, segment : Segment { from : FOO, to : BAR } },
-		Element { id : 1, kind : Kind::Resistor { ohms : 1000.0 }, segment : Segment { from : BAR, to : BAZ } },
-		Element { id : 2, kind : Kind::Ground, segment : Segment { from : FOO, to : FOO } },
+		Element { id : 0, kind : Kind::Wire, segment : Segment { from : FOO, to : BAR }, mirrored : false },
+		Element { id : 1, kind : Kind::Resistor { ohms : 1000.0 }, segment : Segment { from : BAR, to : BAZ }, mirrored : false },
+		Element { id : 2, kind : Kind::Ground, segment : Segment { from : FOO, to : FOO }, mirrored : false },
 	] );
 }
 
@@ -82,7 +82,7 @@ fn it_deletes_a_part()
 	document.apply( add( Kind::Wire, BAR, BAZ ) ).unwrap();
 
 	assert_eq!( document.apply( Operation::Delete { id : 0 } ), Ok( 0 ) );
-	assert_eq!( document.elements(), &[ Element { id : 1, kind : Kind::Wire, segment : Segment { from : BAR, to : BAZ } } ] );
+	assert_eq!( document.elements(), &[ Element { id : 1, kind : Kind::Wire, segment : Segment { from : BAR, to : BAZ }, mirrored : false } ] );
 }
 
 #[test]
@@ -180,7 +180,7 @@ fn it_inserts_a_part_back_at_its_place_with_its_id()
 	document.apply( add( Kind::Wire, BAR, BAZ ) ).unwrap();
 	document.apply( Operation::Delete { id : 0 } ).unwrap();
 
-	let foo = Element { id : 0, kind : Kind::Wire, segment : Segment { from : FOO, to : BAR } };
+	let foo = Element { id : 0, kind : Kind::Wire, segment : Segment { from : FOO, to : BAR }, mirrored : false };
 
 	assert_eq!( document.apply( Operation::Insert { element : foo, index : 0 } ), Ok( 0 ) );
 	assert_eq!( document.elements()[ 0 ], foo );
@@ -192,7 +192,7 @@ fn it_continues_the_ids_after_an_inserted_part()
 {
 	let mut document = Document::default();
 
-	document.apply( Operation::Insert { element : Element { id : 7, kind : Kind::Wire, segment : Segment { from : FOO, to : BAR } }, index : 9 } ).unwrap();
+	document.apply( Operation::Insert { element : Element { id : 7, kind : Kind::Wire, segment : Segment { from : FOO, to : BAR }, mirrored : false }, index : 9 } ).unwrap();
 
 	assert_eq!( document.apply( add( Kind::Wire, BAR, BAZ ) ), Ok( 8 ) );
 }
@@ -204,8 +204,8 @@ fn it_rejects_an_insert_with_a_taken_id_or_an_invalid_part()
 
 	document.apply( add( Kind::Wire, FOO, BAR ) ).unwrap();
 
-	assert_eq!( document.apply( Operation::Insert { element : Element { id : 0, kind : Kind::Wire, segment : Segment { from : BAR, to : BAZ } }, index : 0 } ), Err( Error::Taken ) );
-	assert_eq!( document.apply( Operation::Insert { element : Element { id : 1, kind : Kind::Wire, segment : Segment { from : BAR, to : BAR } }, index : 0 } ), Err( Error::Empty ) );
+	assert_eq!( document.apply( Operation::Insert { element : Element { id : 0, kind : Kind::Wire, segment : Segment { from : BAR, to : BAZ }, mirrored : false }, index : 0 } ), Err( Error::Taken ) );
+	assert_eq!( document.apply( Operation::Insert { element : Element { id : 1, kind : Kind::Wire, segment : Segment { from : BAR, to : BAR }, mirrored : false }, index : 0 } ), Err( Error::Empty ) );
 	assert_eq!( document.elements().len(), 1 );
 }
 
@@ -236,4 +236,33 @@ fn it_gives_no_inverse_for_an_operation_that_fails()
 	assert_eq!( document.inverse( Operation::Delete { id : 7 } ), Err( Error::Missing ) );
 	assert_eq!( document.inverse( Operation::SetValue { id : 0, value : 1.0 } ), Err( Error::Valueless ) );
 	assert_eq!( document.inverse( Operation::SetClosed { id : 0, closed : true } ), Err( Error::Switchless ) );
+}
+
+#[test]
+fn it_moves_a_part_and_gives_the_move_back_as_its_inverse()
+{
+	let mut document = Document::default();
+
+	document.apply( add( Kind::Npn, FOO, Point { x : 2, y : 0 } ) ).unwrap();
+
+	let segment = Segment { from : BAR, to : Point { x : 6, y : 0 } };
+	let inverse = document.inverse( Operation::Move { id : 0, segment, mirrored : true } ).unwrap();
+
+	assert_eq!( document.apply( Operation::Move { id : 0, segment, mirrored : true } ), Ok( 0 ) );
+	assert_eq!( document.elements()[ 0 ], Element { id : 0, kind : Kind::Npn, segment, mirrored : true } );
+	assert_eq!( inverse, Operation::Move { id : 0, segment : Segment { from : FOO, to : Point { x : 2, y : 0 } }, mirrored : false } );
+}
+
+#[test]
+fn it_rejects_a_move_to_an_invalid_place()
+{
+	let mut document = Document::default();
+
+	document.apply( add( Kind::Wire, FOO, BAR ) ).unwrap();
+	document.apply( add( Kind::Ground, BAZ, BAZ ) ).unwrap();
+
+	assert_eq!( document.apply( Operation::Move { id : 0, segment : Segment { from : FOO, to : BAZ }, mirrored : false } ), Err( Error::Crooked ) );
+	assert_eq!( document.apply( Operation::Move { id : 1, segment : Segment { from : FOO, to : BAR }, mirrored : false } ), Err( Error::Misplaced ) );
+	assert_eq!( document.apply( Operation::Move { id : 7, segment : Segment { from : FOO, to : BAR }, mirrored : false } ), Err( Error::Missing ) );
+	assert_eq!( document.elements()[ 0 ].segment, Segment { from : FOO, to : BAR } );
 }

@@ -7,6 +7,7 @@ pub struct Element
 	pub id : u32,
 	pub kind : Kind,
 	pub segment : Segment,
+	pub mirrored : bool,
 }
 
 impl Element
@@ -20,6 +21,11 @@ impl Element
 		let dx = ( to.x - from.x ).signum();
 		let dy = ( to.y - from.y ).signum();
 
-		vec![ from, Point { x : to.x + dx + dy, y : to.y + dy - dx }, Point { x : to.x + dx - dy, y : to.y + dy + dx } ]
+		let left = Point { x : to.x + dx + dy, y : to.y + dy - dx };
+		let right = Point { x : to.x + dx - dy, y : to.y + dy + dx };
+
+		if self.mirrored { return vec![ from, right, left ]; }
+
+		vec![ from, left, right ]
 	}
 }

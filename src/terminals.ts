@@ -1,16 +1,16 @@
-import { Kind } from './enums/kind.ts';
+import { type Kind, TRANSISTORS } from './enums/kind.ts';
 import type { Point } from './types/point.ts';
 
 
-const TRANSISTORS = [ Kind.Npn, Kind.Pnp, Kind.Nmos, Kind.Pmos ];
-
-
-export function terminals( kind : Kind, from : Point, to : Point ) : Point[]
+export function terminals( kind : Kind, from : Point, to : Point, mirrored : boolean ) : Point[]
 {
 	if( ! TRANSISTORS.includes( kind ) ) return [ from, to ];
 
 	const dx = Math.sign( to.x - from.x );
 	const dy = Math.sign( to.y - from.y );
 
-	return [ from, { x : to.x + dx + dy, y : to.y + dy - dx }, { x : to.x + dx - dy, y : to.y + dy + dx } ];
+	const left = { x : to.x + dx + dy, y : to.y + dy - dx };
+	const right = { x : to.x + dx - dy, y : to.y + dy + dx };
+
+	return mirrored ? [ from, right, left ] : [ from, left, right ];
 }

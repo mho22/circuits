@@ -5,7 +5,7 @@ import type { Element } from '../types/element.ts';
 function part( element : Element ) : string
 {
 	const field = FIELDS[ element.kind ];
-	const detail = element.kind === Kind.Switch ? `, "closed" : ${ element.value === 1 }` : field ? `, "${ field }" : ${ element.value }` : '';
+	const detail = element.kind === Kind.Switch ? `, "closed" : ${ element.value === 1 }` : field ? `, "${ field }" : ${ element.value }` : element.mirrored ? ', "mirrored" : true' : '';
 
 	return `{ "kind" : "${ NAMES[ element.kind ].toLowerCase() }"${ detail }, "from" : [ ${ element.from.x }, ${ element.from.y } ], "to" : [ ${ element.to.x }, ${ element.to.y } ] }`;
 }

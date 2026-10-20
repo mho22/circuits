@@ -40,6 +40,18 @@ describe( 'transistor renderer', () =>
 		expect( calls ).toContainEqual( [ 'lineTo', 40, 10 ] );
 	} );
 
+	it( 'draws the collector on the right and the emitter on the left of a mirrored transistor', () =>
+	{
+		const { context, calls } = record();
+
+		draw( context, { ... npn, mirrored : true }, { voltage : 5, current : 0 } );
+
+		const lead = ( potential : number ) => { const index = calls.findIndex( call => call[ 1 ] === 'strokeStyle' && call[ 2 ] === color( potential, 5 ) ); return calls.slice( index + 3, index + 5 ); };
+
+		expect( lead( 3 ) ).toEqual( [ [ 'moveTo', 40, 5 ], [ 'lineTo', 60, 20 ] ] );
+		expect( lead( 0 ) ).toEqual( [ [ 'moveTo', 40, -5 ], [ 'lineTo', 60, -20 ] ] );
+	} );
+
 	it( 'points the arrow of an npn out of the emitter and the arrow of a pnp into it', () =>
 	{
 		const tip = ( kind : Kind ) => drawn( kind ).filter( call => call[ 0 ] === 'moveTo' ).at( -1 )!.slice( 1 ).map( value => Math.round( value as number * 10 ) / 10 );

@@ -11,7 +11,7 @@ fn segment( from : ( i32, i32 ), to : ( i32, i32 ) ) -> Segment
 
 fn add( simulation : &mut Simulation, kind : Kind, from : ( i32, i32 ), to : ( i32, i32 ) ) -> u32
 {
-	simulation.apply( Operation::Add { kind, segment : Segment { from : Point { x : from.0, y : from.1 }, to : Point { x : to.0, y : to.1 } } } ).unwrap()
+	simulation.apply( Operation::Add { kind, segment : Segment { from : Point { x : from.0, y : from.1 }, to : Point { x : to.0, y : to.1 } }, mirrored : false } ).unwrap()
 }
 
 fn series( kind : Kind ) -> Simulation
@@ -235,11 +235,11 @@ fn it_keeps_the_drop_of_a_diode_while_time_runs()
 fn it_opens_a_list_of_parts_in_place_of_the_drawing()
 {
 	let mut simulation = series( Kind::Resistor { ohms : 1000.0 } );
-	let parts = [ ( Kind::Wire, segment( ( 0, 0 ), ( 2, 0 ) ) ), ( Kind::Diode, segment( ( 2, 0 ), ( 4, 0 ) ) ) ];
+	let parts = [ ( Kind::Wire, segment( ( 0, 0 ), ( 2, 0 ) ), false ), ( Kind::Npn, segment( ( 2, 0 ), ( 4, 0 ) ), true ) ];
 
 	simulation.open( &parts ).unwrap();
 
-	let opened : Vec<( Kind, Segment )> = simulation.document().elements().iter().map( | element | ( element.kind, element.segment ) ).collect();
+	let opened : Vec<( Kind, Segment, bool )> = simulation.document().elements().iter().map( | element | ( element.kind, element.segment, element.mirrored ) ).collect();
 
 	assert_eq!( opened, parts );
 }
@@ -265,8 +265,47 @@ fn it_keeps_the_drawing_when_a_part_is_invalid()
 	let mut simulation = series( Kind::Resistor { ohms : 1000.0 } );
 	let before = simulation.document().elements().to_vec();
 
-	assert_eq!( simulation.open( &[ ( Kind::Wire, segment( ( 0, 0 ), ( 2, 0 ) ) ), ( Kind::Resistor { ohms : 0.0 }, segment( ( 2, 0 ), ( 4, 0 ) ) ) ] ), Err( Error::Resistance ) );
-	assert_eq!( simulation.open( &[ ( Kind::Wire, segment( ( 0, 0 ), ( 2, 1 ) ) ) ] ), Err( Error::Crooked ) );
+	assert_eq!( simulation.open( &[ ( Kind::Wire, segment( ( 0, 0 ), ( 2, 0 ) ), false ), ( Kind::Resistor { ohms : 0.0 }, segment( ( 2, 0 ), ( 4, 0 ) ), false ) ] ), Err( Error::Resistance ) );
+	assert_eq!( simulation.open( &[ ( Kind::Wire, segment( ( 0, 0 ), ( 2, 1 ) ), false ) ] ), Err( Error::Crooked ) );
 	assert_eq!( simulation.document().elements(), before.as_slice() );
+	assert_eq!( simulation.undo(), Ok( Some( 4 ) ) );
+}
+
+#[test]
+fn it_moves_a_part_in_one_undo_step()
+{
+	let mut simulation = series( Kind::Resistor { ohms : 1000.0 } );
+	let before = simulation.document().elements().to_vec();
+
+	simulation.transform( 2, segment( ( 8, 0 ), ( 8, 4 ) ), false ).unwrap();
+
+	assert_eq!( simulation.document().elements()[ 2 ].segment, segment( ( 8, 0 ), ( 8, 4 ) ) );
+	assert_eq!( simulation.solution().unwrap().readings[ 1 ].currents[ 0 ], 0.0 );
+
+	simulation.undo().unwrap();
+
+	assert_eq!( simulation.document().elements(), before.as_slice() );
+}
+
+#[test]
+fn it_splits_a_wire_under_a_moved_part()
+{
+	let mut simulation = series( Kind::Wire );
+	let resistor = add( &mut simulation, Kind::Resistor { ohms : 1000.0 }, ( 9, 0 ), ( 9, 2 ) );
+
+	simulation.transform( resistor, segment( ( 4, 1 ), ( 4, 3 ) ), false ).unwrap();
+
+	let index = simulation.document().elements().iter().position( | element | element.id == resistor ).unwrap();
+
+	assert_eq!( simulation.document().elements().len(), 7 );
+	assert!( near( simulation.solution().unwrap().readings[ index ].currents[ 0 ], 0.0025, 1e-12 ) );
+}
+
+#[test]
+fn it_rejects_a_move_of_a_missing_part()
+{
+	let mut simulation = series( Kind::Resistor { ohms : 1000.0 } );
+
+	assert_eq!( simulation.transform( 7, segment( ( 0, 0 ), ( 2, 0 ) ), false ), Err( Error::Missing ) );
 	assert_eq!( simulation.undo(), Ok( Some( 4 ) ) );
 }

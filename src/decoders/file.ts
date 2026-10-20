@@ -1,4 +1,4 @@
-import { FIELDS, Kind, NAMES } from '../enums/kind.ts';
+import { FIELDS, Kind, NAMES, TRANSISTORS } from '../enums/kind.ts';
 
 
 const VERSION = 1;
@@ -36,7 +36,8 @@ function row( part : Record<string, unknown> | null ) : number[]
 	const kind = KINDS.find( kind => NAMES[ kind ].toLowerCase() === part.kind ) ?? unreadable();
 	const field = FIELDS[ kind ];
 	const closed = kind === Kind.Switch && ( typeof part.closed === 'boolean' ? part.closed : unreadable() );
-	const value = field ? number( part[ field ] ) : Number( closed );
+	const mirrored = TRANSISTORS.includes( kind ) && ( typeof ( part.mirrored ?? false ) === 'boolean' ? part.mirrored === true : unreadable() );
+	const value = field ? number( part[ field ] ) : Number( closed || mirrored );
 
 	return [ kind, value, ... point( part.from ), ... point( part.to ) ];
 }

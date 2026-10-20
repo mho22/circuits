@@ -17,6 +17,30 @@ impl Segment
 		Point { x : from.x, y : cursor.y }
 	}
 
+	pub fn turned( &self ) -> Segment
+	{
+		let step = Point { x : ( self.to.x - self.from.x ).signum(), y : ( self.to.y - self.from.y ).signum() };
+		let half = self.length() / 2;
+		let center = Point { x : self.from.x + step.x * half, y : self.from.y + step.y * half };
+		let turn = | point : Point | Point { x : center.x - ( point.y - center.y ), y : center.y + point.x - center.x };
+
+		Segment { from : turn( self.from ), to : turn( self.to ) }
+	}
+
+	pub fn mirrored( &self, vertical : bool ) -> Segment
+	{
+		let flip = | point : Point | if vertical { Point { x : point.x, y : self.from.y + self.to.y - point.y } } else { Point { x : self.from.x + self.to.x - point.x, y : point.y } };
+
+		Segment { from : flip( self.from ), to : flip( self.to ) }
+	}
+
+	pub fn shifted( &self, dx : i32, dy : i32 ) -> Segment
+	{
+		let shift = | point : Point | Point { x : point.x + dx, y : point.y + dy };
+
+		Segment { from : shift( self.from ), to : shift( self.to ) }
+	}
+
 	pub fn is_empty( &self ) -> bool
 	{
 		self.from == self.to

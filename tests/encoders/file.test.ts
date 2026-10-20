@@ -34,6 +34,11 @@ describe( 'file encoder', () =>
 		expect( encode( [ element( { kind : Kind.Switch, value : 0 } ) ] ) ).toContain( '"closed" : false' );
 	} );
 
+	it( 'writes a mirrored transistor', () =>
+	{
+		expect( encode( [ element( { kind : Kind.Nmos, value : 1, mirrored : true } ) ] ) ).toContain( '{ "kind" : "nmos", "mirrored" : true, "from"' );
+	} );
+
 	it( 'writes an empty drawing', () =>
 	{
 		expect( encode( [] ) ).toBe( '{\n\t"version" : 1,\n\t"parts" : []\n}\n' );

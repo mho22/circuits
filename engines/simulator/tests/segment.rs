@@ -84,3 +84,35 @@ fn it_does_not_contain_points_off_it()
 	assert!( ! segment( 4, 4 ).contains( Point { x : -1, y : -1 } ) );
 	assert!( ! segment( 0, 0 ).contains( Point { x : 1, y : 0 } ) );
 }
+
+#[test]
+fn it_turns_a_quarter_clockwise_around_the_point_at_half_its_length()
+{
+	assert_eq!( segment( 4, 0 ).turned(), Segment { from : Point { x : 2, y : -2 }, to : Point { x : 2, y : 2 } } );
+	assert_eq!( segment( 3, 0 ).turned(), Segment { from : Point { x : 1, y : -1 }, to : Point { x : 1, y : 2 } } );
+	assert_eq!( segment( 0, 0 ).turned(), segment( 0, 0 ) );
+}
+
+#[test]
+fn it_comes_back_after_four_turns()
+{
+	for part in [ segment( 4, 0 ), segment( 3, 0 ), segment( 0, -5 ) ]
+	{
+		assert_eq!( part.turned().turned().turned().turned(), part );
+	}
+}
+
+#[test]
+fn it_mirrors_across_its_middle()
+{
+	assert_eq!( segment( 4, 0 ).mirrored( false ), Segment { from : Point { x : 4, y : 0 }, to : ORIGIN } );
+	assert_eq!( segment( 4, 0 ).mirrored( true ), segment( 4, 0 ) );
+	assert_eq!( segment( 0, 3 ).mirrored( true ), Segment { from : Point { x : 0, y : 3 }, to : ORIGIN } );
+	assert_eq!( segment( 0, 3 ).mirrored( false ), segment( 0, 3 ) );
+}
+
+#[test]
+fn it_shifts_both_ends()
+{
+	assert_eq!( segment( 4, 0 ).shifted( 2, -1 ), Segment { from : Point { x : 2, y : -1 }, to : Point { x : 6, y : -1 } } );
+}

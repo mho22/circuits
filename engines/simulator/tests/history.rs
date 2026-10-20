@@ -3,7 +3,7 @@ use simulator::{ Element, History, Kind, Point, Reading, Segment, Solution };
 
 fn element( id : u32, kind : Kind ) -> Element
 {
-	Element { id, kind, segment : Segment { from : Point { x : 0, y : 0 }, to : Point { x : 2, y : 0 } } }
+	Element { id, kind, segment : Segment { from : Point { x : 0, y : 0 }, to : Point { x : 2, y : 0 } }, mirrored : false }
 }
 
 

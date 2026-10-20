@@ -15,15 +15,16 @@ const BODY = '#d0d0d0';
 
 export function draw( context : CanvasRenderingContext2D, element : Element, scale : Scale ) : void
 {
-	const [ base, collector, emitter ] = terminals( element.kind, element.from, element.to ).map( point => ( { x : toScreen( point.x ), y : toScreen( point.y ) } ) );
+	const [ base, collector, emitter ] = terminals( element.kind, element.from, element.to, element.mirrored ).map( point => ( { x : toScreen( point.x ), y : toScreen( point.y ) } ) );
 	const barX = toScreen( element.to.x );
 	const barY = toScreen( element.to.y );
 	const length = Math.hypot( barX - base.x, barY - base.y );
 	const alongX = ( barX - base.x ) / length;
 	const alongY = ( barY - base.y ) / length;
 	const [ baseColor, collectorColor, emitterColor ] = element.potentials.map( potential => color( potential, scale.voltage ) );
-	const startX = barX - alongY * SPREAD;
-	const startY = barY + alongX * SPREAD;
+	const side = element.mirrored ? -1 : 1;
+	const startX = barX - alongY * SPREAD * side;
+	const startY = barY + alongX * SPREAD * side;
 	const outward = element.kind === Kind.Npn ? 1 : -1;
 	const emitterLength = Math.hypot( emitter.x - startX, emitter.y - startY );
 	const directionX = ( emitter.x - startX ) / emitterLength * outward;
@@ -34,7 +35,7 @@ export function draw( context : CanvasRenderingContext2D, element : Element, sca
 	context.lineCap = 'butt';
 
 	line.draw( context, baseColor, 2, base.x, base.y, barX, barY );
-	line.draw( context, collectorColor, 2, barX + alongY * SPREAD, barY - alongX * SPREAD, collector.x, collector.y );
+	line.draw( context, collectorColor, 2, barX + alongY * SPREAD * side, barY - alongX * SPREAD * side, collector.x, collector.y );
 	line.draw( context, emitterColor, 2, startX, startY, emitter.x, emitter.y );
 	line.draw( context, BODY, 3, barX + alongY * BAR, barY - alongX * BAR, barX - alongY * BAR, barY + alongX * BAR );
 

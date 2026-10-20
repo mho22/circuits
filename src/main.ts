@@ -11,6 +11,7 @@ import { encode } from './encoders/file.ts';
 import { INPUTS, Kind, POINTS } from './enums/kind.ts';
 import { read } from './keyboard.ts';
 import { leads } from './leads.ts';
+import { open } from './menus/part.ts';
 import { describe } from './readout.ts';
 import * as current from './renderers/current.ts';
 import * as cursor from './renderers/cursor.ts';
@@ -18,8 +19,10 @@ import * as element from './renderers/element.ts';
 import * as grid from './renderers/grid.ts';
 import { measure } from './scale.ts';
 import { Toolbar } from './toolbar.ts';
-import { erase } from './tools/eraser.ts';
+import { MoveTool } from './tools/move.ts';
 import { PlaceTool } from './tools/place.ts';
+import type { Action } from './types/action.ts';
+import type { Element } from './types/element.ts';
 import type { Point } from './types/point.ts';
 import { View } from './view.ts';
 
@@ -37,6 +40,7 @@ const status = document.querySelector( 'output' )!;
 const picker = document.querySelector( 'input[type=file]' ) as HTMLInputElement;
 const circuit = new Circuit();
 const tool = new PlaceTool( circuit );
+const mover = new MoveTool( circuit );
 const toolbar = new Toolbar( document.querySelector( 'nav' )!, select );
 const clock = new Clock( STEPS_PER_SECOND, STEPS_PER_FRAME );
 const drift = new Drift();
@@ -76,6 +80,43 @@ async function load() : Promise<void>
 	catch( error ) { notice = ( error as Error ).message; }
 }
 
+function attempt( change : () => void ) : void
+{
+	try { change(); }
+
+	catch( error ) { notice = ( error as Error ).message; }
+}
+
+function act( target : Element, anchor : Point, action : Action ) : void
+{
+	if( action === 'move' ) { mover.start( target, anchor ); return; }
+
+	attempt( () =>
+	{
+		if( action === 'rotate' ) circuit.rotate( target.id );
+
+		if( action === 'horizontal' ) circuit.mirror( target.id, false );
+
+		if( action === 'vertical' ) circuit.mirror( target.id, true );
+
+		if( action === 'delete' ) circuit.delete( target.id );
+	} );
+}
+
+function menu( event : MouseEvent ) : void
+{
+	const point = view.toGrid( event.clientX, event.clientY );
+	const elements = decodeElements( circuit.elements() );
+	const targets = Array.from( circuit.elementsAt( point.x, point.y ) ).map( id => elements.find( item => item.id === id )! );
+	const target = targets.find( item => item.kind !== Kind.Wire ) ?? targets[ 0 ];
+
+	if( ! target ) return;
+
+	if( target.kind === Kind.Wire ) { circuit.delete( target.id ); return; }
+
+	open( document.body, { x : event.clientX, y : event.clientY }, target.kind, action => act( target, point, action ) );
+}
+
 function report( text : string, error : boolean ) : void
 {
 	if( status.textContent !== text ) status.textContent = text;
@@ -94,7 +135,7 @@ function frame( time : number ) : void
 	const elements = decodeElements( circuit.elements() );
 	const branches = decodeBranches( circuit.branches() );
 	const scale = measure( elements, branches );
-	const preview = tool.preview();
+	const preview = mover.preview() ?? tool.preview();
 	const paths = [ ... branches, ... elements.filter( item => item.kind !== Kind.Wire && ! POINTS.includes( item.kind ) ).flatMap( leads ) ];
 	const distances = drift.advance( paths, scale.current, seconds );
 
@@ -151,7 +192,7 @@ canvas.addEventListener( 'pointerdown', ( event : PointerEvent ) =>
 		return;
 	}
 
-	if( event.button === 2 ) erase( circuit, point );
+	if( event.button === 0 && mover.element ) { attempt( () => mover.drop() ); return; }
 
 	if( event.button === 0 && event.detail < 2 )
 	{
@@ -167,6 +208,7 @@ canvas.addEventListener( 'pointermove', ( event : PointerEvent ) =>
 
 	if( view.move( { x : event.clientX, y : event.clientY } ) ) return;
 
+	mover.move( hover );
 	tool.move( hover );
 } );
 
@@ -222,13 +264,20 @@ document.querySelector( 'button.load' )!.addEventListener( 'click', () => picker
 
 picker.addEventListener( 'change', load );
 
-canvas.addEventListener( 'contextmenu', ( event : MouseEvent ) => event.preventDefault() );
+canvas.addEventListener( 'contextmenu', ( event : MouseEvent ) =>
+{
+	event.preventDefault();
+
+	menu( event );
+} );
 
 addEventListener( 'keydown', ( event : KeyboardEvent ) =>
 {
 	if( event.target instanceof HTMLInputElement ) return;
 
 	if( event.key === ' ' ) { event.preventDefault(); spaced = true; canvas.classList.add( 'grab' ); return; }
+
+	if( event.key === 'Escape' ) { mover.cancel(); return; }
 
 	const command = read( event );
 

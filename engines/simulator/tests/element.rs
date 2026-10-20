@@ -3,7 +3,7 @@ use simulator::{ Element, Kind, Point, Segment };
 
 fn element( kind : Kind, from : ( i32, i32 ), to : ( i32, i32 ) ) -> Element
 {
-	Element { id : 0, kind, segment : Segment { from : Point { x : from.0, y : from.1 }, to : Point { x : to.0, y : to.1 } } }
+	Element { id : 0, kind, segment : Segment { from : Point { x : from.0, y : from.1 }, to : Point { x : to.0, y : to.1 } }, mirrored : false }
 }
 
 fn points( list : &[ ( i32, i32 ) ] ) -> Vec<Point>
@@ -33,4 +33,12 @@ fn it_puts_the_drain_left_and_the_source_right_one_step_past_the_bar()
 {
 	assert_eq!( element( Kind::Nmos, ( 0, 0 ), ( 2, 0 ) ).terminals(), points( &[ ( 0, 0 ), ( 3, -1 ), ( 3, 1 ) ] ) );
 	assert_eq!( element( Kind::Pmos, ( 0, 0 ), ( 0, 2 ) ).terminals(), points( &[ ( 0, 0 ), ( 1, 3 ), ( -1, 3 ) ] ) );
+}
+
+#[test]
+fn it_swaps_the_collector_and_the_emitter_of_a_mirrored_transistor()
+{
+	let transistor = Element { mirrored : true, ..element( Kind::Npn, ( 0, 0 ), ( 2, 0 ) ) };
+
+	assert_eq!( transistor.terminals(), points( &[ ( 0, 0 ), ( 3, 1 ), ( 3, -1 ) ] ) );
 }

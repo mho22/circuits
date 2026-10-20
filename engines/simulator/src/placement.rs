@@ -30,7 +30,7 @@ fn aligned( segment : &Segment, point : Point ) -> bool
 
 pub fn place( elements : &[ Element ], kind : Kind, segment : Segment ) -> Vec<Operation>
 {
-	let part = Operation::Add { kind, segment };
+	let part = Operation::Add { kind, segment, mirrored : false };
 
 	if matches!( kind, Kind::Wire | Kind::Ground ) { return vec![ part ]; }
 
@@ -49,9 +49,9 @@ pub fn place( elements : &[ Element ], kind : Kind, segment : Segment ) -> Vec<O
 
 		operations.push( Operation::Delete { id : wire.id } );
 
-		if low > 0 { operations.push( Operation::Add { kind : Kind::Wire, segment : Segment { from : wire.segment.from, to : point( &wire.segment, low ) } } ); }
+		if low > 0 { operations.push( Operation::Add { kind : Kind::Wire, segment : Segment { from : wire.segment.from, to : point( &wire.segment, low ) }, mirrored : false } ); }
 
-		if high < length { operations.push( Operation::Add { kind : Kind::Wire, segment : Segment { from : point( &wire.segment, high ), to : wire.segment.to } } ); }
+		if high < length { operations.push( Operation::Add { kind : Kind::Wire, segment : Segment { from : point( &wire.segment, high ), to : wire.segment.to }, mirrored : false } ); }
 	}
 
 	operations.push( part );

@@ -14,11 +14,12 @@ impl Document
 	{
 		match operation
 		{
-			Operation::Add { kind, segment } => self.add( kind, segment ),
+			Operation::Add { kind, segment, mirrored } => self.add( kind, segment, mirrored ),
 			Operation::Insert { element, index } => self.insert( element, index ),
 			Operation::Delete { id } => self.delete( id ),
 			Operation::SetValue { id, value } => self.set_value( id, value ),
 			Operation::SetClosed { id, closed } => self.set_closed( id, closed ),
+			Operation::Move { id, segment, mirrored } => self.move_to( id, segment, mirrored ),
 		}
 	}
 
@@ -46,6 +47,12 @@ impl Document
 
 				Ok( Operation::SetClosed { id, closed } )
 			},
+			Operation::Move { id, .. } =>
+			{
+				let element = self.elements[ self.index( id )? ];
+
+				Ok( Operation::Move { id, segment : element.segment, mirrored : element.mirrored } )
+			},
 		}
 	}
 
@@ -72,13 +79,13 @@ impl Document
 		kind.check()
 	}
 
-	fn add( &mut self, kind : Kind, segment : Segment ) -> Result<u32, Error>
+	fn add( &mut self, kind : Kind, segment : Segment, mirrored : bool ) -> Result<u32, Error>
 	{
 		Document::check( kind, segment )?;
 
 		let id = self.next;
 
-		self.elements.push( Element { id, kind, segment } );
+		self.elements.push( Element { id, kind, segment, mirrored } );
 
 		self.next += 1;
 
@@ -121,6 +128,18 @@ impl Document
 		let index = self.index( id )?;
 
 		self.elements[ index ].kind = self.elements[ index ].kind.with_closed( closed )?;
+
+		Ok( id )
+	}
+
+	fn move_to( &mut self, id : u32, segment : Segment, mirrored : bool ) -> Result<u32, Error>
+	{
+		let index = self.index( id )?;
+
+		Document::check( self.elements[ index ].kind, segment )?;
+
+		self.elements[ index ].segment = segment;
+		self.elements[ index ].mirrored = mirrored;
 
 		Ok( id )
 	}

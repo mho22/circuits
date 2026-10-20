@@ -41,6 +41,18 @@ describe( 'mosfet renderer', () =>
 		expect( calls ).toContainEqual( [ 'lineTo', 40, 20 ] );
 	} );
 
+	it( 'draws the drain on the right and the source on the left of a mirrored mosfet', () =>
+	{
+		const { context, calls } = record();
+
+		draw( context, { ... nmos, mirrored : true }, { voltage : 5, current : 0 } );
+
+		const lead = ( potential : number ) => { const index = calls.findIndex( call => call[ 1 ] === 'strokeStyle' && call[ 2 ] === color( potential, 5 ) ); return calls.slice( index + 3, index + 5 ); };
+
+		expect( lead( 2.5 ) ).toEqual( [ [ 'moveTo', 40, 20 ], [ 'lineTo', 60, 20 ] ] );
+		expect( lead( 0 ) ).toEqual( [ [ 'moveTo', 40, -20 ], [ 'lineTo', 60, -20 ] ] );
+	} );
+
 	it( 'points the arrow of an nmos out of the source and the arrow of a pmos into it', () =>
 	{
 		const tip = ( kind : Kind ) => drawn( kind ).filter( call => call[ 0 ] === 'moveTo' ).at( -1 )!.slice( 1 );

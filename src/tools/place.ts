@@ -58,8 +58,8 @@ export class PlaceTool
 	{
 		if( ! this.start || ! this.end ) return null;
 
-		const count = terminals( this.kind, this.start, this.end ).length;
+		const count = terminals( this.kind, this.start, this.end, false ).length;
 
-		return { id : -1, kind : this.kind, from : this.start, to : this.end, value : VALUES[ this.kind ] ?? 0, potentials : Array( count ).fill( 0 ), currents : Array( count ).fill( NaN ) };
+		return { id : -1, kind : this.kind, from : this.start, to : this.end, value : VALUES[ this.kind ] ?? 0, mirrored : false, potentials : Array( count ).fill( 0 ), currents : Array( count ).fill( NaN ) };
 	}
 }

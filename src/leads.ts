@@ -10,13 +10,13 @@ const MOSFETS = [ Kind.Nmos, Kind.Pmos ];
 
 export function leads( element : Element ) : Pick<Branch, 'from' | 'to' | 'current'>[]
 {
-	const [ base, collector, emitter ] = terminals( element.kind, element.from, element.to );
+	const [ base, collector, emitter ] = terminals( element.kind, element.from, element.to, element.mirrored );
 
 	if( ! emitter ) return [ { from : element.from, to : element.to, current : element.currents[ 0 ] } ];
 
 	if( MOSFETS.includes( element.kind ) )
 	{
-		const [ top, bottom ] = channel( element.from, element.to );
+		const [ top, bottom ] = channel( element.from, element.to, element.mirrored );
 
 		return [
 			{ from : collector, to : top, current : element.currents[ 1 ] },

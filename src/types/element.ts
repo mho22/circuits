@@ -9,6 +9,7 @@ export interface Element
 	from : Point;
 	to : Point;
 	value : number;
+	mirrored : boolean;
 	potentials : number[];
 	currents : number[];
 }

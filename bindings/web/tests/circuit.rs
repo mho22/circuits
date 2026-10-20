@@ -273,3 +273,63 @@ fn it_lists_a_vcc_with_its_voltage_and_its_current()
 	assert_eq!( [ elements[ 1 ], elements[ 6 ], elements[ 7 ], elements[ 8 ] ], [ 12.0, 5.0, 0.0, 5.0 ] );
 	assert!( ( elements[ 10 ] - 0.005 ).abs() < 1e-12 );
 }
+
+#[wasm_bindgen_test]
+fn it_translates_a_part()
+{
+	let mut circuit = Circuit::new();
+
+	circuit.add( 1, 1000.0, 0, 0, 2, 0 ).ok();
+	circuit.translate( 0, 3, -1 ).ok();
+
+	assert_eq!( &circuit.elements()[ 2 .. 6 ], &[ 3.0, -1.0, 5.0, -1.0 ] );
+}
+
+#[wasm_bindgen_test]
+fn it_rotates_a_part_a_quarter_clockwise()
+{
+	let mut circuit = Circuit::new();
+
+	circuit.add( 1, 1000.0, 0, 0, 4, 0 ).ok();
+	circuit.rotate( 0 ).ok();
+
+	assert_eq!( &circuit.elements()[ 2 .. 6 ], &[ 2.0, -2.0, 2.0, 2.0 ] );
+}
+
+#[wasm_bindgen_test]
+fn it_mirrors_a_transistor_and_lists_it_as_mirrored()
+{
+	let mut circuit = Circuit::new();
+
+	circuit.add( 8, 0.0, 0, 0, 2, 0 ).ok();
+	circuit.mirror( 0, true ).ok();
+
+	assert_eq!( &circuit.elements()[ 1 .. 7 ], &[ 8.0, 0.0, 0.0, 2.0, 0.0, 1.0 ] );
+	assert_eq!( circuit.elements_at( 3, 1 ), vec![ 0 ] );
+
+	circuit.mirror( 0, false ).ok();
+
+	assert_eq!( &circuit.elements()[ 1 .. 7 ], &[ 8.0, 2.0, 0.0, 0.0, 0.0, 0.0 ] );
+}
+
+#[wasm_bindgen_test]
+fn it_opens_a_mirrored_transistor()
+{
+	let mut circuit = Circuit::new();
+
+	circuit.open( &[ 10.0, 1.0, 0.0, 0.0, 2.0, 0.0, 1.0, 1000.0, 4.0, 0.0, 6.0, 0.0 ] ).ok();
+
+	let elements = circuit.elements();
+
+	assert_eq!( [ elements[ 6 ], elements[ 19 ] ], [ 1.0, 1000.0 ] );
+}
+
+#[wasm_bindgen_test]
+fn it_rejects_a_move_of_a_missing_part()
+{
+	let mut circuit = Circuit::new();
+
+	assert!( circuit.translate( 7, 1, 0 ).is_err() );
+	assert!( circuit.rotate( 7 ).is_err() );
+	assert!( circuit.mirror( 7, false ).is_err() );
+}

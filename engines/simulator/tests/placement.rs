@@ -11,12 +11,12 @@ fn segment( from : ( i32, i32 ), to : ( i32, i32 ) ) -> Segment
 
 fn wire( id : u32, from : ( i32, i32 ), to : ( i32, i32 ) ) -> Element
 {
-	Element { id, kind : Kind::Wire, segment : segment( from, to ) }
+	Element { id, kind : Kind::Wire, segment : segment( from, to ), mirrored : false }
 }
 
 fn piece( from : ( i32, i32 ), to : ( i32, i32 ) ) -> Operation
 {
-	Operation::Add { kind : Kind::Wire, segment : segment( from, to ) }
+	Operation::Add { kind : Kind::Wire, segment : segment( from, to ), mirrored : false }
 }
 
 
@@ -27,7 +27,7 @@ fn it_splits_a_wire_under_a_part_in_its_middle()
 		Operation::Delete { id : 3 },
 		piece( ( 0, 0 ), ( 2, 0 ) ),
 		piece( ( 5, 0 ), ( 8, 0 ) ),
-		Operation::Add { kind : RESISTOR, segment : segment( ( 2, 0 ), ( 5, 0 ) ) },
+		Operation::Add { kind : RESISTOR, segment : segment( ( 2, 0 ), ( 5, 0 ) ), mirrored : false },
 	] );
 }
 
@@ -49,7 +49,7 @@ fn it_deletes_a_wire_that_the_part_covers()
 {
 	assert_eq!( place( &[ wire( 3, ( 2, 0 ), ( 4, 0 ) ) ], RESISTOR, segment( ( 0, 0 ), ( 6, 0 ) ) ), vec![
 		Operation::Delete { id : 3 },
-		Operation::Add { kind : RESISTOR, segment : segment( ( 0, 0 ), ( 6, 0 ) ) },
+		Operation::Add { kind : RESISTOR, segment : segment( ( 0, 0 ), ( 6, 0 ) ), mirrored : false },
 	] );
 }
 
@@ -63,7 +63,7 @@ fn it_cuts_every_wire_under_the_part()
 		piece( ( 0, 0 ), ( 2, 0 ) ),
 		Operation::Delete { id : 5 },
 		piece( ( 6, 0 ), ( 8, 0 ) ),
-		Operation::Add { kind : RESISTOR, segment : segment( ( 2, 0 ), ( 6, 0 ) ) },
+		Operation::Add { kind : RESISTOR, segment : segment( ( 2, 0 ), ( 6, 0 ) ), mirrored : false },
 	] );
 }
 

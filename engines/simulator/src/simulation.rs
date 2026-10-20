@@ -31,10 +31,21 @@ impl Simulation
 		self.commit( &operations )
 	}
 
-	pub fn open( &mut self, parts : &[ ( Kind, Segment ) ] ) -> Result<u32, Error>
+	pub fn transform( &mut self, id : u32, segment : Segment, mirrored : bool ) -> Result<u32, Error>
+	{
+		let element = self.document.elements().iter().find( | element | element.id == id ).ok_or( Error::Missing )?;
+		let mut operations = place( self.document.elements(), element.kind, segment );
+
+		operations.pop();
+		operations.push( Operation::Move { id, segment, mirrored } );
+
+		self.commit( &operations )
+	}
+
+	pub fn open( &mut self, parts : &[ ( Kind, Segment, bool ) ] ) -> Result<u32, Error>
 	{
 		let deletions = self.document.elements().iter().map( | element | Operation::Delete { id : element.id } );
-		let additions = parts.iter().map( | &( kind, segment ) | Operation::Add { kind, segment } );
+		let additions = parts.iter().map( | &( kind, segment, mirrored ) | Operation::Add { kind, segment, mirrored } );
 		let operations : Vec<Operation> = deletions.chain( additions ).collect();
 
 		self.commit( &operations )
