@@ -6,7 +6,6 @@ import { decode as decodeElements } from './decoders/element.ts';
 import { Drift } from './drift.ts';
 import { edit } from './editors/value.ts';
 import { INPUTS, Kind } from './enums/kind.ts';
-import { toGrid } from './grid.ts';
 import { read } from './keyboard.ts';
 import { describe } from './readout.ts';
 import * as current from './renderers/current.ts';
@@ -18,6 +17,7 @@ import { Toolbar } from './toolbar.ts';
 import { erase } from './tools/eraser.ts';
 import { PlaceTool } from './tools/place.ts';
 import type { Point } from './types/point.ts';
+import { View } from './view.ts';
 
 
 await init();
@@ -35,10 +35,12 @@ const tool = new PlaceTool( circuit );
 const toolbar = new Toolbar( document.querySelector( 'nav' )!, select );
 const clock = new Clock( STEPS_PER_SECOND, STEPS_PER_FRAME );
 const drift = new Drift();
+const view = new View();
 
 let hover : Point | null = null;
 let notice : string | null = null;
 let previous : number | null = null;
+let spaced = false;
 
 
 function select( kind : Kind ) : void
@@ -70,7 +72,9 @@ function frame( time : number ) : void
 	const paths = [ ... branches, ... elements.filter( item => item.kind !== Kind.Wire && item.kind !== Kind.Ground ) ];
 	const distances = drift.advance( paths, scale.current, seconds );
 
-	grid.draw( context, innerWidth, innerHeight );
+	context.setTransform( devicePixelRatio, 0, 0, devicePixelRatio, - view.x * devicePixelRatio, - view.y * devicePixelRatio );
+
+	grid.draw( context, view.x, view.y, innerWidth, innerHeight );
 
 	elements.forEach( item => element.draw( context, item, scale ) );
 
@@ -101,16 +105,25 @@ function resize() : void
 {
 	canvas.width = innerWidth * devicePixelRatio;
 	canvas.height = innerHeight * devicePixelRatio;
-
-	context.setTransform( devicePixelRatio, 0, 0, devicePixelRatio, 0, 0 );
 }
 
 
 canvas.addEventListener( 'pointerdown', ( event : PointerEvent ) =>
 {
-	const point = toGrid( event.clientX, event.clientY );
+	const point = view.toGrid( event.clientX, event.clientY );
 
 	notice = null;
+
+	if( event.button === 1 || ( event.button === 0 && spaced ) )
+	{
+		event.preventDefault();
+
+		canvas.setPointerCapture( event.pointerId );
+
+		view.press( { x : event.clientX, y : event.clientY } );
+
+		return;
+	}
 
 	if( event.button === 2 ) erase( circuit, point );
 
@@ -124,18 +137,35 @@ canvas.addEventListener( 'pointerdown', ( event : PointerEvent ) =>
 
 canvas.addEventListener( 'pointermove', ( event : PointerEvent ) =>
 {
-	hover = toGrid( event.clientX, event.clientY );
+	hover = view.toGrid( event.clientX, event.clientY );
+
+	if( view.move( { x : event.clientX, y : event.clientY } ) ) return;
 
 	tool.move( hover );
 } );
 
-canvas.addEventListener( 'pointerup', () => tool.release() );
+canvas.addEventListener( 'pointerup', () =>
+{
+	view.release();
+	tool.release();
+} );
+
+canvas.addEventListener( 'wheel', ( event : WheelEvent ) =>
+{
+	event.preventDefault();
+
+	if( event.ctrlKey ) return;
+
+	view.scroll( event.deltaX, event.deltaY, event.deltaMode );
+
+	hover = view.toGrid( event.clientX, event.clientY );
+}, { passive : false } );
 
 canvas.addEventListener( 'pointerleave', () => hover = null );
 
 canvas.addEventListener( 'dblclick', ( event : MouseEvent ) =>
 {
-	const point = toGrid( event.clientX, event.clientY );
+	const point = view.toGrid( event.clientX, event.clientY );
 	const ids = Array.from( circuit.elementsAt( point.x, point.y ) );
 	const elements = decodeElements( circuit.elements() );
 	const target = ids.map( id => elements.find( item => item.id === id )! ).find( item => INPUTS[ item.kind ] || item.kind === Kind.Switch );
@@ -164,6 +194,8 @@ addEventListener( 'keydown', ( event : KeyboardEvent ) =>
 {
 	if( event.target instanceof HTMLInputElement ) return;
 
+	if( event.key === ' ' ) { event.preventDefault(); spaced = true; canvas.classList.add( 'grab' ); return; }
+
 	const command = read( event );
 
 	if( command === undefined ) return;
@@ -175,6 +207,15 @@ addEventListener( 'keydown', ( event : KeyboardEvent ) =>
 	if( command === 'redo' ) { circuit.redo(); return; }
 
 	select( command );
+} );
+
+addEventListener( 'keyup', ( event : KeyboardEvent ) =>
+{
+	if( event.key !== ' ' ) return;
+
+	spaced = false;
+
+	canvas.classList.remove( 'grab' );
 } );
 
 addEventListener( 'resize', resize );

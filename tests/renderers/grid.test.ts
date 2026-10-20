@@ -6,20 +6,20 @@ import { record } from '../stubs/context.ts';
 
 describe( 'grid renderer', () =>
 {
-	it( 'clears the screen to black', () =>
+	it( 'clears the visible area to black', () =>
 	{
 		const { context, calls } = record();
 
-		draw( context, SPACING, SPACING );
+		draw( context, 5, 7, SPACING, SPACING );
 
-		expect( calls.slice( 0, 2 ) ).toEqual( [ [ 'set', 'fillStyle', '#000000' ], [ 'fillRect', 0, 0, SPACING, SPACING ] ] );
+		expect( calls.slice( 0, 2 ) ).toEqual( [ [ 'set', 'fillStyle', '#000000' ], [ 'fillRect', 5, 7, SPACING, SPACING ] ] );
 	} );
 
 	it( 'draws one dot on each grid point', () =>
 	{
 		const { context, calls } = record();
 
-		draw( context, SPACING, SPACING * 2 );
+		draw( context, 0, 0, SPACING, SPACING * 2 );
 
 		const dots = calls.slice( 3 );
 
@@ -31,5 +31,14 @@ describe( 'grid renderer', () =>
 			[ 'fillRect', SPACING - 1, SPACING - 1, 2, 2 ],
 			[ 'fillRect', SPACING - 1, SPACING * 2 - 1, 2, 2 ],
 		] );
+	} );
+
+	it( 'draws only the dots inside a moved area', () =>
+	{
+		const { context, calls } = record();
+
+		draw( context, - SPACING * 3 - 5, SPACING * 2 + 5, SPACING, SPACING );
+
+		expect( calls.slice( 3 ) ).toEqual( [ [ 'fillRect', - SPACING * 3 - 1, SPACING * 3 - 1, 2, 2 ] ] );
 	} );
 } );
