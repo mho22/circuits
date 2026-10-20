@@ -188,6 +188,8 @@ canvas.addEventListener( 'dblclick', ( event : MouseEvent ) =>
 	} );
 } );
 
+document.querySelector( 'button.center' )!.addEventListener( 'click', () => view.center() );
+
 canvas.addEventListener( 'contextmenu', ( event : MouseEvent ) => event.preventDefault() );
 
 addEventListener( 'keydown', ( event : KeyboardEvent ) =>

@@ -51,6 +51,16 @@ describe( 'view', () =>
 		expect( [ view.x, view.y ] ).toEqual( [ 0, 0 ] );
 	} );
 
+	it( 'goes back to the origin', () =>
+	{
+		const view = new View();
+
+		view.scroll( 30, -10, 0 );
+		view.center();
+
+		expect( [ view.x, view.y ] ).toEqual( [ 0, 0 ] );
+	} );
+
 	it( 'turns a screen position into a grid point of the moved drawing', () =>
 	{
 		const view = new View();

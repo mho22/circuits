@@ -43,6 +43,12 @@ export class View
 		this.grab = null;
 	}
 
+	center() : void
+	{
+		this.x = 0;
+		this.y = 0;
+	}
+
 	toGrid( x : number, y : number ) : Point
 	{
 		return toGrid( x + this.x, y + this.y );
