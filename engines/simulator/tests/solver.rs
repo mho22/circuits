@@ -511,3 +511,20 @@ fn it_holds_a_vcc_without_a_ground_at_its_voltage()
 	assert_eq!( solution.readings[ 1 ].potentials, vec![ 5.0, 5.0 ] );
 	assert_eq!( solution.readings[ 0 ].currents, vec![ 0.0, -0.0 ] );
 }
+
+#[test]
+fn it_solves_a_circuit_next_to_a_lone_transistor()
+{
+	for kind in [ Kind::Npn, Kind::Pnp, Kind::Nmos, Kind::Pmos ]
+	{
+		let solution = solve( &[
+			element( Kind::Battery { volts : 5.0 }, ( 0, 4 ), ( 0, 0 ) ),
+			element( Kind::Resistor { ohms : 1000.0 }, ( 0, 0 ), ( 0, 4 ) ),
+			element( Kind::Ground, ( 0, 4 ), ( 0, 4 ) ),
+			element( kind, ( 10, 0 ), ( 12, 0 ) ),
+		], &History::default(), STEP ).unwrap();
+
+		assert!( near( solution.readings[ 1 ].currents[ 0 ], 0.005 ) );
+		assert!( solution.readings[ 3 ].currents.iter().all( | current | current.abs() < 1e-9 ) );
+	}
+}

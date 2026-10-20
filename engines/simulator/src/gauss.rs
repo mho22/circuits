@@ -7,17 +7,18 @@ const TOLERANCE : f64 = 1e-12;
 pub fn eliminate( mut matrix : Vec<f64>, mut rhs : Vec<f64> ) -> Result<Vec<f64>, Error>
 {
 	let size = rhs.len();
-	let largest = matrix.iter().fold( 0.0_f64, | largest, value | largest.max( value.abs() ) );
+	let mut scales : Vec<f64> = ( 0 .. size ).map( | row | matrix[ row * size .. ( row + 1 ) * size ].iter().fold( 0.0_f64, | largest, value | largest.max( value.abs() ) ) ).collect();
 
 	for column in 0 .. size
 	{
 		let pivot = ( column .. size ).max_by( | &a, &b | matrix[ a * size + column ].abs().total_cmp( &matrix[ b * size + column ].abs() ) ).unwrap();
 
-		if matrix[ pivot * size + column ].abs() <= largest * TOLERANCE { return Err( Error::Singular ); }
+		if matrix[ pivot * size + column ].abs() <= scales[ pivot ] * TOLERANCE { return Err( Error::Singular ); }
 
 		for index in 0 .. size { matrix.swap( column * size + index, pivot * size + index ); }
 
 		rhs.swap( column, pivot );
+		scales.swap( column, pivot );
 
 		for row in column + 1 .. size
 		{

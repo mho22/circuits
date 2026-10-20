@@ -17,6 +17,12 @@ fn it_swaps_rows_when_a_pivot_is_zero()
 }
 
 #[test]
+fn it_solves_rows_of_very_different_sizes()
+{
+	assert_eq!( eliminate( vec![ 1.0, 0.0, 0.0, 1e-13 ], vec![ 1.0, 1e-13 ] ), Ok( vec![ 1.0, 1.0 ] ) );
+}
+
+#[test]
 fn it_solves_an_empty_system()
 {
 	assert_eq!( eliminate( vec![], vec![] ), Ok( vec![] ) );
