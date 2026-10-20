@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { INPUTS, Kind, NAMES, UNITS } from '../../src/enums/kind.ts';
+import { FIELDS, INPUTS, Kind, NAMES, UNITS } from '../../src/enums/kind.ts';
 
 
 describe( 'kind', () =>
@@ -12,6 +12,11 @@ describe( 'kind', () =>
 	it( 'names every part', () =>
 	{
 		expect( Object.values( NAMES ) ).toEqual( [ 'Wire', 'Resistor', 'Battery', 'Ground', 'Capacitor', 'Inductor', 'Switch', 'Diode', 'NPN', 'PNP', 'NMOS', 'PMOS' ] );
+	} );
+
+	it( 'names the value of each part with a value in a file', () =>
+	{
+		expect( FIELDS ).toEqual( { [ Kind.Resistor ] : 'ohms', [ Kind.Battery ] : 'volts', [ Kind.Capacitor ] : 'farads', [ Kind.Inductor ] : 'henries' } );
 	} );
 
 	it( 'gives a unit only to the parts with a value', () =>

@@ -4,6 +4,11 @@ use simulator::{ Error, Kind, Operation, Point, Segment, Simulation };
 const STEP : f64 = 1e-6;
 
 
+fn segment( from : ( i32, i32 ), to : ( i32, i32 ) ) -> Segment
+{
+	Segment { from : Point { x : from.0, y : from.1 }, to : Point { x : to.0, y : to.1 } }
+}
+
 fn add( simulation : &mut Simulation, kind : Kind, from : ( i32, i32 ), to : ( i32, i32 ) ) -> u32
 {
 	simulation.apply( Operation::Add { kind, segment : Segment { from : Point { x : from.0, y : from.1 }, to : Point { x : to.0, y : to.1 } } } ).unwrap()
@@ -224,4 +229,44 @@ fn it_keeps_the_drop_of_a_diode_while_time_runs()
 
 	assert!( before > 0.6 && before < 0.7 );
 	assert!( near( drop( &simulation ), before, 1e-6 ) );
+}
+
+#[test]
+fn it_opens_a_list_of_parts_in_place_of_the_drawing()
+{
+	let mut simulation = series( Kind::Resistor { ohms : 1000.0 } );
+	let parts = [ ( Kind::Wire, segment( ( 0, 0 ), ( 2, 0 ) ) ), ( Kind::Diode, segment( ( 2, 0 ), ( 4, 0 ) ) ) ];
+
+	simulation.open( &parts ).unwrap();
+
+	let opened : Vec<( Kind, Segment )> = simulation.document().elements().iter().map( | element | ( element.kind, element.segment ) ).collect();
+
+	assert_eq!( opened, parts );
+}
+
+#[test]
+fn it_brings_the_drawing_back_with_one_undo_after_an_open()
+{
+	let mut simulation = series( Kind::Resistor { ohms : 1000.0 } );
+	let before = simulation.document().elements().to_vec();
+
+	simulation.open( &[] ).unwrap();
+
+	assert!( simulation.document().elements().is_empty() );
+
+	simulation.undo().unwrap();
+
+	assert_eq!( simulation.document().elements(), before.as_slice() );
+}
+
+#[test]
+fn it_keeps_the_drawing_when_a_part_is_invalid()
+{
+	let mut simulation = series( Kind::Resistor { ohms : 1000.0 } );
+	let before = simulation.document().elements().to_vec();
+
+	assert_eq!( simulation.open( &[ ( Kind::Wire, segment( ( 0, 0 ), ( 2, 0 ) ) ), ( Kind::Resistor { ohms : 0.0 }, segment( ( 2, 0 ), ( 4, 0 ) ) ) ] ), Err( Error::Resistance ) );
+	assert_eq!( simulation.open( &[ ( Kind::Wire, segment( ( 0, 0 ), ( 2, 1 ) ) ) ] ), Err( Error::Crooked ) );
+	assert_eq!( simulation.document().elements(), before.as_slice() );
+	assert_eq!( simulation.undo(), Ok( Some( 4 ) ) );
 }

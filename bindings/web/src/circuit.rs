@@ -29,24 +29,16 @@ impl Circuit
 
 	pub fn add( &mut self, code : u8, value : f64, from_x : i32, from_y : i32, to_x : i32, to_y : i32 ) -> Result<u32, JsError>
 	{
-		let kind = match code
-		{
-			0 => Kind::Wire,
-			1 => Kind::Resistor { ohms : value },
-			2 => Kind::Battery { volts : value },
-			3 => Kind::Ground,
-			4 => Kind::Capacitor { farads : value },
-			5 => Kind::Inductor { henries : value },
-			6 => Kind::Switch { closed : false },
-			7 => Kind::Diode,
-			8 => Kind::Npn,
-			9 => Kind::Pnp,
-			10 => Kind::Nmos,
-			11 => Kind::Pmos,
-			_ => return Err( JsError::new( "Unknown part kind." ) ),
-		};
+		let kind = Circuit::kind( code, value )?;
 
 		self.simulation.place( kind, Segment { from : Point { x : from_x, y : from_y }, to : Point { x : to_x, y : to_y } } ).map_err( | error | JsError::new( &error.to_string() ) )
+	}
+
+	pub fn open( &mut self, data : &[ f64 ] ) -> Result<u32, JsError>
+	{
+		let parts = data.chunks_exact( 6 ).map( | row | Ok( ( Circuit::kind( row[ 0 ] as u8, row[ 1 ] )?, Segment { from : Point { x : row[ 2 ] as i32, y : row[ 3 ] as i32 }, to : Point { x : row[ 4 ] as i32, y : row[ 5 ] as i32 } } ) ) ).collect::<Result<Vec<_>, JsError>>()?;
+
+		self.simulation.open( &parts ).map_err( | error | JsError::new( &error.to_string() ) )
 	}
 
 	pub fn delete( &mut self, id : u32 ) -> Result<u32, JsError>
@@ -150,5 +142,27 @@ impl Circuit
 	fn apply( &mut self, operation : Operation ) -> Result<u32, JsError>
 	{
 		self.simulation.apply( operation ).map_err( | error | JsError::new( &error.to_string() ) )
+	}
+
+	fn kind( code : u8, value : f64 ) -> Result<Kind, JsError>
+	{
+		let kind = match code
+		{
+			0 => Kind::Wire,
+			1 => Kind::Resistor { ohms : value },
+			2 => Kind::Battery { volts : value },
+			3 => Kind::Ground,
+			4 => Kind::Capacitor { farads : value },
+			5 => Kind::Inductor { henries : value },
+			6 => Kind::Switch { closed : value != 0.0 },
+			7 => Kind::Diode,
+			8 => Kind::Npn,
+			9 => Kind::Pnp,
+			10 => Kind::Nmos,
+			11 => Kind::Pmos,
+			_ => return Err( JsError::new( "Unknown part kind." ) ),
+		};
+
+		Ok( kind )
 	}
 }

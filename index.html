@@ -21,6 +21,7 @@
 			button { padding : 6px 10px; border : 1px solid #2a2a2a; border-radius : 4px; background : #0c0c0c; color : inherit; font : inherit; cursor : pointer; }
 			button.active { border-color : #5c5c5c; color : #e6e6e6; }
 			kbd { margin-left : 6px; color : #5c5c5c; font : inherit; }
+			.files { display : flex; order : 1; gap : 6px; margin-left : auto; }
 			button.center { position : fixed; right : 12px; bottom : 12px; display : flex; width : 32px; height : 32px; padding : 0; align-items : center; justify-content : center; }
 			button.center:hover { color : #e6e6e6; }
 			output { position : fixed; bottom : 12px; left : 12px; }
@@ -31,7 +32,13 @@
 	</head>
 	<body>
 		<canvas></canvas>
-		<nav></nav>
+		<nav>
+			<div class="files">
+				<button class="load">Open</button>
+				<button class="save">Save</button>
+			</div>
+		</nav>
+		<input type="file" accept=".circuit" hidden>
 		<button class="center" aria-label="Center the view">
 			<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5"/><circle cx="8" cy="8" r="1.5"/><path d="M8 0v3M8 13v3M0 8h3M13 8h3"/></svg>
 		</button>

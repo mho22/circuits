@@ -28,6 +28,14 @@ describe( 'keyboard', () =>
 		expect( press( 'y', { ctrlKey : true } ) ).toBe( 'redo' );
 	} );
 
+	it( 'saves and opens with control or command and s or o', () =>
+	{
+		expect( press( 's', { ctrlKey : true } ) ).toBe( 'save' );
+		expect( press( 'S', { metaKey : true } ) ).toBe( 'save' );
+		expect( press( 'o', { ctrlKey : true } ) ).toBe( 'open' );
+		expect( press( 'o', { metaKey : true } ) ).toBe( 'open' );
+	} );
+
 	it( 'leaves other shortcuts of the browser alone', () =>
 	{
 		expect( press( 'c', { metaKey : true } ) ).toBeUndefined();

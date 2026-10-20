@@ -3,8 +3,11 @@ import { Clock } from './clock.ts';
 import { parse, write } from './decimal.ts';
 import { decode as decodeBranches } from './decoders/branch.ts';
 import { decode as decodeElements } from './decoders/element.ts';
+import { decode as decodeFile } from './decoders/file.ts';
 import { Drift } from './drift.ts';
+import { download } from './download.ts';
 import { edit } from './editors/value.ts';
+import { encode } from './encoders/file.ts';
 import { INPUTS, Kind } from './enums/kind.ts';
 import { read } from './keyboard.ts';
 import { leads } from './leads.ts';
@@ -31,6 +34,7 @@ const SEPARATOR = ( 1.5 ).toLocaleString().charAt( 1 );
 const canvas = document.querySelector( 'canvas' )!;
 const context = canvas.getContext( '2d' )!;
 const status = document.querySelector( 'output' )!;
+const picker = document.querySelector( 'input[type=file]' ) as HTMLInputElement;
 const circuit = new Circuit();
 const tool = new PlaceTool( circuit );
 const toolbar = new Toolbar( document.querySelector( 'nav' )!, select );
@@ -38,6 +42,7 @@ const clock = new Clock( STEPS_PER_SECOND, STEPS_PER_FRAME );
 const drift = new Drift();
 const view = new View();
 
+let name = 'untitled.circuit';
 let hover : Point | null = null;
 let notice : string | null = null;
 let previous : number | null = null;
@@ -49,6 +54,26 @@ function select( kind : Kind ) : void
 	tool.kind = kind;
 
 	toolbar.select( kind );
+}
+
+async function save() : Promise<void>
+{
+	try { name = await download( encode( decodeElements( circuit.elements() ) ), name ); }
+
+	catch( error ) { if( ( error as Error ).name !== 'AbortError' ) notice = ( error as Error ).message; }
+}
+
+async function load() : Promise<void>
+{
+	const [ file ] = picker.files ?? [];
+
+	picker.value = '';
+
+	if( ! file ) return;
+
+	try { circuit.open( decodeFile( await file.text() ) ); name = file.name; }
+
+	catch( error ) { notice = ( error as Error ).message; }
 }
 
 function report( text : string, error : boolean ) : void
@@ -191,6 +216,12 @@ canvas.addEventListener( 'dblclick', ( event : MouseEvent ) =>
 
 document.querySelector( 'button.center' )!.addEventListener( 'click', () => view.center() );
 
+document.querySelector( 'button.save' )!.addEventListener( 'click', save );
+
+document.querySelector( 'button.load' )!.addEventListener( 'click', () => picker.click() );
+
+picker.addEventListener( 'change', load );
+
 canvas.addEventListener( 'contextmenu', ( event : MouseEvent ) => event.preventDefault() );
 
 addEventListener( 'keydown', ( event : KeyboardEvent ) =>
@@ -208,6 +239,10 @@ addEventListener( 'keydown', ( event : KeyboardEvent ) =>
 	if( command === 'undo' ) { circuit.undo(); return; }
 
 	if( command === 'redo' ) { circuit.redo(); return; }
+
+	if( command === 'save' ) { save(); return; }
+
+	if( command === 'open' ) { picker.click(); return; }
 
 	select( command );
 } );

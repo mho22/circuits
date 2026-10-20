@@ -31,6 +31,15 @@ impl Simulation
 		self.commit( &operations )
 	}
 
+	pub fn open( &mut self, parts : &[ ( Kind, Segment ) ] ) -> Result<u32, Error>
+	{
+		let deletions = self.document.elements().iter().map( | element | Operation::Delete { id : element.id } );
+		let additions = parts.iter().map( | &( kind, segment ) | Operation::Add { kind, segment } );
+		let operations : Vec<Operation> = deletions.chain( additions ).collect();
+
+		self.commit( &operations )
+	}
+
 	pub fn undo( &mut self ) -> Result<Option<u32>, Error>
 	{
 		let Some( operations ) = self.undos.pop() else { return Ok( None ); };

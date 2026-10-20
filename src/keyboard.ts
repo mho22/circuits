@@ -16,6 +16,10 @@ export function read( event : Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'metaKey' 
 
 	if( modified && key === 'y' ) return 'redo';
 
+	if( modified && key === 's' ) return 'save';
+
+	if( modified && key === 'o' ) return 'open';
+
 	if( modified ) return undefined;
 
 	return SHORTCUTS[ key ];

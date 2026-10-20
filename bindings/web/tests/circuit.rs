@@ -235,3 +235,26 @@ fn it_lists_a_mosfet_with_its_drain_current()
 	assert!( transistor[ 10 ].abs() < 1e-9 );
 }
 
+#[wasm_bindgen_test]
+fn it_opens_parts_in_place_of_the_drawing()
+{
+	let mut circuit = powered();
+
+	circuit.open( &[ 1.0, 220.0, 0.0, 0.0, 2.0, 0.0, 6.0, 1.0, 2.0, 0.0, 2.0, 2.0 ] ).ok();
+
+	let elements = circuit.elements();
+
+	assert_eq!( elements.len(), 26 );
+	assert_eq!( &elements[ 1 .. 7 ], &[ 1.0, 0.0, 0.0, 2.0, 0.0, 220.0 ] );
+	assert_eq!( &elements[ 14 .. 20 ], &[ 6.0, 2.0, 0.0, 2.0, 2.0, 1.0 ] );
+}
+
+#[wasm_bindgen_test]
+fn it_rejects_parts_it_cannot_place()
+{
+	let mut circuit = powered();
+
+	assert!( circuit.open( &[ 12.0, 0.0, 0.0, 0.0, 2.0, 0.0 ] ).is_err() );
+	assert!( circuit.open( &[ 1.0, 0.0, 0.0, 0.0, 2.0, 0.0 ] ).is_err() );
+	assert_eq!( circuit.elements().len(), 65 );
+}
