@@ -29,6 +29,18 @@ impl Kind
 		}
 	}
 
+	pub fn value( &self ) -> Option<f64>
+	{
+		match *self
+		{
+			Kind::Resistor { ohms } => Some( ohms ),
+			Kind::Battery { volts } => Some( volts ),
+			Kind::Capacitor { farads } => Some( farads ),
+			Kind::Inductor { henries } => Some( henries ),
+			_ => None,
+		}
+	}
+
 	pub fn with_value( &self, value : f64 ) -> Result<Kind, Error>
 	{
 		let kind = match self

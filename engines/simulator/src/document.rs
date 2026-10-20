@@ -15,9 +15,37 @@ impl Document
 		match operation
 		{
 			Operation::Add { kind, segment } => self.add( kind, segment ),
+			Operation::Insert { element, index } => self.insert( element, index ),
 			Operation::Delete { id } => self.delete( id ),
 			Operation::SetValue { id, value } => self.set_value( id, value ),
 			Operation::SetClosed { id, closed } => self.set_closed( id, closed ),
+		}
+	}
+
+	pub fn inverse( &self, operation : Operation ) -> Result<Operation, Error>
+	{
+		match operation
+		{
+			Operation::Add { .. } => Ok( Operation::Delete { id : self.next } ),
+			Operation::Insert { element, .. } => Ok( Operation::Delete { id : element.id } ),
+			Operation::Delete { id } =>
+			{
+				let index = self.index( id )?;
+
+				Ok( Operation::Insert { element : self.elements[ index ], index } )
+			},
+			Operation::SetValue { id, .. } =>
+			{
+				let value = self.elements[ self.index( id )? ].kind.value().ok_or( Error::Valueless )?;
+
+				Ok( Operation::SetValue { id, value } )
+			},
+			Operation::SetClosed { id, .. } =>
+			{
+				let Kind::Switch { closed } = self.elements[ self.index( id )? ].kind else { return Err( Error::Switchless ); };
+
+				Ok( Operation::SetClosed { id, closed } )
+			},
 		}
 	}
 
@@ -31,7 +59,7 @@ impl Document
 		self.elements.iter().rev().filter( | element | element.segment.contains( point ) ).map( | element | element.id ).collect()
 	}
 
-	fn add( &mut self, kind : Kind, segment : Segment ) -> Result<u32, Error>
+	fn check( kind : Kind, segment : Segment ) -> Result<(), Error>
 	{
 		if kind == Kind::Ground && ! segment.is_empty() { return Err( Error::Misplaced ); }
 
@@ -39,7 +67,12 @@ impl Document
 
 		if ! segment.is_straight() { return Err( Error::Crooked ); }
 
-		kind.check()?;
+		kind.check()
+	}
+
+	fn add( &mut self, kind : Kind, segment : Segment ) -> Result<u32, Error>
+	{
+		Document::check( kind, segment )?;
 
 		let id = self.next;
 
@@ -48,6 +81,19 @@ impl Document
 		self.next += 1;
 
 		Ok( id )
+	}
+
+	fn insert( &mut self, element : Element, index : usize ) -> Result<u32, Error>
+	{
+		if self.index( element.id ).is_ok() { return Err( Error::Taken ); }
+
+		Document::check( element.kind, element.segment )?;
+
+		self.elements.insert( index.min( self.elements.len() ), element );
+
+		self.next = self.next.max( element.id + 1 );
+
+		Ok( element.id )
 	}
 
 	fn delete( &mut self, id : u32 ) -> Result<u32, Error>

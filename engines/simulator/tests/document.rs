@@ -148,3 +148,70 @@ fn it_finds_the_parts_at_a_point_topmost_first()
 	assert_eq!( document.elements_at( BAZ ), vec![ 2, 1 ] );
 	assert!( document.elements_at( Point { x : 9, y : 9 } ).is_empty() );
 }
+
+#[test]
+fn it_inserts_a_part_back_at_its_place_with_its_id()
+{
+	let mut document = Document::default();
+
+	document.apply( add( Kind::Wire, FOO, BAR ) ).unwrap();
+	document.apply( add( Kind::Wire, BAR, BAZ ) ).unwrap();
+	document.apply( Operation::Delete { id : 0 } ).unwrap();
+
+	let foo = Element { id : 0, kind : Kind::Wire, segment : Segment { from : FOO, to : BAR } };
+
+	assert_eq!( document.apply( Operation::Insert { element : foo, index : 0 } ), Ok( 0 ) );
+	assert_eq!( document.elements()[ 0 ], foo );
+	assert_eq!( document.apply( add( Kind::Wire, FOO, BAZ ) ), Ok( 2 ) );
+}
+
+#[test]
+fn it_continues_the_ids_after_an_inserted_part()
+{
+	let mut document = Document::default();
+
+	document.apply( Operation::Insert { element : Element { id : 7, kind : Kind::Wire, segment : Segment { from : FOO, to : BAR } }, index : 9 } ).unwrap();
+
+	assert_eq!( document.apply( add( Kind::Wire, BAR, BAZ ) ), Ok( 8 ) );
+}
+
+#[test]
+fn it_rejects_an_insert_with_a_taken_id_or_an_invalid_part()
+{
+	let mut document = Document::default();
+
+	document.apply( add( Kind::Wire, FOO, BAR ) ).unwrap();
+
+	assert_eq!( document.apply( Operation::Insert { element : Element { id : 0, kind : Kind::Wire, segment : Segment { from : BAR, to : BAZ } }, index : 0 } ), Err( Error::Taken ) );
+	assert_eq!( document.apply( Operation::Insert { element : Element { id : 1, kind : Kind::Wire, segment : Segment { from : BAR, to : BAR } }, index : 0 } ), Err( Error::Empty ) );
+	assert_eq!( document.elements().len(), 1 );
+}
+
+#[test]
+fn it_gives_the_operation_that_cancels_each_operation()
+{
+	let mut document = Document::default();
+
+	document.apply( add( Kind::Resistor { ohms : 1000.0 }, FOO, BAR ) ).unwrap();
+	document.apply( add( Kind::Switch { closed : false }, BAR, BAZ ) ).unwrap();
+
+	let resistor = document.elements()[ 0 ];
+
+	assert_eq!( document.inverse( add( Kind::Wire, FOO, BAZ ) ), Ok( Operation::Delete { id : 2 } ) );
+	assert_eq!( document.inverse( Operation::Insert { element : resistor, index : 0 } ), Ok( Operation::Delete { id : 0 } ) );
+	assert_eq!( document.inverse( Operation::Delete { id : 0 } ), Ok( Operation::Insert { element : resistor, index : 0 } ) );
+	assert_eq!( document.inverse( Operation::SetValue { id : 0, value : 220.0 } ), Ok( Operation::SetValue { id : 0, value : 1000.0 } ) );
+	assert_eq!( document.inverse( Operation::SetClosed { id : 1, closed : true } ), Ok( Operation::SetClosed { id : 1, closed : false } ) );
+}
+
+#[test]
+fn it_gives_no_inverse_for_an_operation_that_fails()
+{
+	let mut document = Document::default();
+
+	document.apply( add( Kind::Wire, FOO, BAR ) ).unwrap();
+
+	assert_eq!( document.inverse( Operation::Delete { id : 7 } ), Err( Error::Missing ) );
+	assert_eq!( document.inverse( Operation::SetValue { id : 0, value : 1.0 } ), Err( Error::Valueless ) );
+	assert_eq!( document.inverse( Operation::SetClosed { id : 0, closed : true } ), Err( Error::Switchless ) );
+}

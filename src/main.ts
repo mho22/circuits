@@ -6,6 +6,7 @@ import { Drift } from './drift.ts';
 import { edit } from './editors/value.ts';
 import { Kind, UNITS } from './enums/kind.ts';
 import { toGrid } from './grid.ts';
+import { read } from './keyboard.ts';
 import { describe } from './readout.ts';
 import * as current from './renderers/current.ts';
 import * as cursor from './renderers/cursor.ts';
@@ -21,7 +22,6 @@ import type { Point } from './types/point.ts';
 await init();
 
 
-const SHORTCUTS : Record<string, Kind> = { w : Kind.Wire, r : Kind.Resistor, b : Kind.Battery, g : Kind.Ground, c : Kind.Capacitor, l : Kind.Inductor, s : Kind.Switch };
 const STEPS_PER_SECOND = 1000;
 const STEPS_PER_FRAME = 100;
 
@@ -164,11 +164,17 @@ addEventListener( 'keydown', ( event : KeyboardEvent ) =>
 {
 	if( event.target instanceof HTMLInputElement ) return;
 
-	const kind = SHORTCUTS[ event.key.toLowerCase() ];
+	const command = read( event );
 
-	if( kind === undefined ) return;
+	if( command === undefined ) return;
 
-	select( kind );
+	event.preventDefault();
+
+	if( command === 'undo' ) { circuit.undo(); return; }
+
+	if( command === 'redo' ) { circuit.redo(); return; }
+
+	select( command );
 } );
 
 addEventListener( 'resize', resize );

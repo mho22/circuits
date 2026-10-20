@@ -47,6 +47,18 @@ fn it_rejects_a_voltage_that_is_not_finite()
 }
 
 #[test]
+fn it_reads_the_value_of_a_part()
+{
+	assert_eq!( Kind::Resistor { ohms : 220.0 }.value(), Some( 220.0 ) );
+	assert_eq!( Kind::Battery { volts : 9.0 }.value(), Some( 9.0 ) );
+	assert_eq!( Kind::Capacitor { farads : 1e-6 }.value(), Some( 1e-6 ) );
+	assert_eq!( Kind::Inductor { henries : 1e-3 }.value(), Some( 1e-3 ) );
+	assert_eq!( Kind::Wire.value(), None );
+	assert_eq!( Kind::Ground.value(), None );
+	assert_eq!( Kind::Switch { closed : true }.value(), None );
+}
+
+#[test]
 fn it_replaces_the_value_of_a_part()
 {
 	assert_eq!( Kind::Resistor { ohms : 1.0 }.with_value( 220.0 ), Ok( Kind::Resistor { ohms : 220.0 } ) );

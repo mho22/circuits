@@ -61,6 +61,16 @@ impl Circuit
 		self.apply( Operation::SetClosed { id, closed } )
 	}
 
+	pub fn undo( &mut self ) -> Result<Option<u32>, JsError>
+	{
+		self.simulation.undo().map_err( | error | JsError::new( &error.to_string() ) )
+	}
+
+	pub fn redo( &mut self ) -> Result<Option<u32>, JsError>
+	{
+		self.simulation.redo().map_err( | error | JsError::new( &error.to_string() ) )
+	}
+
 	pub fn advance( &mut self, count : u32 )
 	{
 		self.simulation.advance( count );

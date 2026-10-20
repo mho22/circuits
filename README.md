@@ -22,6 +22,7 @@ Requires Rust through `rustup`. `rust-toolchain.toml` pins the version and the `
 - Double-click a resistor, a battery, a capacitor or an inductor to change its value. Write `4.7k`, `220`, `9 V`, `10u`.
 - Double-click a switch to open or close it.
 - Right-click a part to delete it.
+- Press `Ctrl Z` (`⌘ Z` on a Mac) to undo, and `Ctrl Shift Z` or `Ctrl Y` (`⌘ Shift Z`) to redo.
 - Hover a part to read its voltage and current.
 
 Two parts connect where their ends meet, or where an end touches a wire. Two wires that cross do not connect. Every ground is the same 0 V node.

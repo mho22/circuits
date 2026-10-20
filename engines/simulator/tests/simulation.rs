@@ -105,3 +105,70 @@ fn it_rejects_an_invalid_operation()
 	assert_eq!( simulation.apply( Operation::Delete { id : 7 } ), Err( Error::Missing ) );
 	assert!( simulation.solution().unwrap().readings.is_empty() );
 }
+
+#[test]
+fn it_undoes_a_deletion()
+{
+	let mut simulation = series( Kind::Resistor { ohms : 1000.0 } );
+	let before = simulation.document().elements().to_vec();
+
+	simulation.apply( Operation::Delete { id : 3 } ).unwrap();
+
+	assert_eq!( simulation.undo(), Ok( Some( 3 ) ) );
+	assert_eq!( simulation.document().elements(), before.as_slice() );
+	assert!( near( simulation.solution().unwrap().readings[ 1 ].current, 0.0025, 1e-12 ) );
+}
+
+#[test]
+fn it_undoes_each_operation_from_the_last_one()
+{
+	let mut simulation = series( Kind::Switch { closed : false } );
+
+	simulation.apply( Operation::SetValue { id : 1, value : 2200.0 } ).unwrap();
+	simulation.apply( Operation::SetClosed { id : 2, closed : true } ).unwrap();
+
+	assert_eq!( simulation.undo(), Ok( Some( 2 ) ) );
+	assert_eq!( simulation.document().elements()[ 2 ].kind, Kind::Switch { closed : false } );
+	assert_eq!( simulation.undo(), Ok( Some( 1 ) ) );
+	assert_eq!( simulation.document().elements()[ 1 ].kind, Kind::Resistor { ohms : 1000.0 } );
+
+	for _ in 0 .. 5 { simulation.undo().unwrap(); }
+
+	assert!( simulation.document().elements().is_empty() );
+	assert_eq!( simulation.undo(), Ok( None ) );
+}
+
+#[test]
+fn it_redoes_what_it_undid()
+{
+	let mut simulation = series( Kind::Resistor { ohms : 1000.0 } );
+	let after = simulation.document().elements().to_vec();
+
+	simulation.undo().unwrap();
+	simulation.undo().unwrap();
+
+	assert_eq!( simulation.redo(), Ok( Some( 3 ) ) );
+	assert_eq!( simulation.redo(), Ok( Some( 4 ) ) );
+	assert_eq!( simulation.document().elements(), after.as_slice() );
+	assert_eq!( simulation.redo(), Ok( None ) );
+}
+
+#[test]
+fn it_forgets_the_redo_after_a_new_operation()
+{
+	let mut simulation = series( Kind::Resistor { ohms : 1000.0 } );
+
+	simulation.undo().unwrap();
+	add( &mut simulation, Kind::Wire, ( 9, 9 ), ( 9, 8 ) );
+
+	assert_eq!( simulation.redo(), Ok( None ) );
+}
+
+#[test]
+fn it_keeps_the_undo_untouched_by_an_invalid_operation()
+{
+	let mut simulation = series( Kind::Resistor { ohms : 1000.0 } );
+
+	assert!( simulation.apply( Operation::Delete { id : 7 } ).is_err() );
+	assert_eq!( simulation.undo(), Ok( Some( 4 ) ) );
+}

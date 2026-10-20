@@ -13,6 +13,7 @@ pub enum Error
 	Resistance,
 	Singular,
 	Switchless,
+	Taken,
 	Valueless,
 	Voltage,
 }
@@ -32,6 +33,7 @@ impl fmt::Display for Error
 			Error::Resistance => "A resistance must be greater than 0 Ω.",
 			Error::Singular => "The circuit has no single solution: a battery is shorted, or batteries form a loop.",
 			Error::Switchless => "This part is not a switch.",
+			Error::Taken => "A part already has this id.",
 			Error::Valueless => "This part has no value.",
 			Error::Voltage => "A voltage must be a finite number.",
 		};

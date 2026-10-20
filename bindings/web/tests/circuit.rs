@@ -139,3 +139,17 @@ fn it_advances_the_time_step_by_step()
 
 	assert!( ( circuit.elements()[ 27 ] - 5.0 * ( 1.0 - ( -1.0_f64 ).exp() ) ).abs() < 1e-2 );
 }
+
+#[wasm_bindgen_test]
+fn it_undoes_and_redoes_a_deletion()
+{
+	let mut circuit = powered();
+
+	circuit.delete( 1 ).ok();
+
+	assert_eq!( circuit.undo().ok(), Some( Some( 1 ) ) );
+	assert_eq!( circuit.elements_at( 1, 0 ), vec![ 1 ] );
+	assert_eq!( circuit.redo().ok(), Some( Some( 1 ) ) );
+	assert!( circuit.elements_at( 1, 0 ).is_empty() );
+	assert_eq!( circuit.redo().ok(), Some( None ) );
+}
