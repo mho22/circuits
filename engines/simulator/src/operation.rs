@@ -9,5 +9,5 @@ pub enum Operation
 	Delete { id : u32 },
 	SetValue { id : u32, value : f64 },
 	SetClosed { id : u32, closed : bool },
-	Move { id : u32, segment : Segment, mirrored : bool },
+	Move { id : u32, kind : Kind, segment : Segment, mirrored : bool },
 }

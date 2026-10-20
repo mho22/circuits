@@ -1,58 +1,74 @@
-use crate::{ place, solve, stretch, Document, Element, Error, History, Kind, Operation, Segment, Solution };
+use std::collections::HashMap;
+
+use crate::flatten::STRIDE;
+use crate::{ flatten, place, solve, stretch, Document, Element, Error, History, Kind, Operation, Outline, Point, Reading, Registry, Segment, Solution };
 
 
 #[derive( Debug )]
 pub struct Simulation
 {
-	document : Document,
+	layers : Vec<Document>,
+	registry : Registry,
+	elements : Vec<Element>,
 	history : History,
 	solution : Result<Solution, Error>,
 	step : f64,
-	undos : Vec<Vec<Operation>>,
-	redos : Vec<Vec<Operation>>,
+	undos : Vec<Vec<( usize, Operation )>>,
+	redos : Vec<Vec<( usize, Operation )>>,
 }
 
 impl Simulation
 {
 	pub fn new( step : f64 ) -> Simulation
 	{
-		Simulation { document : Document::default(), history : History::default(), solution : Ok( Solution::default() ), step, undos : Vec::new(), redos : Vec::new() }
+		Simulation { layers : vec![ Document::default() ], registry : Registry::default(), elements : Vec::new(), history : History::default(), solution : Ok( Solution::default() ), step, undos : Vec::new(), redos : Vec::new() }
 	}
 
-	pub fn apply( &mut self, operation : Operation ) -> Result<u32, Error>
+	pub fn create( &mut self ) -> usize
 	{
-		self.commit( &[ operation ] )
+		self.layers.push( Document::default() );
+
+		self.layers.len() - 1
 	}
 
-	pub fn place( &mut self, kind : Kind, segment : Segment ) -> Result<u32, Error>
+	pub fn apply( &mut self, layer : usize, operation : Operation ) -> Result<u32, Error>
 	{
-		let operations = place( self.document.elements(), kind, segment );
-
-		self.commit( &operations )
+		self.commit( &[ ( layer, operation ) ] )
 	}
 
-	pub fn transform( &mut self, id : u32, segment : Segment, mirrored : bool ) -> Result<u32, Error>
+	pub fn place( &mut self, layer : usize, kind : Kind, segment : Segment ) -> Result<u32, Error>
 	{
-		let before = *self.document.elements().iter().find( | element | element.id == id ).ok_or( Error::Missing )?;
-		let mut operations = stretch( self.document.elements(), &before, &Element { segment, mirrored, ..before } );
-		let mut draft = self.document.clone();
+		let operations = place( self.document( layer ).ok_or( Error::Layerless )?.elements(), kind, segment );
+		let edits : Vec<( usize, Operation )> = operations.into_iter().map( | operation | ( layer, operation ) ).collect();
+
+		self.commit( &edits )
+	}
+
+	pub fn transform( &mut self, layer : usize, id : u32, kind : Kind, segment : Segment, mirrored : bool ) -> Result<u32, Error>
+	{
+		let document = self.document( layer ).ok_or( Error::Layerless )?;
+		let before = *document.elements().iter().find( | element | element.id == id ).ok_or( Error::Missing )?;
+		let mut operations = stretch( document.elements(), &before, &Element { kind, segment, mirrored, ..before }, | element | self.terminals( element ) );
+		let mut draft = document.clone();
 
 		for &operation in &operations { draft.apply( operation )?; }
 
-		operations.extend( place( draft.elements(), before.kind, segment ) );
+		operations.extend( place( draft.elements(), kind, segment ) );
 		operations.pop();
-		operations.push( Operation::Move { id, segment, mirrored } );
+		operations.push( Operation::Move { id, kind, segment, mirrored } );
 
-		self.commit( &operations )
+		let edits : Vec<( usize, Operation )> = operations.into_iter().map( | operation | ( layer, operation ) ).collect();
+
+		self.commit( &edits )
 	}
 
 	pub fn open( &mut self, parts : &[ ( Kind, Segment, bool ) ] ) -> Result<u32, Error>
 	{
-		let deletions = self.document.elements().iter().map( | element | Operation::Delete { id : element.id } );
-		let additions = parts.iter().map( | &( kind, segment, mirrored ) | Operation::Add { kind, segment, mirrored } );
-		let operations : Vec<Operation> = deletions.chain( additions ).collect();
+		let deletions = self.layers[ 0 ].elements().iter().map( | element | ( 0, Operation::Delete { id : element.id } ) );
+		let additions = parts.iter().map( | &( kind, segment, mirrored ) | ( 0, Operation::Add { kind, segment, mirrored } ) );
+		let edits : Vec<( usize, Operation )> = deletions.chain( additions ).collect();
 
-		self.commit( &operations )
+		self.commit( &edits )
 	}
 
 	pub fn undo( &mut self ) -> Result<Option<u32>, Error>
@@ -81,17 +97,19 @@ impl Simulation
 	{
 		for _ in 0 .. count
 		{
-			self.solution = solve( self.document.elements(), &self.history, self.step );
+			let solution = solve( &self.elements, &self.history, self.step );
 
-			let Ok( solution ) = &self.solution else { return; };
+			if let Ok( solution ) = &solution { self.history = History::record( &self.elements, solution ); }
 
-			self.history = History::record( self.document.elements(), solution );
+			self.solution = solution.map( | solution | self.view( solution ) );
+
+			if self.solution.is_err() { return; }
 		}
 	}
 
-	pub fn document( &self ) -> &Document
+	pub fn document( &self, layer : usize ) -> Option<&Document>
 	{
-		&self.document
+		self.layers.get( layer )
 	}
 
 	pub fn solution( &self ) -> Result<&Solution, Error>
@@ -99,9 +117,16 @@ impl Simulation
 		self.solution.as_ref().map_err( | error | *error )
 	}
 
-	fn commit( &mut self, operations : &[ Operation ] ) -> Result<u32, Error>
+	pub fn terminals( &self, element : &Element ) -> Vec<Point>
 	{
-		let ( id, inverses ) = self.perform( operations )?;
+		let Kind::Symbol { layer, rotation } = element.kind else { return element.terminals(); };
+
+		self.layers.get( layer as usize ).map_or( Vec::new(), | document | Outline::of( document.elements() ).terminals( element.segment.from, rotation ) )
+	}
+
+	fn commit( &mut self, edits : &[ ( usize, Operation ) ] ) -> Result<u32, Error>
+	{
+		let ( id, inverses ) = self.perform( edits )?;
 
 		self.undos.push( inverses );
 		self.redos.clear();
@@ -109,35 +134,64 @@ impl Simulation
 		Ok( id )
 	}
 
-	fn perform( &mut self, operations : &[ Operation ] ) -> Result<( u32, Vec<Operation> ), Error>
+	fn perform( &mut self, edits : &[ ( usize, Operation ) ] ) -> Result<( u32, Vec<( usize, Operation )> ), Error>
 	{
 		let mut inverses = Vec::new();
-		let mut id = 0;
+		let mut result = Ok( 0 );
 
-		for &operation in operations
+		for &( layer, operation ) in edits
 		{
-			let result = self.document.inverse( operation ).and_then( | inverse | self.document.apply( operation ).map( | applied | ( applied, inverse ) ) );
+			result = self.edit( layer, operation ).map( | ( id, inverse ) | { inverses.push( ( layer, inverse ) ); id } );
 
-			let ( applied, inverse ) = match result
-			{
-				Ok( pair ) => pair,
-				Err( error ) =>
-				{
-					for &inverse in inverses.iter().rev() { self.document.apply( inverse ).ok(); }
-
-					return Err( error );
-				},
-			};
-
-			id = applied;
-
-			inverses.push( inverse );
+			if result.is_err() { break; }
 		}
+
+		let result = result.and_then( | id | flatten( &self.layers, &mut self.registry ).map( | elements | ( id, elements ) ) );
+
+		let ( id, elements ) = match result
+		{
+			Ok( pair ) => pair,
+			Err( error ) =>
+			{
+				for &( layer, inverse ) in inverses.iter().rev() { self.layers[ layer ].apply( inverse ).ok(); }
+
+				return Err( error );
+			},
+		};
 
 		inverses.reverse();
 
-		self.solution = solve( self.document.elements(), &self.history, self.step );
+		self.elements = elements;
+		self.solution = solve( &self.elements, &self.history, self.step ).map( | solution | self.view( solution ) );
 
 		Ok( ( id, inverses ) )
+	}
+
+	fn edit( &mut self, layer : usize, operation : Operation ) -> Result<( u32, Operation ), Error>
+	{
+		let document = self.layers.get_mut( layer ).ok_or( Error::Layerless )?;
+		let inverse = document.inverse( operation )?;
+
+		Ok( ( document.apply( operation )?, inverse ) )
+	}
+
+	fn view( &mut self, solution : Solution ) -> Solution
+	{
+		let positions : HashMap<u32, usize> = self.elements.iter().enumerate().map( | ( index, element ) | ( element.id, index ) ).collect();
+		let registry = &mut self.registry;
+		let layers = &self.layers;
+
+		let readings = layers[ 0 ].elements().iter().map( | element |
+		{
+			let Kind::Symbol { layer, .. } = element.kind else { return solution.readings[ positions[ &registry.id( &[ element.id ] ) ] ].clone(); };
+
+			let joins : Vec<&Reading> = layers[ layer as usize ].elements().iter().filter( | part | part.kind == Kind::Pin ).map( | pin | &solution.readings[ positions[ &registry.id( &[ element.id, pin.id ] ) ] ] ).collect();
+
+			Reading { potentials : joins.iter().map( | join | join.potentials[ 1 ] ).collect(), currents : joins.iter().map( | join | join.currents[ 1 ] ).collect() }
+		} ).collect();
+
+		let branches = solution.branches.into_iter().filter( | branch | branch.segment.from.x.abs() < STRIDE / 2 ).collect();
+
+		Solution { readings, branches }
 	}
 }

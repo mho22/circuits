@@ -21,20 +21,20 @@ fn bend( start : Point, end : Point, horizontal : bool, part : Segment ) -> Vec<
 	pieces( corner )
 }
 
-fn tapped( elements : &[ Element ], part : &Element, point : Point ) -> bool
+fn tapped( elements : &[ Element ], part : &Element, point : Point, terminals : &impl Fn( &Element ) -> Vec<Point> ) -> bool
 {
 	elements.iter().filter( | element | element.id != part.id ).any( | element |
 	{
-		if element.kind != Kind::Wire { return element.terminals().contains( &point ); }
+		if element.kind != Kind::Wire { return terminals( element ).contains( &point ); }
 
 		element.segment.contains( point ) && point != element.segment.from && point != element.segment.to
 	} )
 }
 
 
-pub fn stretch( elements : &[ Element ], before : &Element, after : &Element ) -> Vec<Operation>
+pub fn stretch( elements : &[ Element ], before : &Element, after : &Element, terminals : impl Fn( &Element ) -> Vec<Point> ) -> Vec<Operation>
 {
-	let ( old, new ) = ( before.terminals(), after.terminals() );
+	let ( old, new ) = ( terminals( before ), terminals( after ) );
 	let follow = | point : Point | old.iter().position( | &terminal | terminal == point ).map_or( point, | index | new[ index ] );
 	let mut operations = Vec::new();
 	let mut pieces = Vec::new();
@@ -56,7 +56,7 @@ pub fn stretch( elements : &[ Element ], before : &Element, after : &Element ) -
 
 	for ( terminal, moved ) in pairs
 	{
-		if terminal == moved || ! tapped( elements, before, terminal ) { continue; }
+		if terminal == moved || ! tapped( elements, before, terminal, &terminals ) { continue; }
 
 		for piece in bend( terminal, moved, true, after.segment )
 		{

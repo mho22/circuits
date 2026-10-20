@@ -19,7 +19,7 @@ impl Document
 			Operation::Delete { id } => self.delete( id ),
 			Operation::SetValue { id, value } => self.set_value( id, value ),
 			Operation::SetClosed { id, closed } => self.set_closed( id, closed ),
-			Operation::Move { id, segment, mirrored } => self.move_to( id, segment, mirrored ),
+			Operation::Move { id, kind, segment, mirrored } => self.move_to( id, kind, segment, mirrored ),
 		}
 	}
 
@@ -51,7 +51,7 @@ impl Document
 			{
 				let element = self.elements[ self.index( id )? ];
 
-				Ok( Operation::Move { id, segment : element.segment, mirrored : element.mirrored } )
+				Ok( Operation::Move { id, kind : element.kind, segment : element.segment, mirrored : element.mirrored } )
 			},
 		}
 	}
@@ -68,7 +68,7 @@ impl Document
 
 	fn check( kind : Kind, segment : Segment ) -> Result<(), Error>
 	{
-		let point = matches!( kind, Kind::Ground | Kind::Supply { .. } );
+		let point = matches!( kind, Kind::Ground | Kind::Supply { .. } | Kind::Pin | Kind::Symbol { .. } );
 
 		if point && ! segment.is_empty() { return Err( Error::Misplaced ); }
 
@@ -132,12 +132,13 @@ impl Document
 		Ok( id )
 	}
 
-	fn move_to( &mut self, id : u32, segment : Segment, mirrored : bool ) -> Result<u32, Error>
+	fn move_to( &mut self, id : u32, kind : Kind, segment : Segment, mirrored : bool ) -> Result<u32, Error>
 	{
 		let index = self.index( id )?;
 
-		Document::check( self.elements[ index ].kind, segment )?;
+		Document::check( kind, segment )?;
 
+		self.elements[ index ].kind = kind;
 		self.elements[ index ].segment = segment;
 		self.elements[ index ].mirrored = mirrored;
 

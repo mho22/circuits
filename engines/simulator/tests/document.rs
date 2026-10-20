@@ -56,6 +56,18 @@ fn it_puts_a_vcc_on_one_point()
 }
 
 #[test]
+fn it_puts_a_pin_and_a_symbol_on_one_point()
+{
+	let mut document = Document::default();
+
+	assert_eq!( document.apply( add( Kind::Pin, FOO, FOO ) ), Ok( 0 ) );
+	assert_eq!( document.apply( add( Kind::Symbol { layer : 1, rotation : 0 }, BAR, BAR ) ), Ok( 1 ) );
+	assert_eq!( document.apply( add( Kind::Pin, FOO, BAR ) ), Err( Error::Misplaced ) );
+	assert_eq!( document.apply( add( Kind::Symbol { layer : 1, rotation : 0 }, FOO, BAR ) ), Err( Error::Misplaced ) );
+	assert_eq!( document.apply( add( Kind::Symbol { layer : 1, rotation : 4 }, BAZ, BAZ ) ), Err( Error::Rotation ) );
+}
+
+#[test]
 fn it_rejects_a_crooked_part()
 {
 	let mut document = Document::default();
@@ -246,11 +258,11 @@ fn it_moves_a_part_and_gives_the_move_back_as_its_inverse()
 	document.apply( add( Kind::Npn, FOO, Point { x : 2, y : 0 } ) ).unwrap();
 
 	let segment = Segment { from : BAR, to : Point { x : 6, y : 0 } };
-	let inverse = document.inverse( Operation::Move { id : 0, segment, mirrored : true } ).unwrap();
+	let inverse = document.inverse( Operation::Move { id : 0, kind : Kind::Npn, segment, mirrored : true } ).unwrap();
 
-	assert_eq!( document.apply( Operation::Move { id : 0, segment, mirrored : true } ), Ok( 0 ) );
+	assert_eq!( document.apply( Operation::Move { id : 0, kind : Kind::Npn, segment, mirrored : true } ), Ok( 0 ) );
 	assert_eq!( document.elements()[ 0 ], Element { id : 0, kind : Kind::Npn, segment, mirrored : true } );
-	assert_eq!( inverse, Operation::Move { id : 0, segment : Segment { from : FOO, to : Point { x : 2, y : 0 } }, mirrored : false } );
+	assert_eq!( inverse, Operation::Move { id : 0, kind : Kind::Npn, segment : Segment { from : FOO, to : Point { x : 2, y : 0 } }, mirrored : false } );
 }
 
 #[test]
@@ -261,8 +273,23 @@ fn it_rejects_a_move_to_an_invalid_place()
 	document.apply( add( Kind::Wire, FOO, BAR ) ).unwrap();
 	document.apply( add( Kind::Ground, BAZ, BAZ ) ).unwrap();
 
-	assert_eq!( document.apply( Operation::Move { id : 0, segment : Segment { from : FOO, to : BAZ }, mirrored : false } ), Err( Error::Crooked ) );
-	assert_eq!( document.apply( Operation::Move { id : 1, segment : Segment { from : FOO, to : BAR }, mirrored : false } ), Err( Error::Misplaced ) );
-	assert_eq!( document.apply( Operation::Move { id : 7, segment : Segment { from : FOO, to : BAR }, mirrored : false } ), Err( Error::Missing ) );
+	assert_eq!( document.apply( Operation::Move { id : 0, kind : Kind::Wire, segment : Segment { from : FOO, to : BAZ }, mirrored : false } ), Err( Error::Crooked ) );
+	assert_eq!( document.apply( Operation::Move { id : 1, kind : Kind::Ground, segment : Segment { from : FOO, to : BAR }, mirrored : false } ), Err( Error::Misplaced ) );
+	assert_eq!( document.apply( Operation::Move { id : 7, kind : Kind::Wire, segment : Segment { from : FOO, to : BAR }, mirrored : false } ), Err( Error::Missing ) );
 	assert_eq!( document.elements()[ 0 ].segment, Segment { from : FOO, to : BAR } );
+}
+
+#[test]
+fn it_changes_the_kind_of_a_moved_part_and_gives_it_back_as_its_inverse()
+{
+	let mut document = Document::default();
+
+	document.apply( add( Kind::Symbol { layer : 1, rotation : 0 }, FOO, FOO ) ).unwrap();
+
+	let turned = Operation::Move { id : 0, kind : Kind::Symbol { layer : 1, rotation : 1 }, segment : Segment { from : FOO, to : FOO }, mirrored : false };
+	let inverse = document.inverse( turned ).unwrap();
+
+	assert_eq!( document.apply( turned ), Ok( 0 ) );
+	assert_eq!( document.elements()[ 0 ].kind, Kind::Symbol { layer : 1, rotation : 1 } );
+	assert_eq!( inverse, Operation::Move { id : 0, kind : Kind::Symbol { layer : 1, rotation : 0 }, segment : Segment { from : FOO, to : FOO }, mirrored : false } );
 }

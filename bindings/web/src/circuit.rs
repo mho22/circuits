@@ -31,7 +31,7 @@ impl Circuit
 	{
 		let kind = Circuit::kind( code, value )?;
 
-		self.simulation.place( kind, Segment { from : Point { x : from_x, y : from_y }, to : Point { x : to_x, y : to_y } } ).map_err( | error | JsError::new( &error.to_string() ) )
+		self.simulation.place( 0, kind, Segment { from : Point { x : from_x, y : from_y }, to : Point { x : to_x, y : to_y } } ).map_err( | error | JsError::new( &error.to_string() ) )
 	}
 
 	pub fn open( &mut self, data : &[ f64 ] ) -> Result<u32, JsError>
@@ -68,21 +68,21 @@ impl Circuit
 	{
 		let element = self.element( id )?;
 
-		self.transform( id, element.segment.shifted( dx, dy ), element.mirrored )
+		self.transform( id, element.kind, element.segment.shifted( dx, dy ), element.mirrored )
 	}
 
 	pub fn rotate( &mut self, id : u32 ) -> Result<u32, JsError>
 	{
 		let element = self.element( id )?;
 
-		self.transform( id, element.segment.turned(), element.mirrored )
+		self.transform( id, element.kind, element.segment.turned(), element.mirrored )
 	}
 
 	pub fn mirror( &mut self, id : u32, vertical : bool ) -> Result<u32, JsError>
 	{
 		let element = self.element( id )?;
 
-		self.transform( id, element.segment.mirrored( vertical ), ! element.mirrored )
+		self.transform( id, element.kind, element.segment.mirrored( vertical ), ! element.mirrored )
 	}
 
 	pub fn undo( &mut self ) -> Result<Option<u32>, JsError>
@@ -103,7 +103,7 @@ impl Circuit
 	#[wasm_bindgen( js_name = elementsAt )]
 	pub fn elements_at( &self, x : i32, y : i32 ) -> Vec<u32>
 	{
-		self.simulation.document().elements_at( Point { x, y } )
+		self.simulation.document( 0 ).unwrap().elements_at( Point { x, y } )
 	}
 
 	#[wasm_bindgen( js_name = branchAt )]
@@ -116,7 +116,7 @@ impl Circuit
 	{
 		let readings = self.simulation.solution().map( | solution | solution.readings.as_slice() ).unwrap_or( &[] );
 
-		self.simulation.document().elements().iter().enumerate().flat_map( | ( index, element ) |
+		self.simulation.document( 0 ).unwrap().elements().iter().enumerate().flat_map( | ( index, element ) |
 		{
 			let mirrored = if element.mirrored { 1.0 } else { 0.0 };
 
@@ -135,6 +135,8 @@ impl Circuit
 				Kind::Nmos => ( 10.0, mirrored ),
 				Kind::Pmos => ( 11.0, mirrored ),
 				Kind::Supply { volts } => ( 12.0, volts ),
+				Kind::Pin => ( 13.0, 0.0 ),
+				Kind::Symbol { layer, .. } => ( 14.0, layer as f64 ),
 			};
 
 			let mut potentials = [ 0.0, 0.0, f64::NAN ];
@@ -171,17 +173,17 @@ impl Circuit
 
 	fn element( &self, id : u32 ) -> Result<Element, JsError>
 	{
-		self.simulation.document().elements().iter().find( | element | element.id == id ).copied().ok_or_else( || JsError::new( "No part has this id." ) )
+		self.simulation.document( 0 ).unwrap().elements().iter().find( | element | element.id == id ).copied().ok_or_else( || JsError::new( "No part has this id." ) )
 	}
 
-	fn transform( &mut self, id : u32, segment : Segment, mirrored : bool ) -> Result<u32, JsError>
+	fn transform( &mut self, id : u32, kind : Kind, segment : Segment, mirrored : bool ) -> Result<u32, JsError>
 	{
-		self.simulation.transform( id, segment, mirrored ).map_err( | error | JsError::new( &error.to_string() ) )
+		self.simulation.transform( 0, id, kind, segment, mirrored ).map_err( | error | JsError::new( &error.to_string() ) )
 	}
 
 	fn apply( &mut self, operation : Operation ) -> Result<u32, JsError>
 	{
-		self.simulation.apply( operation ).map_err( | error | JsError::new( &error.to_string() ) )
+		self.simulation.apply( 0, operation ).map_err( | error | JsError::new( &error.to_string() ) )
 	}
 
 	fn kind( code : u8, value : f64 ) -> Result<Kind, JsError>

@@ -17,6 +17,8 @@ pub enum Kind
 	Nmos,
 	Pmos,
 	Supply { volts : f64 },
+	Pin,
+	Symbol { layer : u32, rotation : u8 },
 }
 
 impl Kind
@@ -31,6 +33,7 @@ impl Kind
 			Kind::Battery { volts } | Kind::Supply { volts } if ! volts.is_finite() => Err( Error::Voltage ),
 			Kind::Capacitor { farads } if ! positive( farads ) => Err( Error::Capacitance ),
 			Kind::Inductor { henries } if ! positive( henries ) => Err( Error::Inductance ),
+			Kind::Symbol { rotation, .. } if rotation > 3 => Err( Error::Rotation ),
 			_ => Ok( () ),
 		}
 	}

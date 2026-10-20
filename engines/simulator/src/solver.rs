@@ -19,7 +19,7 @@ pub fn solve( elements : &[ Element ], history : &History, step : f64 ) -> Resul
 
 	for ( element, nets ) in elements.iter().zip( &terminals )
 	{
-		if matches!( element.kind, Kind::Wire | Kind::Ground | Kind::Switch { .. } ) { continue; }
+		if matches!( element.kind, Kind::Wire | Kind::Ground | Kind::Pin | Kind::Switch { .. } ) { continue; }
 
 		for &net in &nets[ 1 .. ] { islands.union( nets[ 0 ], net ); }
 	}
@@ -161,7 +161,7 @@ pub fn solve( elements : &[ Element ], history : &History, step : f64 ) -> Resul
 
 	for ( element, reading ) in elements.iter().zip( &readings )
 	{
-		if matches!( element.kind, Kind::Wire | Kind::Ground | Kind::Switch { .. } ) { continue; }
+		if matches!( element.kind, Kind::Wire | Kind::Ground | Kind::Pin | Kind::Switch { .. } ) { continue; }
 
 		let points : Vec<usize> = match element.kind
 		{

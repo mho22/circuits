@@ -18,6 +18,14 @@ fn it_accepts_valid_values()
 	assert_eq!( Kind::Nmos.check(), Ok( () ) );
 	assert_eq!( Kind::Pmos.check(), Ok( () ) );
 	assert_eq!( Kind::Supply { volts : 5.0 }.check(), Ok( () ) );
+	assert_eq!( Kind::Pin.check(), Ok( () ) );
+	assert_eq!( Kind::Symbol { layer : 1, rotation : 3 }.check(), Ok( () ) );
+}
+
+#[test]
+fn it_rejects_a_rotation_past_three_quarter_turns()
+{
+	assert_eq!( Kind::Symbol { layer : 1, rotation : 4 }.check(), Err( Error::Rotation ) );
 }
 
 #[test]
