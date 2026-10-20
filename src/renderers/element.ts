@@ -8,6 +8,7 @@ import * as ground from './ground.ts';
 import * as inductor from './inductor.ts';
 import * as resistor from './resistor.ts';
 import * as toggle from './switch.ts';
+import * as transistor from './transistor.ts';
 import * as wire from './wire.ts';
 
 
@@ -20,6 +21,8 @@ const RENDERERS : Record<Kind, ( context : CanvasRenderingContext2D, element : E
 	[ Kind.Inductor ] : inductor.draw,
 	[ Kind.Switch ] : toggle.draw,
 	[ Kind.Diode ] : diode.draw,
+	[ Kind.Npn ] : transistor.draw,
+	[ Kind.Pnp ] : transistor.draw,
 };
 
 

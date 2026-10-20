@@ -22,9 +22,16 @@ export function describe( element : Element, branch : Branch | undefined ) : str
 
 	if( element.kind === Kind.Wire ) return [ title, format( element.potentials[ 0 ], 'V' ), format( Math.abs( branch?.current ?? NaN ), 'A' ) ].join( ' · ' );
 
-	if( element.kind === Kind.Ground ) return [ title, format( element.potentials[ 0 ], 'V' ), format( Math.abs( element.current ), 'A' ) ].join( ' · ' );
+	if( element.kind === Kind.Ground ) return [ title, format( element.potentials[ 0 ], 'V' ), format( Math.abs( element.currents[ 0 ] ), 'A' ) ].join( ' · ' );
+
+	if( element.potentials.length === 3 )
+	{
+		const [ base, collector, emitter ] = element.potentials;
+
+		return [ title, `Vbe ${ format( Math.abs( base - emitter ), 'V' ) }`, `Vce ${ format( Math.abs( collector - emitter ), 'V' ) }`, `Ib ${ format( Math.abs( element.currents[ 0 ] ), 'A' ) }`, `Ic ${ format( Math.abs( element.currents[ 1 ] ), 'A' ) }` ].join( ' · ' );
+	}
 
 	const across = Math.abs( element.potentials[ 1 ] - element.potentials[ 0 ] );
 
-	return [ title, `${ format( across, 'V' ) } across`, format( Math.abs( element.current ), 'A' ) ].join( ' · ' );
+	return [ title, `${ format( across, 'V' ) } across`, format( Math.abs( element.currents[ 0 ] ), 'A' ) ].join( ' · ' );
 }

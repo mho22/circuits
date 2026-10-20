@@ -1,7 +1,6 @@
-#[derive( Clone, Copy, Debug, PartialEq )]
+#[derive( Clone, Debug, PartialEq )]
 pub struct Reading
 {
-	pub from : f64,
-	pub to : f64,
-	pub current : f64,
+	pub potentials : Vec<f64>,
+	pub currents : Vec<f64>,
 }

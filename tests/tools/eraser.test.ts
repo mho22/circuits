@@ -30,6 +30,6 @@ describe( 'eraser', () =>
 
 		erase( circuit, { x : 9, y : 9 } );
 
-		expect( circuit.elements() ).toHaveLength( 10 );
+		expect( circuit.elements() ).toHaveLength( 13 );
 	} );
 } );

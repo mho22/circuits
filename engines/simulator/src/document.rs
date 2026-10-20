@@ -56,7 +56,7 @@ impl Document
 
 	pub fn elements_at( &self, point : Point ) -> Vec<u32>
 	{
-		self.elements.iter().rev().filter( | element | element.segment.contains( point ) ).map( | element | element.id ).collect()
+		self.elements.iter().rev().filter( | element | element.segment.contains( point ) || element.terminals().contains( &point ) ).map( | element | element.id ).collect()
 	}
 
 	fn check( kind : Kind, segment : Segment ) -> Result<(), Error>

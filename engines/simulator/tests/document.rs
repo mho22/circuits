@@ -150,6 +150,19 @@ fn it_finds_the_parts_at_a_point_topmost_first()
 }
 
 #[test]
+fn it_finds_a_transistor_at_its_collector_and_its_emitter()
+{
+	let mut document = Document::default();
+
+	document.apply( add( Kind::Npn, FOO, Point { x : 2, y : 0 } ) ).unwrap();
+
+	assert_eq!( document.elements_at( Point { x : 1, y : 0 } ), vec![ 0 ] );
+	assert_eq!( document.elements_at( Point { x : 3, y : -1 } ), vec![ 0 ] );
+	assert_eq!( document.elements_at( Point { x : 3, y : 1 } ), vec![ 0 ] );
+	assert!( document.elements_at( Point { x : 3, y : 0 } ).is_empty() );
+}
+
+#[test]
 fn it_inserts_a_part_back_at_its_place_with_its_id()
 {
 	let mut document = Document::default();

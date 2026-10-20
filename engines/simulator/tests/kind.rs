@@ -13,6 +13,8 @@ fn it_accepts_valid_values()
 	assert_eq!( Kind::Inductor { henries : 1e-3 }.check(), Ok( () ) );
 	assert_eq!( Kind::Switch { closed : true }.check(), Ok( () ) );
 	assert_eq!( Kind::Diode.check(), Ok( () ) );
+	assert_eq!( Kind::Npn.check(), Ok( () ) );
+	assert_eq!( Kind::Pnp.check(), Ok( () ) );
 }
 
 #[test]
@@ -58,6 +60,7 @@ fn it_reads_the_value_of_a_part()
 	assert_eq!( Kind::Ground.value(), None );
 	assert_eq!( Kind::Switch { closed : true }.value(), None );
 	assert_eq!( Kind::Diode.value(), None );
+	assert_eq!( Kind::Npn.value(), None );
 }
 
 #[test]
@@ -85,6 +88,7 @@ fn it_rejects_a_value_for_a_part_without_one()
 	assert_eq!( Kind::Ground.with_value( 1.0 ), Err( Error::Valueless ) );
 	assert_eq!( Kind::Switch { closed : false }.with_value( 1.0 ), Err( Error::Valueless ) );
 	assert_eq!( Kind::Diode.with_value( 1.0 ), Err( Error::Valueless ) );
+	assert_eq!( Kind::Pnp.with_value( 1.0 ), Err( Error::Valueless ) );
 }
 
 #[test]
@@ -99,4 +103,14 @@ fn it_rejects_a_closed_state_for_a_part_that_is_not_a_switch()
 {
 	assert_eq!( Kind::Wire.with_closed( true ), Err( Error::Switchless ) );
 	assert_eq!( Kind::Resistor { ohms : 1.0 }.with_closed( true ), Err( Error::Switchless ) );
+}
+
+#[test]
+fn it_lists_the_junctions_of_each_part_from_anode_to_cathode()
+{
+	assert_eq!( Kind::Diode.junctions(), &[ ( 0, 1 ) ] );
+	assert_eq!( Kind::Npn.junctions(), &[ ( 0, 2 ), ( 0, 1 ) ] );
+	assert_eq!( Kind::Pnp.junctions(), &[ ( 2, 0 ), ( 1, 0 ) ] );
+	assert!( Kind::Resistor { ohms : 1.0 }.junctions().is_empty() );
+	assert!( Kind::Wire.junctions().is_empty() );
 }

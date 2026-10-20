@@ -43,13 +43,13 @@ fn it_applies_ohms_law_to_a_battery_and_a_resistor()
 {
 	let solution = solve( &loop_with( &[ element( Kind::Resistor { ohms : 1000.0 }, ( 4, 0 ), ( 4, 4 ) ) ] ), &History::default(), STEP ).unwrap();
 
-	let battery = solution.readings[ 0 ];
-	let resistor = solution.readings[ 4 ];
+	let battery = &solution.readings[ 0 ];
+	let resistor = &solution.readings[ 4 ];
 
-	assert_eq!( ( battery.from, battery.to ), ( 0.0, 5.0 ) );
-	assert!( near( battery.current, 0.005 ) );
-	assert_eq!( ( resistor.from, resistor.to ), ( 5.0, 0.0 ) );
-	assert!( near( resistor.current, 0.005 ) );
+	assert_eq!( ( battery.potentials[ 0 ], battery.potentials[ 1 ] ), ( 0.0, 5.0 ) );
+	assert!( near( battery.currents[ 0 ], 0.005 ) );
+	assert_eq!( ( resistor.potentials[ 0 ], resistor.potentials[ 1 ] ), ( 5.0, 0.0 ) );
+	assert!( near( resistor.currents[ 0 ], 0.005 ) );
 }
 
 #[test]
@@ -60,8 +60,8 @@ fn it_divides_a_voltage_between_resistors_in_series()
 		element( Kind::Resistor { ohms : 3000.0 }, ( 4, 2 ), ( 4, 4 ) ),
 	] ), &History::default(), STEP ).unwrap();
 
-	assert!( near( solution.readings[ 4 ].to, 3.75 ) );
-	assert!( near( solution.readings[ 5 ].current, 0.00125 ) );
+	assert!( near( solution.readings[ 4 ].potentials[ 1 ], 3.75 ) );
+	assert!( near( solution.readings[ 5 ].currents[ 0 ], 0.00125 ) );
 }
 
 #[test]
@@ -72,9 +72,9 @@ fn it_splits_a_current_between_resistors_in_parallel()
 		element( Kind::Resistor { ohms : 1000.0 }, ( 2, 0 ), ( 2, 4 ) ),
 	] ), &History::default(), STEP ).unwrap();
 
-	assert!( near( solution.readings[ 0 ].current, 0.01 ) );
-	assert!( near( solution.readings[ 4 ].current, 0.005 ) );
-	assert!( near( solution.readings[ 5 ].current, 0.005 ) );
+	assert!( near( solution.readings[ 0 ].currents[ 0 ], 0.01 ) );
+	assert!( near( solution.readings[ 4 ].currents[ 0 ], 0.005 ) );
+	assert!( near( solution.readings[ 5 ].currents[ 0 ], 0.005 ) );
 }
 
 #[test]
@@ -98,9 +98,9 @@ fn it_gives_each_wire_the_voltage_of_its_net()
 {
 	let solution = solve( &loop_with( &[ element( Kind::Resistor { ohms : 1000.0 }, ( 4, 0 ), ( 4, 4 ) ) ] ), &History::default(), STEP ).unwrap();
 
-	assert_eq!( solution.readings[ 1 ].from, 5.0 );
-	assert_eq!( solution.readings[ 2 ].from, 0.0 );
-	assert!( solution.readings[ 1 ].current.is_nan() );
+	assert_eq!( solution.readings[ 1 ].potentials[ 0 ], 5.0 );
+	assert_eq!( solution.readings[ 2 ].potentials[ 0 ], 0.0 );
+	assert!( solution.readings[ 1 ].currents[ 0 ].is_nan() );
 	assert!( solution.branches.iter().all( | branch | branch.voltage == 5.0 || branch.voltage == 0.0 ) );
 }
 
@@ -114,9 +114,9 @@ fn it_carries_current_through_the_earth_between_grounds()
 		element( Kind::Ground, ( 5, 0 ), ( 5, 0 ) ),
 	], &History::default(), STEP ).unwrap();
 
-	assert!( near( solution.readings[ 1 ].current, 0.02 ) );
-	assert!( near( solution.readings[ 2 ].current, -0.02 ) );
-	assert!( near( solution.readings[ 3 ].current, 0.02 ) );
+	assert!( near( solution.readings[ 1 ].currents[ 0 ], 0.02 ) );
+	assert!( near( solution.readings[ 2 ].currents[ 0 ], -0.02 ) );
+	assert!( near( solution.readings[ 3 ].currents[ 0 ], 0.02 ) );
 }
 
 #[test]
@@ -127,8 +127,8 @@ fn it_references_a_floating_circuit_to_one_of_its_nets()
 		element( Kind::Resistor { ohms : 10.0 }, ( 0, 2 ), ( 0, 0 ) ),
 	], &History::default(), STEP ).unwrap();
 
-	assert_eq!( solution.readings[ 0 ], Reading { from : 0.0, to : 3.0, current : solution.readings[ 0 ].current } );
-	assert!( near( solution.readings[ 0 ].current, 0.3 ) );
+	assert_eq!( solution.readings[ 0 ], Reading { potentials : vec![ 0.0, 3.0 ], currents : solution.readings[ 0 ].currents.clone() } );
+	assert!( near( solution.readings[ 0 ].currents[ 0 ], 0.3 ) );
 }
 
 #[test]
@@ -136,7 +136,7 @@ fn it_leaves_a_resistor_without_a_source_at_rest()
 {
 	let solution = solve( &[ element( Kind::Resistor { ohms : 10.0 }, ( 0, 0 ), ( 0, 2 ) ) ], &History::default(), STEP ).unwrap();
 
-	assert_eq!( solution.readings[ 0 ], Reading { from : 0.0, to : 0.0, current : 0.0 } );
+	assert_eq!( solution.readings[ 0 ], Reading { potentials : vec![ 0.0, 0.0 ], currents : vec![ 0.0, 0.0 ] } );
 }
 
 #[test]
@@ -171,8 +171,8 @@ fn it_charges_an_empty_capacitor_like_a_conductance()
 		element( Kind::Capacitor { farads : 1e-6 }, ( 4, 2 ), ( 4, 4 ) ),
 	] ), &History::default(), STEP ).unwrap();
 
-	assert!( near( solution.readings[ 5 ].from, 2.5 ) );
-	assert!( near( solution.readings[ 5 ].current, 0.0025 ) );
+	assert!( near( solution.readings[ 5 ].potentials[ 0 ], 2.5 ) );
+	assert!( near( solution.readings[ 5 ].currents[ 0 ], 0.0025 ) );
 }
 
 #[test]
@@ -183,13 +183,13 @@ fn it_discharges_a_capacitor_from_its_stored_voltage()
 		Element { id : 2, ..element( Kind::Resistor { ohms : 1000.0 }, ( 0, 2 ), ( 0, 0 ) ) },
 	];
 
-	let charged = Solution { readings : vec![ Reading { from : 2.0, to : 0.0, current : 0.0 }, Reading { from : 0.0, to : 2.0, current : 0.0 } ], branches : vec![] };
+	let charged = Solution { readings : vec![ Reading { potentials : vec![ 2.0, 0.0 ], currents : vec![ 0.0, 0.0 ] }, Reading { potentials : vec![ 0.0, 2.0 ], currents : vec![ 0.0, 0.0 ] } ], branches : vec![] };
 
 	let solution = solve( &elements, &History::record( &elements, &charged ), STEP ).unwrap();
 
-	assert!( near( solution.readings[ 0 ].from - solution.readings[ 0 ].to, 1.0 ) );
-	assert!( near( solution.readings[ 0 ].current, -0.001 ) );
-	assert!( near( solution.readings[ 1 ].current, -0.001 ) );
+	assert!( near( solution.readings[ 0 ].potentials[ 0 ] - solution.readings[ 0 ].potentials[ 1 ], 1.0 ) );
+	assert!( near( solution.readings[ 0 ].currents[ 0 ], -0.001 ) );
+	assert!( near( solution.readings[ 1 ].currents[ 0 ], -0.001 ) );
 }
 
 #[test]
@@ -200,8 +200,8 @@ fn it_lets_current_rise_slowly_in_an_inductor()
 		element( Kind::Inductor { henries : 1.0 }, ( 4, 2 ), ( 4, 4 ) ),
 	] ), &History::default(), STEP ).unwrap();
 
-	assert!( near( solution.readings[ 5 ].from, 2.5 ) );
-	assert!( near( solution.readings[ 5 ].current, 0.0025 ) );
+	assert!( near( solution.readings[ 5 ].potentials[ 0 ], 2.5 ) );
+	assert!( near( solution.readings[ 5 ].currents[ 0 ], 0.0025 ) );
 }
 
 #[test]
@@ -212,13 +212,13 @@ fn it_keeps_the_stored_current_of_an_inductor()
 		Element { id : 2, ..element( Kind::Resistor { ohms : 1000.0 }, ( 0, 2 ), ( 0, 0 ) ) },
 	];
 
-	let flowing = Solution { readings : vec![ Reading { from : 0.0, to : 0.0, current : 0.01 }, Reading { from : 0.0, to : 0.0, current : 0.0 } ], branches : vec![] };
+	let flowing = Solution { readings : vec![ Reading { potentials : vec![ 0.0, 0.0 ], currents : vec![ 0.01, -0.01 ] }, Reading { potentials : vec![ 0.0, 0.0 ], currents : vec![ 0.0, 0.0 ] } ], branches : vec![] };
 
 	let solution = solve( &elements, &History::record( &elements, &flowing ), STEP ).unwrap();
 
-	assert!( near( solution.readings[ 0 ].current, 0.005 ) );
-	assert!( near( solution.readings[ 1 ].current, 0.005 ) );
-	assert!( near( solution.readings[ 0 ].to, 5.0 ) );
+	assert!( near( solution.readings[ 0 ].currents[ 0 ], 0.005 ) );
+	assert!( near( solution.readings[ 1 ].currents[ 0 ], 0.005 ) );
+	assert!( near( solution.readings[ 0 ].potentials[ 1 ], 5.0 ) );
 }
 
 #[test]
@@ -229,8 +229,8 @@ fn it_stops_the_current_at_an_open_switch()
 		element( Kind::Switch { closed : false }, ( 4, 2 ), ( 4, 4 ) ),
 	] ), &History::default(), STEP ).unwrap();
 
-	assert_eq!( solution.readings[ 4 ].current, 0.0 );
-	assert_eq!( solution.readings[ 5 ], Reading { from : 5.0, to : 0.0, current : 0.0 } );
+	assert_eq!( solution.readings[ 4 ].currents[ 0 ], 0.0 );
+	assert_eq!( solution.readings[ 5 ], Reading { potentials : vec![ 5.0, 0.0 ], currents : vec![ 0.0, 0.0 ] } );
 }
 
 #[test]
@@ -241,9 +241,9 @@ fn it_carries_the_current_through_a_closed_switch()
 		element( Kind::Switch { closed : true }, ( 4, 2 ), ( 4, 4 ) ),
 	] ), &History::default(), STEP ).unwrap();
 
-	assert!( near( solution.readings[ 4 ].current, 0.005 ) );
-	assert!( near( solution.readings[ 5 ].current.abs(), 0.005 ) );
-	assert_eq!( ( solution.readings[ 5 ].from, solution.readings[ 5 ].to ), ( 0.0, 0.0 ) );
+	assert!( near( solution.readings[ 4 ].currents[ 0 ], 0.005 ) );
+	assert!( near( solution.readings[ 5 ].currents[ 0 ].abs(), 0.005 ) );
+	assert_eq!( ( solution.readings[ 5 ].potentials[ 0 ], solution.readings[ 5 ].potentials[ 1 ] ), ( 0.0, 0.0 ) );
 }
 
 #[test]
@@ -265,12 +265,12 @@ fn it_drops_about_0_65_v_across_a_diode_in_the_forward_direction()
 		element( Kind::Resistor { ohms : 1000.0 }, ( 4, 2 ), ( 4, 4 ) ),
 	] ), &History::default(), STEP ).unwrap();
 
-	let diode = solution.readings[ 4 ];
-	let drop = diode.from - diode.to;
+	let diode = &solution.readings[ 4 ];
+	let drop = diode.potentials[ 0 ] - diode.potentials[ 1 ];
 
 	assert!( drop > 0.6 && drop < 0.7 );
-	assert!( ( diode.current - ( 5.0 - drop ) / 1000.0 ).abs() < 1e-9 );
-	assert!( ( diode.current - 1e-14 * ( ( drop / 0.025852 ).exp() - 1.0 ) ).abs() < 1e-7 );
+	assert!( ( diode.currents[ 0 ] - ( 5.0 - drop ) / 1000.0 ).abs() < 1e-9 );
+	assert!( ( diode.currents[ 0 ] - 1e-14 * ( ( drop / 0.025852 ).exp() - 1.0 ) ).abs() < 1e-7 );
 }
 
 #[test]
@@ -281,10 +281,10 @@ fn it_blocks_the_current_through_a_diode_in_the_reverse_direction()
 		element( Kind::Resistor { ohms : 1000.0 }, ( 4, 2 ), ( 4, 4 ) ),
 	] ), &History::default(), STEP ).unwrap();
 
-	let diode = solution.readings[ 4 ];
+	let diode = &solution.readings[ 4 ];
 
-	assert!( diode.current.abs() < 1e-9 );
-	assert!( ( diode.to - diode.from - 5.0 ).abs() < 1e-6 );
+	assert!( diode.currents[ 0 ].abs() < 1e-9 );
+	assert!( ( diode.potentials[ 1 ] - diode.potentials[ 0 ] - 5.0 ).abs() < 1e-6 );
 }
 
 #[test]
@@ -296,10 +296,10 @@ fn it_carries_the_current_through_two_diodes_in_series()
 		element( Kind::Resistor { ohms : 1000.0 }, ( 4, 2 ), ( 4, 4 ) ),
 	] ), &History::default(), STEP ).unwrap();
 
-	let drop = solution.readings[ 4 ].from - solution.readings[ 5 ].to;
+	let drop = solution.readings[ 4 ].potentials[ 0 ] - solution.readings[ 5 ].potentials[ 1 ];
 
 	assert!( drop > 1.2 && drop < 1.4 );
-	assert!( ( solution.readings[ 6 ].current - ( 5.0 - drop ) / 1000.0 ).abs() < 1e-9 );
+	assert!( ( solution.readings[ 6 ].currents[ 0 ] - ( 5.0 - drop ) / 1000.0 ).abs() < 1e-9 );
 }
 
 #[test]
@@ -310,7 +310,83 @@ fn it_gives_up_on_diodes_that_do_not_settle()
 		element( Kind::Resistor { ohms : 1000.0 }, ( 4, 2 ), ( 4, 4 ) ),
 	] );
 
-	let broken = Solution { readings : vec![ Reading { from : f64::NAN, to : 0.0, current : 0.0 }; 6 ], branches : vec![] };
+	let broken = Solution { readings : vec![ Reading { potentials : vec![ f64::NAN, 0.0 ], currents : vec![ 0.0, 0.0 ] }; 6 ], branches : vec![] };
 
 	assert_eq!( solve( &elements, &History::record( &elements, &broken ), STEP ), Err( Error::Unsettled ) );
+}
+
+fn amplifier( kind : Kind, volts : f64, base : f64 ) -> Vec<Element>
+{
+	vec![
+		element( Kind::Battery { volts }, ( 0, 6 ), ( 0, 0 ) ),
+		element( Kind::Wire, ( 0, 0 ), ( 8, 0 ) ),
+		element( Kind::Resistor { ohms : base }, ( 4, 0 ), ( 4, 3 ) ),
+		element( Kind::Resistor { ohms : 1000.0 }, ( 7, 0 ), ( 7, 2 ) ),
+		element( kind, ( 4, 3 ), ( 6, 3 ) ),
+		element( Kind::Wire, ( 7, 4 ), ( 7, 6 ) ),
+		element( Kind::Wire, ( 0, 6 ), ( 7, 6 ) ),
+		element( Kind::Ground, ( 0, 6 ), ( 0, 6 ) ),
+	]
+}
+
+#[test]
+fn it_amplifies_the_base_current_of_an_npn_transistor_by_its_gain()
+{
+	let solution = solve( &amplifier( Kind::Npn, 5.0, 200_000.0 ), &History::default(), STEP ).unwrap();
+	let transistor = &solution.readings[ 4 ];
+	let [ base, collector, emitter ] = transistor.currents[ .. ] else { panic!() };
+
+	assert!( ( base - ( 5.0 - transistor.potentials[ 0 ] ) / 200_000.0 ).abs() < 1e-12 );
+	assert!( transistor.potentials[ 0 ] > 0.6 && transistor.potentials[ 0 ] < 0.7 );
+	assert!( ( collector / base - 100.0 ).abs() < 0.01 );
+	assert!( ( base + collector + emitter ).abs() < 1e-12 );
+	assert!( transistor.potentials[ 1 ] > 2.5 && transistor.potentials[ 1 ] < 3.0 );
+}
+
+#[test]
+fn it_saturates_an_npn_transistor_with_a_large_base_current()
+{
+	let solution = solve( &amplifier( Kind::Npn, 5.0, 10_000.0 ), &History::default(), STEP ).unwrap();
+	let transistor = &solution.readings[ 4 ];
+
+	assert!( transistor.potentials[ 1 ] < 0.2 );
+	assert!( transistor.currents[ 1 ] > 0.0048 && transistor.currents[ 1 ] < 0.005 );
+	assert!( transistor.currents[ 1 ] / transistor.currents[ 0 ] < 20.0 );
+}
+
+#[test]
+fn it_cuts_off_an_npn_transistor_without_base_current()
+{
+	let mut elements = amplifier( Kind::Npn, 5.0, 200_000.0 );
+
+	elements.remove( 2 );
+
+	let solution = solve( &elements, &History::default(), STEP ).unwrap();
+
+	assert!( solution.readings[ 3 ].currents[ 1 ].abs() < 1e-9 );
+	assert!( ( solution.readings[ 3 ].potentials[ 1 ] - 5.0 ).abs() < 1e-6 );
+}
+
+#[test]
+fn it_mirrors_the_currents_of_a_pnp_transistor()
+{
+	let npn = solve( &amplifier( Kind::Npn, 5.0, 200_000.0 ), &History::default(), STEP ).unwrap();
+	let pnp = solve( &amplifier( Kind::Pnp, -5.0, 200_000.0 ), &History::default(), STEP ).unwrap();
+
+	for terminal in 0 .. 3
+	{
+		assert!( ( npn.readings[ 4 ].currents[ terminal ] + pnp.readings[ 4 ].currents[ terminal ] ).abs() < 1e-12 );
+		assert!( ( npn.readings[ 4 ].potentials[ terminal ] + pnp.readings[ 4 ].potentials[ terminal ] ).abs() < 1e-9 );
+	}
+}
+
+#[test]
+fn it_carries_the_transistor_currents_through_the_wires()
+{
+	let solution = solve( &amplifier( Kind::Npn, 5.0, 200_000.0 ), &History::default(), STEP ).unwrap();
+	let emitter = solution.readings[ 4 ].currents[ 2 ];
+	let branch = solution.branch_at( Point { x : 7, y : 5 } ).unwrap();
+
+	assert!( ( solution.branches[ branch ].current.abs() - emitter.abs() ).abs() < 1e-12 );
+	assert!( ( solution.readings[ 0 ].currents[ 0 ] + emitter ).abs() < 1e-12 );
 }

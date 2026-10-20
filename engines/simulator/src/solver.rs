@@ -10,13 +10,14 @@ const TOLERANCE : f64 = 1e-6;
 pub fn solve( elements : &[ Element ], history : &History, step : f64 ) -> Result<Solution, Error>
 {
 	let netlist = Netlist::build( elements );
+	let terminals : Vec<Vec<usize>> = elements.iter().map( | element | element.terminals().into_iter().map( | point | netlist.net( point ) ).collect() ).collect();
 	let mut islands = UnionFind::new( netlist.count );
 
-	for element in elements
+	for ( element, nets ) in elements.iter().zip( &terminals )
 	{
 		if matches!( element.kind, Kind::Wire | Kind::Ground | Kind::Switch { .. } ) { continue; }
 
-		islands.union( netlist.net( element.segment.from ), netlist.net( element.segment.to ) );
+		for &net in &nets[ 1 .. ] { islands.union( nets[ 0 ], net ); }
 	}
 
 	let mut references = HashMap::new();
@@ -42,7 +43,7 @@ pub fn solve( elements : &[ Element ], history : &History, step : f64 ) -> Resul
 
 	size += batteries.len();
 
-	let assemble = | guesses : &[ f64 ] | -> Result<Vec<f64>, Error>
+	let assemble = | guesses : &[ [ f64; 2 ] ] | -> Result<Vec<f64>, Error>
 	{
 		let mut matrix = vec![ 0.0; size * size ];
 		let mut rhs = vec![ 0.0; size ];
@@ -52,21 +53,25 @@ pub fn solve( elements : &[ Element ], history : &History, step : f64 ) -> Resul
 			if let ( Some( row ), Some( column ) ) = ( row, column ) { matrix[ row * size + column ] += value; }
 		};
 
-		for ( element, &guess ) in elements.iter().zip( guesses )
+		for ( index, element ) in elements.iter().enumerate()
 		{
-			let Some( ( conductance, source ) ) = companion( element, history, step, guess ) else { continue; };
+			let nets = &terminals[ index ];
 
-			let a = unknowns[ netlist.net( element.segment.from ) ];
-			let b = unknowns[ netlist.net( element.segment.to ) ];
+			for part in companion( element, history, step, guesses[ index ] )
+			{
+				let p = unknowns[ nets[ part.across.0 ] ];
+				let q = unknowns[ nets[ part.across.1 ] ];
 
-			stamp( a, a, conductance );
-			stamp( b, b, conductance );
-			stamp( a, b, - conductance );
-			stamp( b, a, - conductance );
+				for ( &net, &weight ) in nets.iter().zip( &part.weights )
+				{
+					let row = unknowns[ net ];
 
-			if let Some( a ) = a { rhs[ a ] += source; }
+					stamp( row, p, weight * part.conductance );
+					stamp( row, q, - weight * part.conductance );
 
-			if let Some( b ) = b { rhs[ b ] -= source; }
+					if let Some( row ) = row { rhs[ row ] += weight * part.source; }
+				}
+			}
 		}
 
 		for ( offset, &index ) in batteries.iter().enumerate()
@@ -74,8 +79,8 @@ pub fn solve( elements : &[ Element ], history : &History, step : f64 ) -> Resul
 			let Kind::Battery { volts } = elements[ index ].kind else { continue; };
 
 			let row = Some( nodes + offset );
-			let negative = unknowns[ netlist.net( elements[ index ].segment.from ) ];
-			let positive = unknowns[ netlist.net( elements[ index ].segment.to ) ];
+			let negative = unknowns[ terminals[ index ][ 0 ] ];
+			let positive = unknowns[ terminals[ index ][ 1 ] ];
 
 			stamp( negative, row, 1.0 );
 			stamp( positive, row, -1.0 );
@@ -88,7 +93,7 @@ pub fn solve( elements : &[ Element ], history : &History, step : f64 ) -> Resul
 		eliminate( matrix, rhs )
 	};
 
-	let mut guesses : Vec<f64> = elements.iter().map( | element | history.get( element.id ) ).collect();
+	let mut guesses : Vec<[ f64; 2 ]> = elements.iter().map( | element | history.get( element.id ) ).collect();
 	let mut iteration = 0;
 
 	let solution = loop
@@ -97,13 +102,16 @@ pub fn solve( elements : &[ Element ], history : &History, step : f64 ) -> Resul
 
 		let voltage = | net : usize | unknowns[ net ].map_or( 0.0, | unknown : usize | solution[ unknown ] );
 
-		let next : Vec<f64> = elements.iter().zip( &guesses ).map( | ( element, &guess ) | match element.kind
+		let next : Vec<[ f64; 2 ]> = elements.iter().zip( &terminals ).zip( &guesses ).map( | ( ( element, nets ), &guess ) |
 		{
-			Kind::Diode => limit( voltage( netlist.net( element.segment.from ) ) - voltage( netlist.net( element.segment.to ) ), guess ),
-			_ => guess,
+			let mut next = guess;
+
+			for ( index, &( a, b ) ) in element.kind.junctions().iter().enumerate() { next[ index ] = limit( voltage( nets[ a ] ) - voltage( nets[ b ] ), guess[ index ] ); }
+
+			next
 		} ).collect();
 
-		if next.iter().zip( &guesses ).all( | ( a, b ) | ( a - b ).abs() <= TOLERANCE ) { break solution; }
+		if next.iter().flatten().zip( guesses.iter().flatten() ).all( | ( a, b ) | ( a - b ).abs() <= TOLERANCE ) { break solution; }
 
 		iteration += 1;
 
@@ -114,20 +122,25 @@ pub fn solve( elements : &[ Element ], history : &History, step : f64 ) -> Resul
 
 	let voltage = | net : usize | unknowns[ net ].map_or( 0.0, | unknown | solution[ unknown ] );
 
-	let mut readings : Vec<Reading> = elements.iter().zip( &guesses ).map( | ( element, &guess ) |
+	let mut readings : Vec<Reading> = elements.iter().enumerate().map( | ( index, element ) |
 	{
-		let from = voltage( netlist.net( element.segment.from ) );
-		let to = voltage( netlist.net( element.segment.to ) );
+		let potentials : Vec<f64> = terminals[ index ].iter().map( | &net | voltage( net ) ).collect();
+		let parts = companion( element, history, step, guesses[ index ] );
 
-		let current = match ( element.kind, companion( element, history, step, guess ) )
+		let currents = match element.kind
 		{
-			( _, Some( ( conductance, source ) ) ) => conductance * ( from - to ) - source,
-			( Kind::Battery { .. }, _ ) => solution[ nodes + batteries.iter().position( | &index | elements[ index ].id == element.id ).unwrap() ],
-			( Kind::Switch { .. }, _ ) => 0.0,
-			_ => f64::NAN,
+			_ if ! parts.is_empty() => ( 0 .. potentials.len() ).map( | terminal | parts.iter().map( | part | part.weights[ terminal ] * part.current( &potentials ) ).sum() ).collect(),
+			Kind::Battery { .. } =>
+			{
+				let current = solution[ nodes + batteries.iter().position( | &battery | battery == index ).unwrap() ];
+
+				vec![ current, - current ]
+			},
+			Kind::Switch { .. } => vec![ 0.0, 0.0 ],
+			_ => vec![ f64::NAN, f64::NAN ],
 		};
 
-		Reading { from, to, current }
+		Reading { potentials, currents }
 	} ).collect();
 
 	let earth = netlist.points.len();
@@ -137,8 +150,7 @@ pub fn solve( elements : &[ Element ], history : &History, step : f64 ) -> Resul
 	{
 		if matches!( element.kind, Kind::Wire | Kind::Ground | Kind::Switch { .. } ) { continue; }
 
-		injections[ netlist.index( element.segment.to ) ] += reading.current;
-		injections[ netlist.index( element.segment.from ) ] -= reading.current;
+		for ( point, current ) in element.terminals().into_iter().zip( &reading.currents ) { injections[ netlist.index( point ) ] -= current; }
 	}
 
 	let switches : Vec<usize> = ( 0 .. elements.len() ).filter( | &index | elements[ index ].kind == Kind::Switch { closed : true } ).collect();
@@ -151,7 +163,12 @@ pub fn solve( elements : &[ Element ], history : &History, step : f64 ) -> Resul
 
 	let currents = distribute( earth + 1, &edges, &injections );
 
-	for ( offset, &index ) in switches.iter().chain( &grounds ).enumerate() { readings[ index ].current = currents[ netlist.edges.len() + offset ]; }
+	for ( offset, &index ) in switches.iter().chain( &grounds ).enumerate()
+	{
+		let current = currents[ netlist.edges.len() + offset ];
+
+		readings[ index ].currents = vec![ current, - current ];
+	}
 
 	let branches = netlist.edges.iter().zip( &currents ).map( | ( &( a, b ), &current ) | Branch
 	{

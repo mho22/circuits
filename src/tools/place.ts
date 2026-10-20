@@ -1,5 +1,6 @@
 import { Circuit } from '../../bindings/web/pkg/web.js';
 import { Kind } from '../enums/kind.ts';
+import { terminals } from '../terminals.ts';
 import type { Element } from '../types/element.ts';
 import type { Point } from '../types/point.ts';
 
@@ -52,6 +53,8 @@ export class PlaceTool
 	{
 		if( ! this.start || ! this.end ) return null;
 
-		return { id : -1, kind : this.kind, from : this.start, to : this.end, value : VALUES[ this.kind ] ?? 0, potentials : [ 0, 0 ], current : NaN };
+		const count = terminals( this.kind, this.start, this.end ).length;
+
+		return { id : -1, kind : this.kind, from : this.start, to : this.end, value : VALUES[ this.kind ] ?? 0, potentials : Array( count ).fill( 0 ), currents : Array( count ).fill( NaN ) };
 	}
 }

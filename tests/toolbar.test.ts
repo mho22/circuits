@@ -36,6 +36,7 @@ describe( 'toolbar', () =>
 		expect( menus().map( menu => Array.from( menu.children ).map( item => item.textContent ) ) ).toEqual( [
 			[ 'WireW', 'GroundG', 'SwitchS' ],
 			[ 'ResistorR', 'CapacitorC', 'InductorL' ],
+			[ 'DiodeD', 'NPNN', 'PNPP' ],
 		] );
 	} );
 
@@ -43,7 +44,7 @@ describe( 'toolbar', () =>
 	{
 		new Toolbar( parent, () => {} );
 
-		expect( opens().map( open => open.getAttribute( 'aria-label' ) ) ).toEqual( [ 'Wiring parts', 'Passive parts' ] );
+		expect( opens().map( open => open.getAttribute( 'aria-label' ) ) ).toEqual( [ 'Wiring parts', 'Passive parts', 'Semiconductors parts' ] );
 	} );
 
 	it( 'opens one menu at a time', () =>
@@ -52,15 +53,15 @@ describe( 'toolbar', () =>
 
 		opens()[ 0 ].click();
 
-		expect( menus().map( menu => menu.hidden ) ).toEqual( [ false, true ] );
+		expect( menus().map( menu => menu.hidden ) ).toEqual( [ false, true, true ] );
 
 		opens()[ 1 ].click();
 
-		expect( menus().map( menu => menu.hidden ) ).toEqual( [ true, false ] );
+		expect( menus().map( menu => menu.hidden ) ).toEqual( [ true, false, true ] );
 
 		opens()[ 1 ].click();
 
-		expect( menus().map( menu => menu.hidden ) ).toEqual( [ true, true ] );
+		expect( menus().map( menu => menu.hidden ) ).toEqual( [ true, true, true ] );
 	} );
 
 	it( 'picks a part from a menu and closes the menu', () =>

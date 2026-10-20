@@ -12,6 +12,8 @@ pub enum Kind
 	Inductor { henries : f64 },
 	Switch { closed : bool },
 	Diode,
+	Npn,
+	Pnp,
 }
 
 impl Kind
@@ -27,6 +29,17 @@ impl Kind
 			Kind::Capacitor { farads } if ! positive( farads ) => Err( Error::Capacitance ),
 			Kind::Inductor { henries } if ! positive( henries ) => Err( Error::Inductance ),
 			_ => Ok( () ),
+		}
+	}
+
+	pub fn junctions( &self ) -> &'static [ ( usize, usize ) ]
+	{
+		match self
+		{
+			Kind::Diode => &[ ( 0, 1 ) ],
+			Kind::Npn => &[ ( 0, 2 ), ( 0, 1 ) ],
+			Kind::Pnp => &[ ( 2, 0 ), ( 1, 0 ) ],
+			_ => &[],
 		}
 	}
 

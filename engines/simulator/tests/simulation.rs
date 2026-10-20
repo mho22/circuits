@@ -34,7 +34,7 @@ fn it_solves_the_circuit_after_each_operation()
 	let simulation = series( Kind::Resistor { ohms : 1000.0 } );
 
 	assert_eq!( simulation.document().elements().len(), 5 );
-	assert!( near( simulation.solution().unwrap().readings[ 1 ].current, 0.0025, 1e-12 ) );
+	assert!( near( simulation.solution().unwrap().readings[ 1 ].currents[ 0 ], 0.0025, 1e-12 ) );
 }
 
 #[test]
@@ -48,7 +48,7 @@ fn it_charges_a_capacitor_along_the_rc_curve()
 
 		let expected = 5.0 * ( 1.0 - ( - milliseconds as f64 ).exp() );
 
-		assert!( near( simulation.solution().unwrap().readings[ 2 ].from, expected, 2e-3 ) );
+		assert!( near( simulation.solution().unwrap().readings[ 2 ].potentials[ 0 ], expected, 2e-3 ) );
 	}
 }
 
@@ -63,7 +63,7 @@ fn it_raises_the_current_of_an_inductor_along_the_rl_curve()
 
 		let expected = 0.005 * ( 1.0 - ( - milliseconds as f64 ).exp() );
 
-		assert!( near( simulation.solution().unwrap().readings[ 2 ].current, expected, 2e-6 ) );
+		assert!( near( simulation.solution().unwrap().readings[ 2 ].currents[ 0 ], expected, 2e-6 ) );
 	}
 }
 
@@ -82,7 +82,7 @@ fn it_keeps_the_charge_while_the_circuit_has_no_solution()
 
 	simulation.apply( Operation::Delete { id : short } ).unwrap();
 
-	assert!( near( simulation.solution().unwrap().readings[ 2 ].from, 5.0 * ( 1.0 - ( -1.0_f64 ).exp() ), 1e-2 ) );
+	assert!( near( simulation.solution().unwrap().readings[ 2 ].potentials[ 0 ], 5.0 * ( 1.0 - ( -1.0_f64 ).exp() ), 1e-2 ) );
 }
 
 #[test]
@@ -90,11 +90,11 @@ fn it_opens_and_closes_a_switch()
 {
 	let mut simulation = series( Kind::Switch { closed : false } );
 
-	assert_eq!( simulation.solution().unwrap().readings[ 1 ].current, 0.0 );
+	assert_eq!( simulation.solution().unwrap().readings[ 1 ].currents[ 0 ], 0.0 );
 
 	simulation.apply( Operation::SetClosed { id : 2, closed : true } ).unwrap();
 
-	assert!( near( simulation.solution().unwrap().readings[ 1 ].current, 0.005, 1e-12 ) );
+	assert!( near( simulation.solution().unwrap().readings[ 1 ].currents[ 0 ], 0.005, 1e-12 ) );
 }
 
 #[test]
@@ -116,7 +116,7 @@ fn it_undoes_a_deletion()
 
 	assert_eq!( simulation.undo(), Ok( Some( 3 ) ) );
 	assert_eq!( simulation.document().elements(), before.as_slice() );
-	assert!( near( simulation.solution().unwrap().readings[ 1 ].current, 0.0025, 1e-12 ) );
+	assert!( near( simulation.solution().unwrap().readings[ 1 ].currents[ 0 ], 0.0025, 1e-12 ) );
 }
 
 #[test]
@@ -183,7 +183,7 @@ fn it_places_a_part_on_a_wire_and_carries_the_current_through_it()
 	let index = simulation.document().elements().iter().position( | element | element.id == resistor ).unwrap();
 
 	assert_eq!( simulation.document().elements().len(), 7 );
-	assert!( near( solution.readings[ index ].current, 0.0025, 1e-12 ) );
+	assert!( near( solution.readings[ index ].currents[ 0 ], 0.0025, 1e-12 ) );
 }
 
 #[test]
@@ -217,7 +217,7 @@ fn it_leaves_the_wire_whole_when_the_part_is_invalid()
 fn it_keeps_the_drop_of_a_diode_while_time_runs()
 {
 	let mut simulation = series( Kind::Diode );
-	let drop = | simulation : &Simulation | { let reading = &simulation.solution().unwrap().readings[ 2 ]; reading.from - reading.to };
+	let drop = | simulation : &Simulation | { let reading = &simulation.solution().unwrap().readings[ 2 ]; reading.potentials[ 0 ] - reading.potentials[ 1 ] };
 	let before = drop( &simulation );
 
 	simulation.advance( 100 );

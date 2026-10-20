@@ -24,7 +24,7 @@ impl Netlist
 
 		for element in elements
 		{
-			for point in [ element.segment.from, element.segment.to ]
+			for point in element.terminals()
 			{
 				indices.entry( point ).or_insert_with( || { points.push( point ); points.len() - 1 } );
 			}

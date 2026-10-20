@@ -95,3 +95,18 @@ fn it_has_no_earth_without_a_ground()
 	assert_eq!( netlist.points, vec![ point( 0, 0 ), point( 1, 0 ) ] );
 	assert_eq!( netlist.nets, vec![ 0, 0 ] );
 }
+
+#[test]
+fn it_joins_the_collector_and_the_emitter_of_a_transistor_to_their_wires()
+{
+	let netlist = Netlist::build( &[
+		element( Kind::Npn, ( 0, 0 ), ( 2, 0 ) ),
+		element( Kind::Wire, ( 3, -1 ), ( 3, -4 ) ),
+		element( Kind::Wire, ( 3, 1 ), ( 3, 4 ) ),
+	] );
+
+	assert_eq!( netlist.count, 3 );
+	assert_eq!( netlist.net( point( 3, -1 ) ), netlist.net( point( 3, -4 ) ) );
+	assert_eq!( netlist.net( point( 3, 1 ) ), netlist.net( point( 3, 4 ) ) );
+	assert_ne!( netlist.net( point( 3, -1 ) ), netlist.net( point( 3, 1 ) ) );
+}

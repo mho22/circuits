@@ -7,6 +7,7 @@ import { Drift } from './drift.ts';
 import { edit } from './editors/value.ts';
 import { INPUTS, Kind } from './enums/kind.ts';
 import { read } from './keyboard.ts';
+import { leads } from './leads.ts';
 import { describe } from './readout.ts';
 import * as current from './renderers/current.ts';
 import * as cursor from './renderers/cursor.ts';
@@ -69,7 +70,7 @@ function frame( time : number ) : void
 	const branches = decodeBranches( circuit.branches() );
 	const scale = measure( elements, branches );
 	const preview = tool.preview();
-	const paths = [ ... branches, ... elements.filter( item => item.kind !== Kind.Wire && item.kind !== Kind.Ground ) ];
+	const paths = [ ... branches, ... elements.filter( item => item.kind !== Kind.Wire && item.kind !== Kind.Ground ).flatMap( leads ) ];
 	const distances = drift.advance( paths, scale.current, seconds );
 
 	context.setTransform( devicePixelRatio, 0, 0, devicePixelRatio, - view.x * devicePixelRatio, - view.y * devicePixelRatio );

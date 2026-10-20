@@ -39,6 +39,8 @@ impl Circuit
 			5 => Kind::Inductor { henries : value },
 			6 => Kind::Switch { closed : false },
 			7 => Kind::Diode,
+			8 => Kind::Npn,
+			9 => Kind::Pnp,
 			_ => return Err( JsError::new( "Unknown part kind." ) ),
 		};
 
@@ -105,13 +107,22 @@ impl Circuit
 				Kind::Inductor { henries } => ( 5.0, henries ),
 				Kind::Switch { closed } => ( 6.0, if closed { 1.0 } else { 0.0 } ),
 				Kind::Diode => ( 7.0, 0.0 ),
+				Kind::Npn => ( 8.0, 0.0 ),
+				Kind::Pnp => ( 9.0, 0.0 ),
 			};
 
-			let ( from, to, current ) = readings.get( index ).map_or( ( 0.0, 0.0, f64::NAN ), | reading | ( reading.from, reading.to, reading.current ) );
+			let mut potentials = [ 0.0, 0.0, f64::NAN ];
+			let mut currents = [ f64::NAN; 3 ];
+
+			if let Some( reading ) = readings.get( index )
+			{
+				potentials[ .. reading.potentials.len() ].copy_from_slice( &reading.potentials );
+				currents[ .. reading.currents.len() ].copy_from_slice( &reading.currents );
+			}
 
 			let segment = element.segment;
 
-			[ element.id as f64, code, segment.from.x as f64, segment.from.y as f64, segment.to.x as f64, segment.to.y as f64, value, from, to, current ]
+			[ element.id as f64, code, segment.from.x as f64, segment.from.y as f64, segment.to.x as f64, segment.to.y as f64, value, potentials[ 0 ], potentials[ 1 ], potentials[ 2 ], currents[ 0 ], currents[ 1 ], currents[ 2 ] ]
 		} ).collect()
 	}
 

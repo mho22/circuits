@@ -14,7 +14,7 @@ export function measure( elements : Element[], branches : Branch[] ) : Scale
 {
 	const voltage = largest( elements.flatMap( element => element.potentials ) );
 
-	const current = largest( [ ... elements.filter( element => element.kind !== Kind.Wire ).map( element => element.current ), ... branches.map( branch => branch.current ) ] );
+	const current = largest( [ ... elements.filter( element => element.kind !== Kind.Wire ).flatMap( element => element.currents ), ... branches.map( branch => branch.current ) ] );
 
 	return { voltage, current };
 }

@@ -20,33 +20,39 @@ describe( 'readout', () =>
 
 	it( 'describes a resistor with its value, the voltage across it and its current', () =>
 	{
-		expect( read( element( { kind : Kind.Resistor, value : 2200, potentials : [ 5, 0 ], current : 0.00227 } ), undefined ) ).toBe( 'Resistor 2.2 kΩ · 5 V across · 2.27 mA' );
+		expect( read( element( { kind : Kind.Resistor, value : 2200, potentials : [ 5, 0 ], currents : [ 0.00227, -0.00227 ] } ), undefined ) ).toBe( 'Resistor 2.2 kΩ · 5 V across · 2.27 mA' );
 	} );
 
 	it( 'describes a battery', () =>
 	{
-		expect( read( element( { kind : Kind.Battery, value : 9, potentials : [ 0, 9 ], current : -0.5 } ), undefined ) ).toBe( 'Battery 9 V · 9 V across · 500 mA' );
+		expect( read( element( { kind : Kind.Battery, value : 9, potentials : [ 0, 9 ], currents : [ -0.5, 0.5 ] } ), undefined ) ).toBe( 'Battery 9 V · 9 V across · 500 mA' );
 	} );
 
 	it( 'describes a capacitor and an inductor with their values', () =>
 	{
-		expect( read( element( { kind : Kind.Capacitor, value : 1e-5, potentials : [ 3, 0 ], current : 0.002 } ), undefined ) ).toBe( 'Capacitor 10 µF · 3 V across · 2 mA' );
-		expect( read( element( { kind : Kind.Inductor, value : 1, potentials : [ 0, 1 ], current : -0.004 } ), undefined ) ).toBe( 'Inductor 1 H · 1 V across · 4 mA' );
+		expect( read( element( { kind : Kind.Capacitor, value : 1e-5, potentials : [ 3, 0 ], currents : [ 0.002, -0.002 ] } ), undefined ) ).toBe( 'Capacitor 10 µF · 3 V across · 2 mA' );
+		expect( read( element( { kind : Kind.Inductor, value : 1, potentials : [ 0, 1 ], currents : [ -0.004, 0.004 ] } ), undefined ) ).toBe( 'Inductor 1 H · 1 V across · 4 mA' );
 	} );
 
 	it( 'describes a switch with its state', () =>
 	{
-		expect( read( element( { kind : Kind.Switch, value : 0, potentials : [ 5, 0 ], current : 0 } ), undefined ) ).toBe( 'Switch open · 5 V across · 0 A' );
-		expect( read( element( { kind : Kind.Switch, value : 1, potentials : [ 0, 0 ], current : 0.005 } ), undefined ) ).toBe( 'Switch closed · 0 V across · 5 mA' );
+		expect( read( element( { kind : Kind.Switch, value : 0, potentials : [ 5, 0 ], currents : [ 0, 0 ] } ), undefined ) ).toBe( 'Switch open · 5 V across · 0 A' );
+		expect( read( element( { kind : Kind.Switch, value : 1, potentials : [ 0, 0 ], currents : [ 0.005, -0.005 ] } ), undefined ) ).toBe( 'Switch closed · 0 V across · 5 mA' );
 	} );
 
 	it( 'describes a diode with its drop', () =>
 	{
-		expect( read( element( { kind : Kind.Diode, potentials : [ 5, 4.35 ], current : 0.00435 } ), undefined ) ).toBe( 'Diode · 650 mV across · 4.35 mA' );
+		expect( read( element( { kind : Kind.Diode, potentials : [ 5, 4.35 ], currents : [ 0.00435, -0.00435 ] } ), undefined ) ).toBe( 'Diode · 650 mV across · 4.35 mA' );
+	} );
+
+	it( 'describes a transistor with its junction voltages and its base and collector currents', () =>
+	{
+		expect( read( element( { kind : Kind.Npn, potentials : [ 0.7, 3, 0 ], currents : [ 2e-5, 2e-3, -2.02e-3 ] } ), undefined ) ).toBe( 'NPN · Vbe 700 mV · Vce 3 V · Ib 20 µA · Ic 2 mA' );
+		expect( read( element( { kind : Kind.Pnp, potentials : [ -0.7, -3, 0 ], currents : [ -2e-5, -2e-3, 2.02e-3 ] } ), undefined ) ).toBe( 'PNP · Vbe 700 mV · Vce 3 V · Ib 20 µA · Ic 2 mA' );
 	} );
 
 	it( 'describes a ground', () =>
 	{
-		expect( read( element( { kind : Kind.Ground, current : -0.02 } ), undefined ) ).toBe( 'Ground · 0 V · 20 mA' );
+		expect( read( element( { kind : Kind.Ground, currents : [ -0.02, 0.02 ] } ), undefined ) ).toBe( 'Ground · 0 V · 20 mA' );
 	} );
 } );

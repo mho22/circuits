@@ -27,11 +27,12 @@ fn it_lists_each_part_with_its_reading()
 {
 	let elements = powered().elements();
 
-	assert_eq!( elements.len(), 50 );
+	assert_eq!( elements.len(), 65 );
 	assert_eq!( &elements[ 0 .. 9 ], &[ 0.0, 2.0, 0.0, 2.0, 0.0, 0.0, 5.0, 0.0, 5.0 ] );
-	assert!( ( elements[ 9 ] - 0.005 ).abs() < 1e-12 );
-	assert_eq!( &elements[ 10 .. 19 ], &[ 1.0, 1.0, 0.0, 0.0, 2.0, 0.0, 1000.0, 5.0, 0.0 ] );
-	assert_eq!( &elements[ 40 .. 47 ], &[ 4.0, 3.0, 0.0, 2.0, 0.0, 2.0, 0.0 ] );
+	assert!( elements[ 9 ].is_nan() );
+	assert!( ( elements[ 10 ] - 0.005 ).abs() < 1e-12 );
+	assert_eq!( &elements[ 13 .. 22 ], &[ 1.0, 1.0, 0.0, 0.0, 2.0, 0.0, 1000.0, 5.0, 0.0 ] );
+	assert_eq!( &elements[ 52 .. 59 ], &[ 4.0, 3.0, 0.0, 2.0, 0.0, 2.0, 0.0 ] );
 }
 
 #[wasm_bindgen_test]
@@ -60,7 +61,7 @@ fn it_sets_a_value_and_solves_again()
 	let mut circuit = powered();
 
 	assert_eq!( circuit.set_value( 0, 10.0 ).ok(), Some( 0 ) );
-	assert!( ( circuit.elements()[ 19 ] - 0.01 ).abs() < 1e-12 );
+	assert!( ( circuit.elements()[ 23 ] - 0.01 ).abs() < 1e-12 );
 }
 
 #[wasm_bindgen_test]
@@ -78,7 +79,7 @@ fn it_rejects_an_invalid_part()
 {
 	let mut circuit = Circuit::new();
 
-	assert!( circuit.add( 9, 0.0, 0, 0, 1, 0 ).is_err() );
+	assert!( circuit.add( 10, 0.0, 0, 0, 1, 0 ).is_err() );
 	assert!( circuit.add( 0, 0.0, 0, 0, 2, 1 ).is_err() );
 	assert!( circuit.elements().is_empty() );
 }
@@ -96,7 +97,7 @@ fn it_reports_a_circuit_without_solution()
 	assert!( circuit.error().unwrap().starts_with( "The circuit has no single solution" ) );
 	assert!( circuit.branches().is_empty() );
 	assert_eq!( circuit.branch_at( 0, 1 ), None );
-	assert!( circuit.elements()[ 9 ].is_nan() );
+	assert!( circuit.elements()[ 10 ].is_nan() );
 }
 
 #[wasm_bindgen_test]
@@ -110,7 +111,7 @@ fn it_lists_a_capacitor_an_inductor_and_a_switch_with_their_values()
 
 	let elements = circuit.elements();
 
-	assert_eq!( [ elements[ 1 ], elements[ 6 ], elements[ 11 ], elements[ 16 ], elements[ 21 ], elements[ 26 ] ], [ 4.0, 1e-5, 5.0, 1.0, 6.0, 0.0 ] );
+	assert_eq!( [ elements[ 1 ], elements[ 6 ], elements[ 14 ], elements[ 19 ], elements[ 27 ], elements[ 32 ] ], [ 4.0, 1e-5, 5.0, 1.0, 6.0, 0.0 ] );
 }
 
 #[wasm_bindgen_test]
@@ -121,7 +122,7 @@ fn it_closes_a_switch_and_solves_again()
 	circuit.add( 6, 0.0, 2, 2, 2, 4 ).ok();
 
 	assert_eq!( circuit.set_closed( 5, true ).ok(), Some( 5 ) );
-	assert_eq!( circuit.elements()[ 56 ], 1.0 );
+	assert_eq!( circuit.elements()[ 71 ], 1.0 );
 	assert!( circuit.set_closed( 1, true ).is_err() );
 }
 
@@ -137,7 +138,7 @@ fn it_advances_the_time_step_by_step()
 
 	circuit.advance( 1000 );
 
-	assert!( ( circuit.elements()[ 27 ] - 5.0 * ( 1.0 - ( -1.0_f64 ).exp() ) ).abs() < 1e-2 );
+	assert!( ( circuit.elements()[ 33 ] - 5.0 * ( 1.0 - ( -1.0_f64 ).exp() ) ).abs() < 1e-2 );
 }
 
 #[wasm_bindgen_test]
@@ -178,8 +179,34 @@ fn it_lists_a_diode_with_its_forward_drop()
 	circuit.add( 0, 0.0, 2, 2, 0, 2 ).ok();
 
 	let elements = circuit.elements();
-	let drop = elements[ 17 ] - elements[ 18 ];
+	let drop = elements[ 20 ] - elements[ 21 ];
 
-	assert_eq!( elements[ 11 ], 7.0 );
+	assert_eq!( elements[ 14 ], 7.0 );
 	assert!( drop > 0.6 && drop < 0.7 );
+}
+
+#[wasm_bindgen_test]
+fn it_lists_a_transistor_with_the_voltage_and_the_current_of_each_terminal()
+{
+	let mut circuit = Circuit::new();
+
+	circuit.add( 2, 5.0, 0, 6, 0, 0 ).ok();
+	circuit.add( 0, 0.0, 0, 0, 8, 0 ).ok();
+	circuit.add( 1, 200_000.0, 4, 0, 4, 3 ).ok();
+	circuit.add( 1, 1000.0, 7, 0, 7, 2 ).ok();
+	circuit.add( 8, 0.0, 4, 3, 6, 3 ).ok();
+	circuit.add( 0, 0.0, 7, 4, 7, 6 ).ok();
+	circuit.add( 0, 0.0, 0, 6, 7, 6 ).ok();
+	circuit.add( 3, 0.0, 0, 6, 0, 6 ).ok();
+
+	let elements = circuit.elements();
+	let transistor = &elements[ 52 .. 65 ];
+
+	assert_eq!( transistor[ 1 ], 8.0 );
+	assert!( transistor[ 7 ] > 0.6 && transistor[ 7 ] < 0.7 );
+	assert_eq!( transistor[ 9 ], 0.0 );
+	assert!( ( transistor[ 11 ] / transistor[ 10 ] - 100.0 ).abs() < 0.01 );
+	assert!( ( transistor[ 10 ] + transistor[ 11 ] + transistor[ 12 ] ).abs() < 1e-12 );
+	assert!( elements[ 9 ].is_nan() && elements[ 12 ].is_nan() );
+	assert_eq!( circuit.elements_at( 7, 2 ), vec![ 4, 3 ] );
 }

@@ -17,6 +17,7 @@ mod segment;
 mod simulation;
 mod solution;
 mod solver;
+mod stamp;
 mod union_find;
 
 pub use branch::Branch;
@@ -38,4 +39,5 @@ pub use segment::Segment;
 pub use simulation::Simulation;
 pub use solution::Solution;
 pub use solver::solve;
+pub use stamp::Stamp;
 pub use union_find::UnionFind;
