@@ -1,7 +1,7 @@
 use crate::{ Element, Error, Kind, Operation, Point, Segment };
 
 
-#[derive( Debug, Default )]
+#[derive( Clone, Debug, Default )]
 pub struct Document
 {
 	elements : Vec<Element>,

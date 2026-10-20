@@ -21,6 +21,7 @@ import { measure } from './scale.ts';
 import { Toolbar } from './toolbar.ts';
 import { MoveTool } from './tools/move.ts';
 import { PlaceTool } from './tools/place.ts';
+import { toggle } from './tools/toggle.ts';
 import type { Action } from './types/action.ts';
 import type { Element } from './types/element.ts';
 import type { Point } from './types/point.ts';
@@ -51,6 +52,7 @@ let hover : Point | null = null;
 let notice : string | null = null;
 let previous : number | null = null;
 let spaced = false;
+let pressed : Point | null = null;
 
 
 function select( kind : Kind ) : void
@@ -194,6 +196,8 @@ canvas.addEventListener( 'pointerdown', ( event : PointerEvent ) =>
 
 	if( event.button === 0 && mover.element ) { attempt( () => mover.drop() ); return; }
 
+	if( event.button === 0 ) pressed = point;
+
 	if( event.button === 0 && event.detail < 2 )
 	{
 		canvas.setPointerCapture( event.pointerId );
@@ -212,10 +216,17 @@ canvas.addEventListener( 'pointermove', ( event : PointerEvent ) =>
 	tool.move( hover );
 } );
 
-canvas.addEventListener( 'pointerup', () =>
+canvas.addEventListener( 'pointerup', ( event : PointerEvent ) =>
 {
+	const point = view.toGrid( event.clientX, event.clientY );
+	const clicked = pressed && pressed.x === point.x && pressed.y === point.y && ! POINTS.includes( tool.kind );
+
+	pressed = null;
+
 	view.release();
 	tool.release();
+
+	if( clicked ) toggle( circuit, point );
 } );
 
 canvas.addEventListener( 'wheel', ( event : WheelEvent ) =>
@@ -236,11 +247,9 @@ canvas.addEventListener( 'dblclick', ( event : MouseEvent ) =>
 	const point = view.toGrid( event.clientX, event.clientY );
 	const ids = Array.from( circuit.elementsAt( point.x, point.y ) );
 	const elements = decodeElements( circuit.elements() );
-	const target = ids.map( id => elements.find( item => item.id === id )! ).find( item => INPUTS[ item.kind ] || item.kind === Kind.Switch );
+	const target = ids.map( id => elements.find( item => item.id === id )! ).find( item => INPUTS[ item.kind ] );
 
 	if( ! target ) return;
-
-	if( target.kind === Kind.Switch ) { circuit.setClosed( target.id, ! target.value ); return; }
 
 	const [ unit, scale ] = INPUTS[ target.kind ]!;
 

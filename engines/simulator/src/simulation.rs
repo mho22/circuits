@@ -1,4 +1,4 @@
-use crate::{ place, solve, Document, Error, History, Kind, Operation, Segment, Solution };
+use crate::{ place, solve, stretch, Document, Element, Error, History, Kind, Operation, Segment, Solution };
 
 
 #[derive( Debug )]
@@ -33,9 +33,13 @@ impl Simulation
 
 	pub fn transform( &mut self, id : u32, segment : Segment, mirrored : bool ) -> Result<u32, Error>
 	{
-		let element = self.document.elements().iter().find( | element | element.id == id ).ok_or( Error::Missing )?;
-		let mut operations = place( self.document.elements(), element.kind, segment );
+		let before = *self.document.elements().iter().find( | element | element.id == id ).ok_or( Error::Missing )?;
+		let mut operations = stretch( self.document.elements(), &before, &Element { segment, mirrored, ..before } );
+		let mut draft = self.document.clone();
 
+		for &operation in &operations { draft.apply( operation )?; }
+
+		operations.extend( place( draft.elements(), before.kind, segment ) );
 		operations.pop();
 		operations.push( Operation::Move { id, segment, mirrored } );
 

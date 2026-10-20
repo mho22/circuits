@@ -272,7 +272,7 @@ fn it_keeps_the_drawing_when_a_part_is_invalid()
 }
 
 #[test]
-fn it_moves_a_part_in_one_undo_step()
+fn it_moves_a_part_with_its_wires_in_one_undo_step()
 {
 	let mut simulation = series( Kind::Resistor { ohms : 1000.0 } );
 	let before = simulation.document().elements().to_vec();
@@ -280,7 +280,7 @@ fn it_moves_a_part_in_one_undo_step()
 	simulation.transform( 2, segment( ( 8, 0 ), ( 8, 4 ) ), false ).unwrap();
 
 	assert_eq!( simulation.document().elements()[ 2 ].segment, segment( ( 8, 0 ), ( 8, 4 ) ) );
-	assert_eq!( simulation.solution().unwrap().readings[ 1 ].currents[ 0 ], 0.0 );
+	assert!( near( simulation.solution().unwrap().readings[ 2 ].currents[ 0 ], 0.0025, 1e-12 ) );
 
 	simulation.undo().unwrap();
 
@@ -308,4 +308,20 @@ fn it_rejects_a_move_of_a_missing_part()
 
 	assert_eq!( simulation.transform( 7, segment( ( 0, 0 ), ( 2, 0 ) ), false ), Err( Error::Missing ) );
 	assert_eq!( simulation.undo(), Ok( Some( 4 ) ) );
+}
+
+#[test]
+fn it_slides_a_part_along_its_wire()
+{
+	let mut simulation = Simulation::new( STEP );
+
+	add( &mut simulation, Kind::Wire, ( 0, 0 ), ( 8, 0 ) );
+
+	let resistor = simulation.place( Kind::Resistor { ohms : 1000.0 }, segment( ( 2, 0 ), ( 4, 0 ) ) ).unwrap();
+
+	simulation.transform( resistor, segment( ( 5, 0 ), ( 7, 0 ) ), false ).unwrap();
+
+	let wires : Vec<Segment> = simulation.document().elements().iter().filter( | element | element.kind == Kind::Wire ).map( | element | element.segment ).collect();
+
+	assert_eq!( wires, vec![ segment( ( 0, 0 ), ( 5, 0 ) ), segment( ( 7, 0 ), ( 8, 0 ) ) ] );
 }

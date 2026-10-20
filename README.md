@@ -20,9 +20,9 @@ Requires Rust through `rustup`. `rust-toolchain.toml` pins the version and the `
 - Pick a part in the toolbar, or press its key: `W` wire, `S` switch, `R` resistor, `C` capacitor, `L` inductor, `D` diode, `N` NPN transistor, `P` PNP transistor, `M` NMOS transistor, `F` PMOS transistor, `B` battery, `V` VCC, `G` ground. The toolbar groups the parts by role: wiring, passive parts, semiconductors and sources. The arrow next to a group lists its parts.
 - Drag to draw a part. A part runs at 0° or 90°. Click to place a VCC or a ground.
 - Double-click a resistor, a battery, a VCC, a capacitor or an inductor to change its value. Write a number in the unit at the end of the input: `Ω`, `V`, `µF` or `mH`. A comma or a dot separates the decimals: `4700` Ω, `4,7` µF.
-- Double-click a switch to open or close it.
+- Click a switch to open or close it.
 - Right-click a wire to delete it.
-- Right-click any other part to open its menu: `Move`, `Rotate`, `Mirror horizontally`, `Mirror vertically` and `Delete`. A ground and a VCC have only `Move` and `Delete`. After `Move`, the part follows the cursor: click to drop it, or press `Escape` to cancel. `Rotate` turns the part a quarter clockwise. A mirrored transistor swaps the sides of its collector and its emitter, or of its drain and its source.
+- Right-click any other part to open its menu: `Move`, `Rotate`, `Mirror horizontally`, `Mirror vertically` and `Delete`. A ground and a VCC have only `Move` and `Delete`. After `Move`, the part follows the cursor: click to drop it, or press `Escape` to cancel. `Rotate` turns the part a quarter clockwise. The wires on the part follow it, and bend at a right angle where they must. A part that touched another part, or the middle of a wire, stays joined to it by a new wire. A mirrored transistor swaps the sides of its collector and its emitter, or of its drain and its source.
 - Press `Ctrl Z` (`⌘ Z` on a Mac) to undo, and `Ctrl Shift Z` or `Ctrl Y` (`⌘ Shift Z`) to redo.
 - Hover a part to read its voltage and current.
 - Move the view with a two-finger swipe or the mouse wheel, by dragging with the middle button, or by holding `Space` and dragging.

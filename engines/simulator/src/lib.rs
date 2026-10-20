@@ -19,6 +19,7 @@ mod simulation;
 mod solution;
 mod solver;
 mod stamp;
+mod stretch;
 mod union_find;
 
 pub use branch::Branch;
@@ -42,4 +43,5 @@ pub use simulation::Simulation;
 pub use solution::Solution;
 pub use solver::solve;
 pub use stamp::Stamp;
+pub use stretch::stretch;
 pub use union_find::UnionFind;
