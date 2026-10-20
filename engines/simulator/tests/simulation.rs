@@ -172,3 +172,43 @@ fn it_keeps_the_undo_untouched_by_an_invalid_operation()
 	assert!( simulation.apply( Operation::Delete { id : 7 } ).is_err() );
 	assert_eq!( simulation.undo(), Ok( Some( 4 ) ) );
 }
+
+#[test]
+fn it_places_a_part_on_a_wire_and_carries_the_current_through_it()
+{
+	let mut simulation = series( Kind::Wire );
+
+	let resistor = simulation.place( Kind::Resistor { ohms : 1000.0 }, Segment { from : Point { x : 4, y : 1 }, to : Point { x : 4, y : 3 } } ).unwrap();
+	let solution = simulation.solution().unwrap();
+	let index = simulation.document().elements().iter().position( | element | element.id == resistor ).unwrap();
+
+	assert_eq!( simulation.document().elements().len(), 7 );
+	assert!( near( solution.readings[ index ].current, 0.0025, 1e-12 ) );
+}
+
+#[test]
+fn it_undoes_a_split_in_one_step()
+{
+	let mut simulation = series( Kind::Wire );
+	let before = simulation.document().elements().to_vec();
+
+	simulation.place( Kind::Resistor { ohms : 1000.0 }, Segment { from : Point { x : 4, y : 1 }, to : Point { x : 4, y : 3 } } ).unwrap();
+	simulation.undo().unwrap();
+
+	assert_eq!( simulation.document().elements(), before.as_slice() );
+
+	simulation.redo().unwrap();
+
+	assert_eq!( simulation.document().elements().len(), 7 );
+}
+
+#[test]
+fn it_leaves_the_wire_whole_when_the_part_is_invalid()
+{
+	let mut simulation = series( Kind::Wire );
+	let before = simulation.document().elements().to_vec();
+
+	assert_eq!( simulation.place( Kind::Resistor { ohms : 0.0 }, Segment { from : Point { x : 4, y : 1 }, to : Point { x : 4, y : 3 } } ), Err( Error::Resistance ) );
+	assert_eq!( simulation.document().elements(), before.as_slice() );
+	assert_eq!( simulation.undo(), Ok( Some( 4 ) ) );
+}

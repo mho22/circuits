@@ -27,6 +27,8 @@ Requires Rust through `rustup`. `rust-toolchain.toml` pins the version and the `
 
 Two parts connect where their ends meet, or where an end touches a wire. Two wires that cross do not connect. Every ground is the same 0 V node.
 
+A part drawn along a wire replaces the wire under it. The wire keeps its pieces on each side, and they connect to the ends of the part.
+
 The color of a wire shows its voltage: green is positive, red is negative, gray is 0 V. The yellow dots show the current.
 
 Time runs at 10 ms of circuit time per second. A capacitor starts empty and an inductor starts without current. Each time step is 10 µs.

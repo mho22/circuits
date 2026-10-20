@@ -1,4 +1,4 @@
-use crate::{ solve, Document, Error, History, Operation, Solution };
+use crate::{ place, solve, Document, Error, History, Kind, Operation, Segment, Solution };
 
 
 #[derive( Debug )]
@@ -22,6 +22,13 @@ impl Simulation
 	pub fn apply( &mut self, operation : Operation ) -> Result<u32, Error>
 	{
 		self.commit( &[ operation ] )
+	}
+
+	pub fn place( &mut self, kind : Kind, segment : Segment ) -> Result<u32, Error>
+	{
+		let operations = place( self.document.elements(), kind, segment );
+
+		self.commit( &operations )
 	}
 
 	pub fn undo( &mut self ) -> Result<Option<u32>, Error>

@@ -153,3 +153,16 @@ fn it_undoes_and_redoes_a_deletion()
 	assert!( circuit.elements_at( 1, 0 ).is_empty() );
 	assert_eq!( circuit.redo().ok(), Some( None ) );
 }
+
+#[wasm_bindgen_test]
+fn it_splits_a_wire_under_a_new_part()
+{
+	let mut circuit = Circuit::new();
+
+	circuit.add( 0, 0.0, 0, 0, 6, 0 ).ok();
+
+	assert_eq!( circuit.add( 1, 1000.0, 2, 0, 4, 0 ).ok(), Some( 3 ) );
+	assert_eq!( circuit.elements_at( 1, 0 ), vec![ 1 ] );
+	assert_eq!( circuit.elements_at( 3, 0 ), vec![ 3 ] );
+	assert_eq!( circuit.elements_at( 5, 0 ), vec![ 2 ] );
+}

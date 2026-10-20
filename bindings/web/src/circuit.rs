@@ -41,7 +41,7 @@ impl Circuit
 			_ => return Err( JsError::new( "Unknown part kind." ) ),
 		};
 
-		self.apply( Operation::Add { kind, segment : Segment { from : Point { x : from_x, y : from_y }, to : Point { x : to_x, y : to_y } } } )
+		self.simulation.place( kind, Segment { from : Point { x : from_x, y : from_y }, to : Point { x : to_x, y : to_y } } ).map_err( | error | JsError::new( &error.to_string() ) )
 	}
 
 	pub fn delete( &mut self, id : u32 ) -> Result<u32, JsError>
