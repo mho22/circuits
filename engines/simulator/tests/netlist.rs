@@ -58,6 +58,24 @@ fn it_joins_a_part_end_on_the_middle_of_a_wire()
 }
 
 #[test]
+fn it_joins_the_ends_of_a_closed_switch()
+{
+	let netlist = Netlist::build( &[ element( Kind::Switch { closed : true }, ( 0, 0 ), ( 2, 0 ) ), element( Kind::Wire, ( 0, 0 ), ( 0, 3 ) ) ] );
+
+	assert_eq!( netlist.count, 1 );
+	assert_eq!( netlist.links, vec![ ( 0, 1 ) ] );
+}
+
+#[test]
+fn it_keeps_the_ends_of_an_open_switch_apart()
+{
+	let netlist = Netlist::build( &[ element( Kind::Switch { closed : false }, ( 0, 0 ), ( 2, 0 ) ) ] );
+
+	assert_eq!( netlist.count, 2 );
+	assert!( netlist.links.is_empty() );
+}
+
+#[test]
 fn it_joins_every_ground_into_one_earth()
 {
 	let netlist = Netlist::build( &[ element( Kind::Ground, ( 0, 0 ), ( 0, 0 ) ), element( Kind::Ground, ( 5, 5 ), ( 5, 5 ) ), element( Kind::Wire, ( 9, 9 ), ( 9, 8 ) ) ] );

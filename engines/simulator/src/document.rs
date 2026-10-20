@@ -17,6 +17,7 @@ impl Document
 			Operation::Add { kind, segment } => self.add( kind, segment ),
 			Operation::Delete { id } => self.delete( id ),
 			Operation::SetValue { id, value } => self.set_value( id, value ),
+			Operation::SetClosed { id, closed } => self.set_closed( id, closed ),
 		}
 	}
 
@@ -63,6 +64,15 @@ impl Document
 		let index = self.index( id )?;
 
 		self.elements[ index ].kind = self.elements[ index ].kind.with_value( value )?;
+
+		Ok( id )
+	}
+
+	fn set_closed( &mut self, id : u32, closed : bool ) -> Result<u32, Error>
+	{
+		let index = self.index( id )?;
+
+		self.elements[ index ].kind = self.elements[ index ].kind.with_closed( closed )?;
 
 		Ok( id )
 	}

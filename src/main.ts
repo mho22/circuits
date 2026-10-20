@@ -1,6 +1,8 @@
 import init, { Circuit } from '../bindings/web/pkg/web.js';
+import { Clock } from './clock.ts';
 import { decode as decodeBranches } from './decoders/branch.ts';
 import { decode as decodeElements } from './decoders/element.ts';
+import { Drift } from './drift.ts';
 import { edit } from './editors/value.ts';
 import { Kind, UNITS } from './enums/kind.ts';
 import { toGrid } from './grid.ts';
@@ -19,7 +21,9 @@ import type { Point } from './types/point.ts';
 await init();
 
 
-const SHORTCUTS : Record<string, Kind> = { w : Kind.Wire, r : Kind.Resistor, b : Kind.Battery, g : Kind.Ground };
+const SHORTCUTS : Record<string, Kind> = { w : Kind.Wire, r : Kind.Resistor, b : Kind.Battery, g : Kind.Ground, c : Kind.Capacitor, l : Kind.Inductor, s : Kind.Switch };
+const STEPS_PER_SECOND = 1000;
+const STEPS_PER_FRAME = 100;
 
 const canvas = document.querySelector( 'canvas' )!;
 const context = canvas.getContext( '2d' )!;
@@ -27,9 +31,12 @@ const status = document.querySelector( 'output' )!;
 const buttons = document.querySelectorAll<HTMLButtonElement>( 'nav button' );
 const circuit = new Circuit();
 const tool = new PlaceTool( circuit );
+const clock = new Clock( STEPS_PER_SECOND, STEPS_PER_FRAME );
+const drift = new Drift();
 
 let hover : Point | null = null;
 let notice : string | null = null;
+let previous : number | null = null;
 
 
 function select( kind : Kind ) : void
@@ -48,19 +55,24 @@ function report( text : string, error : boolean ) : void
 
 function frame( time : number ) : void
 {
+	const seconds = previous === null ? 0 : ( time - previous ) / 1000;
+
+	previous = time;
+
+	circuit.advance( clock.tick( seconds ) );
+
 	const elements = decodeElements( circuit.elements() );
 	const branches = decodeBranches( circuit.branches() );
 	const scale = measure( elements, branches );
-	const seconds = time / 1000;
 	const preview = tool.preview();
+	const paths = [ ... branches, ... elements.filter( item => item.kind !== Kind.Wire && item.kind !== Kind.Ground ) ];
+	const distances = drift.advance( paths, scale.current, seconds );
 
 	grid.draw( context, innerWidth, innerHeight );
 
 	elements.forEach( item => element.draw( context, item, scale ) );
 
-	branches.forEach( branch => current.draw( context, branch.from, branch.to, branch.current, scale.current, seconds ) );
-
-	elements.filter( item => UNITS[ item.kind ] ).forEach( item => current.draw( context, item.from, item.to, item.current, scale.current, seconds ) );
+	paths.forEach( ( path, index ) => current.draw( context, path.from, path.to, path.current, scale.current, distances[ index ] ) );
 
 	if( preview )
 	{
@@ -124,10 +136,13 @@ canvas.addEventListener( 'dblclick', ( event : MouseEvent ) =>
 	const point = toGrid( event.clientX, event.clientY );
 	const ids = Array.from( circuit.elementsAt( point.x, point.y ) );
 	const elements = decodeElements( circuit.elements() );
-	const target = ids.map( id => elements.find( item => item.id === id )! ).find( item => UNITS[ item.kind ] );
-	const unit = target ? UNITS[ target.kind ] : undefined;
+	const target = ids.map( id => elements.find( item => item.id === id )! ).find( item => UNITS[ item.kind ] || item.kind === Kind.Switch );
 
-	if( ! target || ! unit ) return;
+	if( ! target ) return;
+
+	if( target.kind === Kind.Switch ) { circuit.setClosed( target.id, ! target.value ); return; }
+
+	const unit = UNITS[ target.kind ]!;
 
 	edit( document.body, { x : event.clientX, y : event.clientY }, format( target.value, unit ), text =>
 	{

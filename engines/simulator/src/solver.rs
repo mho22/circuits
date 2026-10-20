@@ -1,16 +1,28 @@
 use std::collections::HashMap;
 
-use crate::{ distribute, eliminate, Branch, Element, Error, Kind, Netlist, Reading, Segment, Solution, UnionFind };
+use crate::{ distribute, eliminate, Branch, Element, Error, History, Kind, Netlist, Reading, Segment, Solution, UnionFind };
 
 
-pub fn solve( elements : &[ Element ] ) -> Result<Solution, Error>
+fn companion( element : &Element, history : &History, step : f64 ) -> Option<( f64, f64 )>
+{
+	match element.kind
+	{
+		Kind::Resistor { ohms } => Some( ( 1.0 / ohms, 0.0 ) ),
+		Kind::Capacitor { farads } => Some( ( farads / step, farads / step * history.get( element.id ) ) ),
+		Kind::Inductor { henries } => Some( ( step / henries, - history.get( element.id ) ) ),
+		_ => None,
+	}
+}
+
+
+pub fn solve( elements : &[ Element ], history : &History, step : f64 ) -> Result<Solution, Error>
 {
 	let netlist = Netlist::build( elements );
 	let mut islands = UnionFind::new( netlist.count );
 
 	for element in elements
 	{
-		if matches!( element.kind, Kind::Wire | Kind::Ground ) { continue; }
+		if matches!( element.kind, Kind::Wire | Kind::Ground | Kind::Switch { .. } ) { continue; }
 
 		islands.union( netlist.net( element.segment.from ), netlist.net( element.segment.to ) );
 	}
@@ -48,16 +60,19 @@ pub fn solve( elements : &[ Element ] ) -> Result<Solution, Error>
 
 	for element in elements
 	{
-		let Kind::Resistor { ohms } = element.kind else { continue; };
+		let Some( ( conductance, source ) ) = companion( element, history, step ) else { continue; };
 
 		let a = unknowns[ netlist.net( element.segment.from ) ];
 		let b = unknowns[ netlist.net( element.segment.to ) ];
-		let conductance = 1.0 / ohms;
 
 		stamp( a, a, conductance );
 		stamp( b, b, conductance );
 		stamp( a, b, - conductance );
 		stamp( b, a, - conductance );
+
+		if let Some( a ) = a { rhs[ a ] += source; }
+
+		if let Some( b ) = b { rhs[ b ] -= source; }
 	}
 
 	for ( offset, &index ) in batteries.iter().enumerate()
@@ -85,10 +100,11 @@ pub fn solve( elements : &[ Element ] ) -> Result<Solution, Error>
 		let from = voltage( netlist.net( element.segment.from ) );
 		let to = voltage( netlist.net( element.segment.to ) );
 
-		let current = match element.kind
+		let current = match ( element.kind, companion( element, history, step ) )
 		{
-			Kind::Resistor { ohms } => ( from - to ) / ohms,
-			Kind::Battery { .. } => solution[ nodes + batteries.iter().position( | &index | elements[ index ].id == element.id ).unwrap() ],
+			( _, Some( ( conductance, source ) ) ) => conductance * ( from - to ) - source,
+			( Kind::Battery { .. }, _ ) => solution[ nodes + batteries.iter().position( | &index | elements[ index ].id == element.id ).unwrap() ],
+			( Kind::Switch { .. }, _ ) => 0.0,
 			_ => f64::NAN,
 		};
 
@@ -100,21 +116,23 @@ pub fn solve( elements : &[ Element ] ) -> Result<Solution, Error>
 
 	for ( element, reading ) in elements.iter().zip( &readings )
 	{
-		if matches!( element.kind, Kind::Wire | Kind::Ground ) { continue; }
+		if matches!( element.kind, Kind::Wire | Kind::Ground | Kind::Switch { .. } ) { continue; }
 
 		injections[ netlist.index( element.segment.to ) ] += reading.current;
 		injections[ netlist.index( element.segment.from ) ] -= reading.current;
 	}
 
+	let switches : Vec<usize> = ( 0 .. elements.len() ).filter( | &index | elements[ index ].kind == Kind::Switch { closed : true } ).collect();
 	let grounds : Vec<usize> = ( 0 .. elements.len() ).filter( | &index | elements[ index ].kind == Kind::Ground ).collect();
 
 	let mut edges = netlist.edges.clone();
 
+	edges.extend( &netlist.links );
 	edges.extend( grounds.iter().map( | &index | ( netlist.index( elements[ index ].segment.from ), earth ) ) );
 
 	let currents = distribute( earth + 1, &edges, &injections );
 
-	for ( offset, &index ) in grounds.iter().enumerate() { readings[ index ].current = currents[ netlist.edges.len() + offset ]; }
+	for ( offset, &index ) in switches.iter().chain( &grounds ).enumerate() { readings[ index ].current = currents[ netlist.edges.len() + offset ]; }
 
 	let branches = netlist.edges.iter().zip( &currents ).map( | ( &( a, b ), &current ) | Branch
 	{

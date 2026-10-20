@@ -28,6 +28,18 @@ describe( 'readout', () =>
 		expect( read( element( { kind : Kind.Battery, value : 9, potentials : [ 0, 9 ], current : -0.5 } ), undefined ) ).toBe( 'Battery 9 V · 9 V across · 500 mA' );
 	} );
 
+	it( 'describes a capacitor and an inductor with their values', () =>
+	{
+		expect( read( element( { kind : Kind.Capacitor, value : 1e-5, potentials : [ 3, 0 ], current : 0.002 } ), undefined ) ).toBe( 'Capacitor 10 µF · 3 V across · 2 mA' );
+		expect( read( element( { kind : Kind.Inductor, value : 1, potentials : [ 0, 1 ], current : -0.004 } ), undefined ) ).toBe( 'Inductor 1 H · 1 V across · 4 mA' );
+	} );
+
+	it( 'describes a switch with its state', () =>
+	{
+		expect( read( element( { kind : Kind.Switch, value : 0, potentials : [ 5, 0 ], current : 0 } ), undefined ) ).toBe( 'Switch open · 5 V across · 0 A' );
+		expect( read( element( { kind : Kind.Switch, value : 1, potentials : [ 0, 0 ], current : 0.005 } ), undefined ) ).toBe( 'Switch closed · 0 V across · 5 mA' );
+	} );
+
 	it( 'describes a ground', () =>
 	{
 		expect( read( element( { kind : Kind.Ground, current : -0.02 } ), undefined ) ).toBe( 'Ground · 0 V · 20 mA' );

@@ -24,5 +24,8 @@ describe( 'element renderer', () =>
 		expect( drawn( Kind.Resistor ).some( call => call[ 0 ] === 'createLinearGradient' ) ).toBe( true );
 		expect( drawn( Kind.Battery ).filter( call => call[ 0 ] === 'stroke' ) ).toHaveLength( 4 );
 		expect( drawn( Kind.Ground ).filter( call => call[ 0 ] === 'moveTo' ) ).toHaveLength( 4 );
+		expect( drawn( Kind.Capacitor ).filter( call => call[ 0 ] === 'stroke' ) ).toHaveLength( 4 );
+		expect( drawn( Kind.Inductor ).filter( call => call[ 0 ] === 'arc' ) ).toHaveLength( 4 );
+		expect( drawn( Kind.Switch ).filter( call => call[ 0 ] === 'stroke' ) ).toHaveLength( 3 );
 	} );
 } );

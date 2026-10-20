@@ -98,3 +98,44 @@ fn it_reports_a_circuit_without_solution()
 	assert_eq!( circuit.branch_at( 0, 1 ), None );
 	assert!( circuit.elements()[ 9 ].is_nan() );
 }
+
+#[wasm_bindgen_test]
+fn it_lists_a_capacitor_an_inductor_and_a_switch_with_their_values()
+{
+	let mut circuit = Circuit::new();
+
+	circuit.add( 4, 1e-5, 0, 0, 2, 0 ).ok();
+	circuit.add( 5, 1.0, 0, 2, 2, 2 ).ok();
+	circuit.add( 6, 0.0, 0, 4, 2, 4 ).ok();
+
+	let elements = circuit.elements();
+
+	assert_eq!( [ elements[ 1 ], elements[ 6 ], elements[ 11 ], elements[ 16 ], elements[ 21 ], elements[ 26 ] ], [ 4.0, 1e-5, 5.0, 1.0, 6.0, 0.0 ] );
+}
+
+#[wasm_bindgen_test]
+fn it_closes_a_switch_and_solves_again()
+{
+	let mut circuit = powered();
+
+	circuit.add( 6, 0.0, 2, 2, 2, 4 ).ok();
+
+	assert_eq!( circuit.set_closed( 5, true ).ok(), Some( 5 ) );
+	assert_eq!( circuit.elements()[ 56 ], 1.0 );
+	assert!( circuit.set_closed( 1, true ).is_err() );
+}
+
+#[wasm_bindgen_test]
+fn it_advances_the_time_step_by_step()
+{
+	let mut circuit = Circuit::new();
+
+	circuit.add( 2, 5.0, 0, 2, 0, 0 ).ok();
+	circuit.add( 1, 1000.0, 0, 0, 2, 0 ).ok();
+	circuit.add( 4, 1e-5, 2, 0, 2, 2 ).ok();
+	circuit.add( 0, 0.0, 2, 2, 0, 2 ).ok();
+
+	circuit.advance( 1000 );
+
+	assert!( ( circuit.elements()[ 27 ] - 5.0 * ( 1.0 - ( -1.0_f64 ).exp() ) ).abs() < 1e-2 );
+}

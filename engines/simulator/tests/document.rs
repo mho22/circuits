@@ -94,6 +94,7 @@ fn it_rejects_an_operation_on_a_missing_part()
 
 	assert_eq!( document.apply( Operation::Delete { id : 7 } ), Err( Error::Missing ) );
 	assert_eq!( document.apply( Operation::SetValue { id : 7, value : 1.0 } ), Err( Error::Missing ) );
+	assert_eq!( document.apply( Operation::SetClosed { id : 7, closed : true } ), Err( Error::Missing ) );
 }
 
 #[test]
@@ -118,6 +119,19 @@ fn it_keeps_the_value_when_the_new_one_is_invalid()
 	assert_eq!( document.apply( Operation::SetValue { id : 0, value : -1.0 } ), Err( Error::Resistance ) );
 	assert_eq!( document.apply( Operation::SetValue { id : 1, value : 1.0 } ), Err( Error::Valueless ) );
 	assert_eq!( document.elements()[ 0 ].kind, Kind::Resistor { ohms : 1000.0 } );
+}
+
+#[test]
+fn it_closes_a_switch()
+{
+	let mut document = Document::default();
+
+	document.apply( add( Kind::Switch { closed : false }, FOO, BAR ) ).unwrap();
+	document.apply( add( Kind::Wire, BAR, BAZ ) ).unwrap();
+
+	assert_eq!( document.apply( Operation::SetClosed { id : 0, closed : true } ), Ok( 0 ) );
+	assert_eq!( document.apply( Operation::SetClosed { id : 1, closed : true } ), Err( Error::Switchless ) );
+	assert_eq!( document.elements()[ 0 ].kind, Kind::Switch { closed : true } );
 }
 
 #[test]

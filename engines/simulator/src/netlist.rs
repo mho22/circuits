@@ -11,6 +11,7 @@ pub struct Netlist
 	pub count : usize,
 	pub earth : Option<usize>,
 	pub edges : Vec<( usize, usize )>,
+	pub links : Vec<( usize, usize )>,
 	indices : HashMap<Point, usize>,
 }
 
@@ -40,9 +41,11 @@ impl Netlist
 			edges.extend( on.windows( 2 ).map( | pair | ( pair[ 0 ], pair[ 1 ] ) ) );
 		}
 
+		let links : Vec<( usize, usize )> = elements.iter().filter( | element | element.kind == Kind::Switch { closed : true } ).map( | element | ( indices[ &element.segment.from ], indices[ &element.segment.to ] ) ).collect();
+
 		let mut forest = UnionFind::new( points.len() );
 
-		for &( a, b ) in &edges { forest.union( a, b ); }
+		for &( a, b ) in edges.iter().chain( &links ) { forest.union( a, b ); }
 
 		let grounds : Vec<usize> = elements.iter().filter( | element | element.kind == Kind::Ground ).map( | element | indices[ &element.segment.from ] ).collect();
 
@@ -54,7 +57,7 @@ impl Netlist
 
 		let earth = grounds.first().map( | &ground | nets[ ground ] );
 
-		Netlist { points, nets, count : roots.len(), earth, edges, indices }
+		Netlist { points, nets, count : roots.len(), earth, edges, links, indices }
 	}
 
 	pub fn index( &self, point : Point ) -> usize

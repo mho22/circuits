@@ -2,8 +2,11 @@ import { Kind } from '../enums/kind.ts';
 import type { Element } from '../types/element.ts';
 import type { Scale } from '../types/scale.ts';
 import * as battery from './battery.ts';
+import * as capacitor from './capacitor.ts';
 import * as ground from './ground.ts';
+import * as inductor from './inductor.ts';
 import * as resistor from './resistor.ts';
+import * as toggle from './switch.ts';
 import * as wire from './wire.ts';
 
 
@@ -12,6 +15,9 @@ const RENDERERS : Record<Kind, ( context : CanvasRenderingContext2D, element : E
 	[ Kind.Resistor ] : resistor.draw,
 	[ Kind.Battery ] : battery.draw,
 	[ Kind.Ground ] : ground.draw,
+	[ Kind.Capacitor ] : capacitor.draw,
+	[ Kind.Inductor ] : inductor.draw,
+	[ Kind.Switch ] : toggle.draw,
 };
 
 

@@ -1,12 +1,14 @@
-use simulator::{ solve, Document, Error, Kind, Operation, Point, Segment, Solution };
+use simulator::{ Kind, Operation, Point, Segment, Simulation };
 use wasm_bindgen::prelude::*;
+
+
+const STEP : f64 = 1e-5;
 
 
 #[wasm_bindgen]
 pub struct Circuit
 {
-	document : Document,
-	solution : Result<Solution, Error>,
+	simulation : Simulation,
 }
 
 #[wasm_bindgen]
@@ -15,7 +17,7 @@ impl Circuit
 	#[wasm_bindgen( constructor )]
 	pub fn new() -> Circuit
 	{
-		Circuit { document : Document::default(), solution : Ok( Solution::default() ) }
+		Circuit { simulation : Simulation::new( STEP ) }
 	}
 
 	pub fn snap( from_x : i32, from_y : i32, cursor_x : i32, cursor_y : i32 ) -> Vec<i32>
@@ -33,6 +35,9 @@ impl Circuit
 			1 => Kind::Resistor { ohms : value },
 			2 => Kind::Battery { volts : value },
 			3 => Kind::Ground,
+			4 => Kind::Capacitor { farads : value },
+			5 => Kind::Inductor { henries : value },
+			6 => Kind::Switch { closed : false },
 			_ => return Err( JsError::new( "Unknown part kind." ) ),
 		};
 
@@ -50,23 +55,34 @@ impl Circuit
 		self.apply( Operation::SetValue { id, value } )
 	}
 
+	#[wasm_bindgen( js_name = setClosed )]
+	pub fn set_closed( &mut self, id : u32, closed : bool ) -> Result<u32, JsError>
+	{
+		self.apply( Operation::SetClosed { id, closed } )
+	}
+
+	pub fn advance( &mut self, count : u32 )
+	{
+		self.simulation.advance( count );
+	}
+
 	#[wasm_bindgen( js_name = elementsAt )]
 	pub fn elements_at( &self, x : i32, y : i32 ) -> Vec<u32>
 	{
-		self.document.elements_at( Point { x, y } )
+		self.simulation.document().elements_at( Point { x, y } )
 	}
 
 	#[wasm_bindgen( js_name = branchAt )]
 	pub fn branch_at( &self, x : i32, y : i32 ) -> Option<u32>
 	{
-		self.solution.as_ref().ok()?.branch_at( Point { x, y } ).map( | index | index as u32 )
+		self.simulation.solution().ok()?.branch_at( Point { x, y } ).map( | index | index as u32 )
 	}
 
 	pub fn elements( &self ) -> Vec<f64>
 	{
-		let readings = self.solution.as_ref().map( | solution | solution.readings.as_slice() ).unwrap_or( &[] );
+		let readings = self.simulation.solution().map( | solution | solution.readings.as_slice() ).unwrap_or( &[] );
 
-		self.document.elements().iter().enumerate().flat_map( | ( index, element ) |
+		self.simulation.document().elements().iter().enumerate().flat_map( | ( index, element ) |
 		{
 			let ( code, value ) = match element.kind
 			{
@@ -74,6 +90,9 @@ impl Circuit
 				Kind::Resistor { ohms } => ( 1.0, ohms ),
 				Kind::Battery { volts } => ( 2.0, volts ),
 				Kind::Ground => ( 3.0, 0.0 ),
+				Kind::Capacitor { farads } => ( 4.0, farads ),
+				Kind::Inductor { henries } => ( 5.0, henries ),
+				Kind::Switch { closed } => ( 6.0, if closed { 1.0 } else { 0.0 } ),
 			};
 
 			let ( from, to, current ) = readings.get( index ).map_or( ( 0.0, 0.0, f64::NAN ), | reading | ( reading.from, reading.to, reading.current ) );
@@ -86,7 +105,7 @@ impl Circuit
 
 	pub fn branches( &self ) -> Vec<f64>
 	{
-		let Ok( solution ) = &self.solution else { return vec![]; };
+		let Ok( solution ) = self.simulation.solution() else { return vec![]; };
 
 		solution.branches.iter().flat_map( | branch |
 		{
@@ -98,15 +117,11 @@ impl Circuit
 
 	pub fn error( &self ) -> Option<String>
 	{
-		self.solution.as_ref().err().map( | error | error.to_string() )
+		self.simulation.solution().err().map( | error | error.to_string() )
 	}
 
 	fn apply( &mut self, operation : Operation ) -> Result<u32, JsError>
 	{
-		let id = self.document.apply( operation ).map_err( | error | JsError::new( &error.to_string() ) )?;
-
-		self.solution = solve( self.document.elements() );
-
-		Ok( id )
+		self.simulation.apply( operation ).map_err( | error | JsError::new( &error.to_string() ) )
 	}
 }

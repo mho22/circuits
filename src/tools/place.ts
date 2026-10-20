@@ -4,7 +4,7 @@ import type { Element } from '../types/element.ts';
 import type { Point } from '../types/point.ts';
 
 
-const VALUES : Partial<Record<Kind, number>> = { [ Kind.Resistor ] : 1000, [ Kind.Battery ] : 5 };
+const VALUES : Partial<Record<Kind, number>> = { [ Kind.Resistor ] : 1000, [ Kind.Battery ] : 5, [ Kind.Capacitor ] : 1e-5, [ Kind.Inductor ] : 1 };
 
 
 export class PlaceTool

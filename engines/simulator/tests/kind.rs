@@ -9,6 +9,9 @@ fn it_accepts_valid_values()
 	assert_eq!( Kind::Resistor { ohms : 1000.0 }.check(), Ok( () ) );
 	assert_eq!( Kind::Battery { volts : -9.0 }.check(), Ok( () ) );
 	assert_eq!( Kind::Battery { volts : 0.0 }.check(), Ok( () ) );
+	assert_eq!( Kind::Capacitor { farads : 1e-6 }.check(), Ok( () ) );
+	assert_eq!( Kind::Inductor { henries : 1e-3 }.check(), Ok( () ) );
+	assert_eq!( Kind::Switch { closed : true }.check(), Ok( () ) );
 }
 
 #[test]
@@ -18,6 +21,22 @@ fn it_rejects_a_resistance_that_is_not_positive_and_finite()
 	assert_eq!( Kind::Resistor { ohms : -1.0 }.check(), Err( Error::Resistance ) );
 	assert_eq!( Kind::Resistor { ohms : f64::INFINITY }.check(), Err( Error::Resistance ) );
 	assert_eq!( Kind::Resistor { ohms : f64::NAN }.check(), Err( Error::Resistance ) );
+}
+
+#[test]
+fn it_rejects_a_capacitance_that_is_not_positive_and_finite()
+{
+	assert_eq!( Kind::Capacitor { farads : 0.0 }.check(), Err( Error::Capacitance ) );
+	assert_eq!( Kind::Capacitor { farads : -1e-6 }.check(), Err( Error::Capacitance ) );
+	assert_eq!( Kind::Capacitor { farads : f64::NAN }.check(), Err( Error::Capacitance ) );
+}
+
+#[test]
+fn it_rejects_an_inductance_that_is_not_positive_and_finite()
+{
+	assert_eq!( Kind::Inductor { henries : 0.0 }.check(), Err( Error::Inductance ) );
+	assert_eq!( Kind::Inductor { henries : f64::INFINITY }.check(), Err( Error::Inductance ) );
+	assert_eq!( Kind::Inductor { henries : f64::NAN }.check(), Err( Error::Inductance ) );
 }
 
 #[test]
@@ -32,6 +51,8 @@ fn it_replaces_the_value_of_a_part()
 {
 	assert_eq!( Kind::Resistor { ohms : 1.0 }.with_value( 220.0 ), Ok( Kind::Resistor { ohms : 220.0 } ) );
 	assert_eq!( Kind::Battery { volts : 1.0 }.with_value( 9.0 ), Ok( Kind::Battery { volts : 9.0 } ) );
+	assert_eq!( Kind::Capacitor { farads : 1.0 }.with_value( 1e-6 ), Ok( Kind::Capacitor { farads : 1e-6 } ) );
+	assert_eq!( Kind::Inductor { henries : 1.0 }.with_value( 1e-3 ), Ok( Kind::Inductor { henries : 1e-3 } ) );
 }
 
 #[test]
@@ -39,6 +60,8 @@ fn it_rejects_an_invalid_new_value()
 {
 	assert_eq!( Kind::Resistor { ohms : 1.0 }.with_value( 0.0 ), Err( Error::Resistance ) );
 	assert_eq!( Kind::Battery { volts : 1.0 }.with_value( f64::NAN ), Err( Error::Voltage ) );
+	assert_eq!( Kind::Capacitor { farads : 1.0 }.with_value( 0.0 ), Err( Error::Capacitance ) );
+	assert_eq!( Kind::Inductor { henries : 1.0 }.with_value( -1.0 ), Err( Error::Inductance ) );
 }
 
 #[test]
@@ -46,4 +69,19 @@ fn it_rejects_a_value_for_a_part_without_one()
 {
 	assert_eq!( Kind::Wire.with_value( 1.0 ), Err( Error::Valueless ) );
 	assert_eq!( Kind::Ground.with_value( 1.0 ), Err( Error::Valueless ) );
+	assert_eq!( Kind::Switch { closed : false }.with_value( 1.0 ), Err( Error::Valueless ) );
+}
+
+#[test]
+fn it_opens_and_closes_a_switch()
+{
+	assert_eq!( Kind::Switch { closed : false }.with_closed( true ), Ok( Kind::Switch { closed : true } ) );
+	assert_eq!( Kind::Switch { closed : true }.with_closed( false ), Ok( Kind::Switch { closed : false } ) );
+}
+
+#[test]
+fn it_rejects_a_closed_state_for_a_part_that_is_not_a_switch()
+{
+	assert_eq!( Kind::Wire.with_closed( true ), Err( Error::Switchless ) );
+	assert_eq!( Kind::Resistor { ohms : 1.0 }.with_closed( true ), Err( Error::Switchless ) );
 }

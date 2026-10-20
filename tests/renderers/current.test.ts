@@ -9,11 +9,11 @@ describe( 'current renderer', () =>
 	const from = { x : 0, y : 0 };
 	const to = { x : 2, y : 0 };
 
-	function dots( current : number, scale : number, time : number ) : number[]
+	function dots( current : number, scale : number, distance : number ) : number[]
 	{
 		const { context, calls } = record();
 
-		draw( context, from, to, current, scale, time );
+		draw( context, from, to, current, scale, distance );
 
 		return calls.filter( call => call[ 0 ] === 'fillRect' ).map( call => ( call[ 1 ] as number ) + 1.5 );
 	}
@@ -23,19 +23,15 @@ describe( 'current renderer', () =>
 		expect( dots( 1, 1, 0 ) ).toEqual( [ 0, 16, 32 ] );
 	} );
 
-	it( 'moves the dots forward with a positive current', () =>
+	it( 'shifts the dots by the distance they drifted', () =>
 	{
-		expect( dots( 1, 1, 0.05 ) ).toEqual( [ 4, 20, 36 ] );
+		expect( dots( 1, 1, 4 ) ).toEqual( [ 4, 20, 36 ] );
+		expect( dots( 1, 1, 36 ) ).toEqual( [ 4, 20, 36 ] );
 	} );
 
-	it( 'moves the dots backward with a negative current', () =>
+	it( 'shifts the dots backward with a negative distance', () =>
 	{
-		expect( dots( -1, 1, 0.05 ) ).toEqual( [ 12, 28 ] );
-	} );
-
-	it( 'moves the dots slower with a smaller current', () =>
-	{
-		expect( dots( 0.5, 1, 0.05 ) ).toEqual( [ 2, 18, 34 ] );
+		expect( dots( -1, 1, -4 ) ).toEqual( [ 12, 28 ] );
 	} );
 
 	it( 'draws no dot without current or scale', () =>
@@ -47,6 +43,6 @@ describe( 'current renderer', () =>
 
 	it( 'stays within the path length', () =>
 	{
-		expect( Math.max( ... dots( 1, 1, 0.19 ) ) ).toBeLessThan( SPACING * 2 );
+		expect( Math.max( ... dots( 1, 1, 15.2 ) ) ).toBeLessThan( SPACING * 2 );
 	} );
 } );

@@ -3,23 +3,13 @@ import { toScreen } from '../grid.ts';
 import type { Element } from '../types/element.ts';
 import type { Scale } from '../types/scale.ts';
 import * as label from './label.ts';
+import * as line from './line.ts';
 
 
 const GAP = 4;
 const LONG = 12;
 const SHORT = 6;
 const PLATE = '#d0d0d0';
-
-
-function line( context : CanvasRenderingContext2D, style : string, width : number, fromX : number, fromY : number, toX : number, toY : number ) : void
-{
-	context.strokeStyle = style;
-	context.lineWidth = width;
-	context.beginPath();
-	context.moveTo( fromX, fromY );
-	context.lineTo( toX, toY );
-	context.stroke();
-}
 
 
 export function draw( context : CanvasRenderingContext2D, element : Element, scale : Scale ) : void
@@ -40,10 +30,10 @@ export function draw( context : CanvasRenderingContext2D, element : Element, sca
 
 	context.lineCap = 'butt';
 
-	line( context, color( element.potentials[ 0 ], scale.voltage ), 2, fromX, fromY, negativeX, negativeY );
-	line( context, color( element.potentials[ 1 ], scale.voltage ), 2, positiveX, positiveY, toX, toY );
-	line( context, PLATE, 4, negativeX + alongY * SHORT, negativeY - alongX * SHORT, negativeX - alongY * SHORT, negativeY + alongX * SHORT );
-	line( context, PLATE, 2, positiveX + alongY * LONG, positiveY - alongX * LONG, positiveX - alongY * LONG, positiveY + alongX * LONG );
+	line.draw( context, color( element.potentials[ 0 ], scale.voltage ), 2, fromX, fromY, negativeX, negativeY );
+	line.draw( context, color( element.potentials[ 1 ], scale.voltage ), 2, positiveX, positiveY, toX, toY );
+	line.draw( context, PLATE, 4, negativeX + alongY * SHORT, negativeY - alongX * SHORT, negativeX - alongY * SHORT, negativeY + alongX * SHORT );
+	line.draw( context, PLATE, 2, positiveX + alongY * LONG, positiveY - alongX * LONG, positiveX - alongY * LONG, positiveY + alongX * LONG );
 
 	label.draw( context, element );
 }

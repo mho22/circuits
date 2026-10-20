@@ -31,14 +31,20 @@ describe( 'place tool', () =>
 		tool.move( { x : 6, y : 1 } );
 		tool.release();
 
-		tool.kind = Kind.Battery;
-		tool.press( { x : 0, y : 0 } );
-		tool.move( { x : 0, y : 3 } );
-		tool.release();
+		for( const kind of [ Kind.Battery, Kind.Capacitor, Kind.Inductor, Kind.Switch ] )
+		{
+			tool.kind = kind;
+			tool.press( { x : 0, y : 0 } );
+			tool.move( { x : 0, y : 3 } );
+			tool.release();
+		}
 
 		expect( decode( circuit.elements() ).map( element => [ element.kind, element.value, element.to ] ) ).toEqual( [
 			[ Kind.Resistor, 1000, { x : 6, y : 0 } ],
 			[ Kind.Battery, 5, { x : 0, y : 3 } ],
+			[ Kind.Capacitor, 1e-5, { x : 0, y : 3 } ],
+			[ Kind.Inductor, 1, { x : 0, y : 3 } ],
+			[ Kind.Switch, 0, { x : 0, y : 3 } ],
 		] );
 
 		expect( tool.preview() ).toBeNull();
