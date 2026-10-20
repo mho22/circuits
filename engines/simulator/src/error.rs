@@ -6,7 +6,12 @@ pub enum Error
 {
 	Crooked,
 	Empty,
+	Misplaced,
 	Missing,
+	Resistance,
+	Singular,
+	Valueless,
+	Voltage,
 }
 
 impl fmt::Display for Error
@@ -15,9 +20,14 @@ impl fmt::Display for Error
 	{
 		let message = match self
 		{
-			Error::Crooked => "A wire must run at 0°, 45° or 90°.",
-			Error::Empty => "A wire must have a length.",
-			Error::Missing => "No wire has this id.",
+			Error::Crooked => "A part must run at 0°, 45° or 90°.",
+			Error::Empty => "A part must have a length.",
+			Error::Misplaced => "A ground sits on one point.",
+			Error::Missing => "No part has this id.",
+			Error::Resistance => "A resistance must be greater than 0 Ω.",
+			Error::Singular => "The circuit has no single solution: a battery is shorted, or batteries form a loop.",
+			Error::Valueless => "This part has no value.",
+			Error::Voltage => "A voltage must be a finite number.",
 		};
 
 		formatter.write_str( message )

@@ -1,12 +1,12 @@
-use simulator::{ Document, Operation, Point, Wire };
+use simulator::{ solve, Document, Error, Kind, Operation, Point, Segment, Solution };
 use wasm_bindgen::prelude::*;
 
 
 #[wasm_bindgen]
-#[derive( Default )]
 pub struct Circuit
 {
 	document : Document,
+	solution : Result<Solution, Error>,
 }
 
 #[wasm_bindgen]
@@ -15,38 +15,98 @@ impl Circuit
 	#[wasm_bindgen( constructor )]
 	pub fn new() -> Circuit
 	{
-		Circuit::default()
+		Circuit { document : Document::default(), solution : Ok( Solution::default() ) }
 	}
 
 	pub fn snap( from_x : i32, from_y : i32, cursor_x : i32, cursor_y : i32 ) -> Vec<i32>
 	{
-		let point = Wire::snap( Point { x : from_x, y : from_y }, Point { x : cursor_x, y : cursor_y } );
+		let point = Segment::snap( Point { x : from_x, y : from_y }, Point { x : cursor_x, y : cursor_y } );
 
 		vec![ point.x, point.y ]
 	}
 
-	#[wasm_bindgen( js_name = addWire )]
-	pub fn add_wire( &mut self, from_x : i32, from_y : i32, to_x : i32, to_y : i32 ) -> Result<u32, JsError>
+	pub fn add( &mut self, code : u8, value : f64, from_x : i32, from_y : i32, to_x : i32, to_y : i32 ) -> Result<u32, JsError>
 	{
-		let operation = Operation::AddWire { from : Point { x : from_x, y : from_y }, to : Point { x : to_x, y : to_y } };
+		let kind = match code
+		{
+			0 => Kind::Wire,
+			1 => Kind::Resistor { ohms : value },
+			2 => Kind::Battery { volts : value },
+			3 => Kind::Ground,
+			_ => return Err( JsError::new( "Unknown part kind." ) ),
+		};
 
-		self.document.apply( operation ).map_err( | error | JsError::new( &error.to_string() ) )
+		self.apply( Operation::Add { kind, segment : Segment { from : Point { x : from_x, y : from_y }, to : Point { x : to_x, y : to_y } } } )
 	}
 
-	#[wasm_bindgen( js_name = deleteWire )]
-	pub fn delete_wire( &mut self, id : u32 ) -> Result<u32, JsError>
+	pub fn delete( &mut self, id : u32 ) -> Result<u32, JsError>
 	{
-		self.document.apply( Operation::DeleteWire { id } ).map_err( | error | JsError::new( &error.to_string() ) )
+		self.apply( Operation::Delete { id } )
 	}
 
-	#[wasm_bindgen( js_name = wireAt )]
-	pub fn wire_at( &self, x : i32, y : i32 ) -> Option<u32>
+	#[wasm_bindgen( js_name = setValue )]
+	pub fn set_value( &mut self, id : u32, value : f64 ) -> Result<u32, JsError>
 	{
-		self.document.wire_at( Point { x, y } )
+		self.apply( Operation::SetValue { id, value } )
 	}
 
-	pub fn wires( &self ) -> Vec<i32>
+	#[wasm_bindgen( js_name = elementsAt )]
+	pub fn elements_at( &self, x : i32, y : i32 ) -> Vec<u32>
 	{
-		self.document.wires().iter().flat_map( | wire | [ wire.from.x, wire.from.y, wire.to.x, wire.to.y ] ).collect()
+		self.document.elements_at( Point { x, y } )
+	}
+
+	#[wasm_bindgen( js_name = branchAt )]
+	pub fn branch_at( &self, x : i32, y : i32 ) -> Option<u32>
+	{
+		self.solution.as_ref().ok()?.branch_at( Point { x, y } ).map( | index | index as u32 )
+	}
+
+	pub fn elements( &self ) -> Vec<f64>
+	{
+		let readings = self.solution.as_ref().map( | solution | solution.readings.as_slice() ).unwrap_or( &[] );
+
+		self.document.elements().iter().enumerate().flat_map( | ( index, element ) |
+		{
+			let ( code, value ) = match element.kind
+			{
+				Kind::Wire => ( 0.0, 0.0 ),
+				Kind::Resistor { ohms } => ( 1.0, ohms ),
+				Kind::Battery { volts } => ( 2.0, volts ),
+				Kind::Ground => ( 3.0, 0.0 ),
+			};
+
+			let ( from, to, current ) = readings.get( index ).map_or( ( 0.0, 0.0, f64::NAN ), | reading | ( reading.from, reading.to, reading.current ) );
+
+			let segment = element.segment;
+
+			[ element.id as f64, code, segment.from.x as f64, segment.from.y as f64, segment.to.x as f64, segment.to.y as f64, value, from, to, current ]
+		} ).collect()
+	}
+
+	pub fn branches( &self ) -> Vec<f64>
+	{
+		let Ok( solution ) = &self.solution else { return vec![]; };
+
+		solution.branches.iter().flat_map( | branch |
+		{
+			let segment = branch.segment;
+
+			[ segment.from.x as f64, segment.from.y as f64, segment.to.x as f64, segment.to.y as f64, branch.voltage, branch.current ]
+		} ).collect()
+	}
+
+	pub fn error( &self ) -> Option<String>
+	{
+		self.solution.as_ref().err().map( | error | error.to_string() )
+	}
+
+	fn apply( &mut self, operation : Operation ) -> Result<u32, JsError>
+	{
+		let id = self.document.apply( operation ).map_err( | error | JsError::new( &error.to_string() ) )?;
+
+		self.solution = solve( self.document.elements() );
+
+		Ok( id )
 	}
 }

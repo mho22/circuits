@@ -1,23 +1,16 @@
+import { color } from '../colors/voltage.ts';
 import { toScreen } from '../grid.ts';
+import type { Element } from '../types/element.ts';
+import type { Scale } from '../types/scale.ts';
 
 
-const COLOR = '#9e9e9e';
-
-
-export function draw( context : CanvasRenderingContext2D, segments : ArrayLike<number>, alpha = 1 ) : void
+export function draw( context : CanvasRenderingContext2D, element : Element, scale : Scale ) : void
 {
-	context.globalAlpha = alpha;
-	context.strokeStyle = COLOR;
+	context.strokeStyle = color( element.potentials[ 0 ], scale.voltage );
 	context.lineWidth = 2;
 	context.lineCap = 'round';
 	context.beginPath();
-
-	for( let index = 0; index < segments.length; index += 4 )
-	{
-		context.moveTo( toScreen( segments[ index ] ), toScreen( segments[ index + 1 ] ) );
-		context.lineTo( toScreen( segments[ index + 2 ] ), toScreen( segments[ index + 3 ] ) );
-	}
-
+	context.moveTo( toScreen( element.from.x ), toScreen( element.from.y ) );
+	context.lineTo( toScreen( element.to.x ), toScreen( element.to.y ) );
 	context.stroke();
-	context.globalAlpha = 1;
 }

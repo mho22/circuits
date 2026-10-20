@@ -1,9 +1,10 @@
-use crate::Point;
+use crate::{ Kind, Segment };
 
 
-#[derive( Clone, Copy, Debug, PartialEq, Eq )]
+#[derive( Clone, Copy, Debug, PartialEq )]
 pub enum Operation
 {
-	AddWire { from : Point, to : Point },
-	DeleteWire { id : u32 },
+	Add { kind : Kind, segment : Segment },
+	Delete { id : u32 },
+	SetValue { id : u32, value : f64 },
 }

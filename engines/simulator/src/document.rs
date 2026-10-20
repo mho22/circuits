@@ -1,10 +1,10 @@
-use crate::{ Error, Operation, Point, Wire };
+use crate::{ Element, Error, Kind, Operation, Point, Segment };
 
 
 #[derive( Debug, Default )]
 pub struct Document
 {
-	wires : Vec<Wire>,
+	elements : Vec<Element>,
 	next : u32,
 }
 
@@ -14,42 +14,61 @@ impl Document
 	{
 		match operation
 		{
-			Operation::AddWire { from, to } => self.add_wire( from, to ),
-			Operation::DeleteWire { id } => self.delete_wire( id ),
+			Operation::Add { kind, segment } => self.add( kind, segment ),
+			Operation::Delete { id } => self.delete( id ),
+			Operation::SetValue { id, value } => self.set_value( id, value ),
 		}
 	}
 
-	pub fn wires( &self ) -> &[ Wire ]
+	pub fn elements( &self ) -> &[ Element ]
 	{
-		&self.wires
+		&self.elements
 	}
 
-	pub fn wire_at( &self, point : Point ) -> Option<u32>
+	pub fn elements_at( &self, point : Point ) -> Vec<u32>
 	{
-		self.wires.iter().rev().find( | wire | wire.contains( point ) ).map( | wire | wire.id )
+		self.elements.iter().rev().filter( | element | element.segment.contains( point ) ).map( | element | element.id ).collect()
 	}
 
-	fn add_wire( &mut self, from : Point, to : Point ) -> Result<u32, Error>
+	fn add( &mut self, kind : Kind, segment : Segment ) -> Result<u32, Error>
 	{
-		if from == to { return Err( Error::Empty ); }
+		if kind == Kind::Ground && ! segment.is_empty() { return Err( Error::Misplaced ); }
 
-		if ! Wire::is_straight( from, to ) { return Err( Error::Crooked ); }
+		if kind != Kind::Ground && segment.is_empty() { return Err( Error::Empty ); }
+
+		if ! segment.is_straight() { return Err( Error::Crooked ); }
+
+		kind.check()?;
 
 		let id = self.next;
 
-		self.wires.push( Wire { id, from, to } );
+		self.elements.push( Element { id, kind, segment } );
 
 		self.next += 1;
 
 		Ok( id )
 	}
 
-	fn delete_wire( &mut self, id : u32 ) -> Result<u32, Error>
+	fn delete( &mut self, id : u32 ) -> Result<u32, Error>
 	{
-		let index = self.wires.iter().position( | wire | wire.id == id ).ok_or( Error::Missing )?;
+		let index = self.index( id )?;
 
-		self.wires.remove( index );
+		self.elements.remove( index );
 
 		Ok( id )
+	}
+
+	fn set_value( &mut self, id : u32, value : f64 ) -> Result<u32, Error>
+	{
+		let index = self.index( id )?;
+
+		self.elements[ index ].kind = self.elements[ index ].kind.with_value( value )?;
+
+		Ok( id )
+	}
+
+	fn index( &self, id : u32 ) -> Result<usize, Error>
+	{
+		self.elements.iter().position( | element | element.id == id ).ok_or( Error::Missing )
 	}
 }

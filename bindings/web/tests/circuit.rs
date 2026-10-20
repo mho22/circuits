@@ -2,6 +2,20 @@ use wasm_bindgen_test::wasm_bindgen_test;
 use web::Circuit;
 
 
+fn powered() -> Circuit
+{
+	let mut circuit = Circuit::new();
+
+	circuit.add( 2, 5.0, 0, 2, 0, 0 ).ok();
+	circuit.add( 1, 1000.0, 0, 0, 2, 0 ).ok();
+	circuit.add( 0, 0.0, 2, 0, 2, 2 ).ok();
+	circuit.add( 0, 0.0, 2, 2, 0, 2 ).ok();
+	circuit.add( 3, 0.0, 0, 2, 0, 2 ).ok();
+
+	circuit
+}
+
+
 #[wasm_bindgen_test]
 fn it_snaps_a_cursor_to_a_straight_end()
 {
@@ -9,35 +23,78 @@ fn it_snaps_a_cursor_to_a_straight_end()
 }
 
 #[wasm_bindgen_test]
-fn it_adds_and_lists_wires()
+fn it_lists_each_part_with_its_reading()
 {
-	let mut circuit = Circuit::new();
+	let elements = powered().elements();
 
-	assert_eq!( circuit.add_wire( 0, 0, 4, 0 ).ok(), Some( 0 ) );
-	assert_eq!( circuit.add_wire( 4, 0, 4, 4 ).ok(), Some( 1 ) );
-
-	assert_eq!( circuit.wires(), vec![ 0, 0, 4, 0, 4, 0, 4, 4 ] );
+	assert_eq!( elements.len(), 50 );
+	assert_eq!( &elements[ 0 .. 9 ], &[ 0.0, 2.0, 0.0, 2.0, 0.0, 0.0, 5.0, 0.0, 5.0 ] );
+	assert!( ( elements[ 9 ] - 0.005 ).abs() < 1e-12 );
+	assert_eq!( &elements[ 10 .. 19 ], &[ 1.0, 1.0, 0.0, 0.0, 2.0, 0.0, 1000.0, 5.0, 0.0 ] );
+	assert_eq!( &elements[ 40 .. 47 ], &[ 4.0, 3.0, 0.0, 2.0, 0.0, 2.0, 0.0 ] );
 }
 
 #[wasm_bindgen_test]
-fn it_rejects_a_crooked_wire()
+fn it_lists_each_piece_of_wire_with_its_reading()
 {
-	let mut circuit = Circuit::new();
+	let branches = powered().branches();
 
-	assert!( circuit.add_wire( 0, 0, 2, 1 ).is_err() );
-	assert!( circuit.wires().is_empty() );
+	assert_eq!( branches.len(), 12 );
+	assert_eq!( &branches[ 0 .. 5 ], &[ 2.0, 0.0, 2.0, 2.0, 0.0 ] );
+	assert!( ( branches[ 5 ].abs() - 0.005 ).abs() < 1e-12 );
 }
 
 #[wasm_bindgen_test]
-fn it_deletes_the_wire_at_a_point()
+fn it_finds_parts_and_branches_at_a_point()
+{
+	let circuit = powered();
+
+	assert_eq!( circuit.elements_at( 1, 0 ), vec![ 1 ] );
+	assert_eq!( circuit.branch_at( 1, 2 ), Some( 1 ) );
+	assert_eq!( circuit.branch_at( 9, 9 ), None );
+}
+
+#[wasm_bindgen_test]
+fn it_sets_a_value_and_solves_again()
+{
+	let mut circuit = powered();
+
+	assert_eq!( circuit.set_value( 0, 10.0 ).ok(), Some( 0 ) );
+	assert!( ( circuit.elements()[ 19 ] - 0.01 ).abs() < 1e-12 );
+}
+
+#[wasm_bindgen_test]
+fn it_deletes_a_part()
+{
+	let mut circuit = powered();
+
+	assert_eq!( circuit.delete( 1 ).ok(), Some( 1 ) );
+	assert!( circuit.elements_at( 1, 0 ).is_empty() );
+	assert!( circuit.delete( 1 ).is_err() );
+}
+
+#[wasm_bindgen_test]
+fn it_rejects_an_invalid_part()
 {
 	let mut circuit = Circuit::new();
 
-	circuit.add_wire( 0, 0, 4, 0 ).ok();
+	assert!( circuit.add( 9, 0.0, 0, 0, 1, 0 ).is_err() );
+	assert!( circuit.add( 0, 0.0, 0, 0, 2, 1 ).is_err() );
+	assert!( circuit.elements().is_empty() );
+}
 
-	let id = circuit.wire_at( 2, 0 ).unwrap();
+#[wasm_bindgen_test]
+fn it_reports_a_circuit_without_solution()
+{
+	let mut circuit = Circuit::new();
 
-	assert_eq!( circuit.delete_wire( id ).ok(), Some( 0 ) );
-	assert_eq!( circuit.wire_at( 2, 0 ), None );
-	assert!( circuit.delete_wire( id ).is_err() );
+	assert_eq!( circuit.error(), None );
+
+	circuit.add( 2, 5.0, 0, 0, 0, 2 ).ok();
+	circuit.add( 0, 0.0, 0, 0, 0, 2 ).ok();
+
+	assert!( circuit.error().unwrap().starts_with( "The circuit has no single solution" ) );
+	assert!( circuit.branches().is_empty() );
+	assert_eq!( circuit.branch_at( 0, 1 ), None );
+	assert!( circuit.elements()[ 9 ].is_nan() );
 }
