@@ -1,4 +1,4 @@
-use simulator::{ LIGHT, SILICON };
+use simulator::{ LIGHTS, SILICON };
 
 
 const SATURATION : f64 = 1e-14;
@@ -75,9 +75,12 @@ fn it_falls_back_to_the_critical_voltage_on_a_large_drop()
 }
 
 #[test]
-fn it_drops_about_1_9_v_across_a_light_junction_at_10_ma()
+fn it_drops_about_1_9_v_in_red_2_v_in_green_and_3_v_in_blue_across_a_light_junction_at_10_ma()
 {
-	let current = | voltage : f64 | LIGHT.saturation * ( ( voltage / LIGHT.thermal ).exp() - 1.0 );
+	for ( light, low, high ) in [ ( LIGHTS[ 0 ], 1.85, 1.95 ), ( LIGHTS[ 1 ], 1.95, 2.1 ), ( LIGHTS[ 2 ], 2.9, 3.05 ) ]
+	{
+		let current = | voltage : f64 | light.saturation * ( ( voltage / light.thermal ).exp() - 1.0 );
 
-	assert!( current( 1.85 ) < 0.01 && current( 1.95 ) > 0.01 );
+		assert!( current( low ) < 0.01 && current( high ) > 0.01 );
+	}
 }

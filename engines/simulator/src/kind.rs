@@ -1,7 +1,7 @@
-use crate::{ Error, Junction, LIGHT, SILICON };
+use crate::{ Error, Junction, LIGHTS, SILICON };
 
 
-const COLORS : u8 = 3;
+const COLORS : u8 = LIGHTS.len() as u8;
 
 
 #[derive( Clone, Copy, Debug, PartialEq )]
@@ -62,7 +62,7 @@ impl Kind
 
 	pub fn junction( &self ) -> Junction
 	{
-		if let Kind::Led { .. } = self { return LIGHT; }
+		if let Kind::Led { color } = *self { return LIGHTS[ color as usize ]; }
 
 		SILICON
 	}

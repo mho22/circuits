@@ -55,7 +55,7 @@ pub use flatten::flatten;
 pub use flow::distribute;
 pub use gauss::eliminate;
 pub use history::History;
-pub use junction::{ Junction, LIGHT, SILICON };
+pub use junction::{ Junction, LIGHTS, SILICON };
 pub use kind::Kind;
 pub use logic::Logic;
 pub use mixed::{ advance, settle };

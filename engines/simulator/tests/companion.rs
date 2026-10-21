@@ -1,4 +1,4 @@
-use simulator::{ companion, conduct, Element, History, Kind, Point, Reading, Segment, Solution, Stamp, LIGHT, SILICON };
+use simulator::{ companion, conduct, Element, History, Kind, Point, Reading, Segment, Solution, Stamp, LIGHTS, SILICON };
 
 
 const STEP : f64 = 1e-3;
@@ -49,11 +49,11 @@ fn it_turns_a_diode_into_its_junction_at_the_guess()
 }
 
 #[test]
-fn it_turns_an_led_into_its_light_junction_at_the_guess()
+fn it_turns_an_led_into_the_light_junction_of_its_color_at_the_guess()
 {
-	let ( conductance, source ) = LIGHT.linearize( 1.9 );
+	let ( conductance, source ) = LIGHTS[ 2 ].linearize( 3.0 );
 
-	assert_eq!( companion( &element( Kind::Led { color : 0 } ), &History::default(), STEP, [ 1.9, 0.0 ] ), vec![ Stamp { across : ( 0, 1 ), conductance, source, weights : THROUGH } ] );
+	assert_eq!( companion( &element( Kind::Led { color : 2 } ), &History::default(), STEP, [ 3.0, 0.0 ] ), vec![ Stamp { across : ( 0, 1 ), conductance, source, weights : THROUGH } ] );
 }
 
 #[test]

@@ -12,7 +12,11 @@ pub struct Junction
 }
 
 pub const SILICON : Junction = Junction { saturation : 1e-14, thermal : 0.025852 };
-pub const LIGHT : Junction = Junction { saturation : 1e-18, thermal : 0.051704 };
+pub const LIGHTS : [ Junction; 3 ] = [
+	Junction { saturation : 1e-18, thermal : 0.051704 },
+	Junction { saturation : 1e-19, thermal : 0.051704 },
+	Junction { saturation : 1e-27, thermal : 0.051704 },
+];
 
 impl Junction
 {

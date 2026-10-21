@@ -1,4 +1,4 @@
-use simulator::{ Error, Kind, LIGHT, SILICON };
+use simulator::{ Error, Kind, LIGHTS, SILICON };
 
 
 #[test]
@@ -177,9 +177,9 @@ fn it_tells_an_input_and_an_output_from_the_other_parts()
 }
 
 #[test]
-fn it_gives_an_led_the_light_junction_and_every_other_part_the_silicon_junction()
+fn it_gives_an_led_the_light_junction_of_its_color_and_every_other_part_the_silicon_junction()
 {
-	assert_eq!( Kind::Led { color : 2 }.junction(), LIGHT );
+	assert_eq!( [ 0, 1, 2 ].map( | color | Kind::Led { color }.junction() ), LIGHTS );
 	assert_eq!( Kind::Diode.junction(), SILICON );
 	assert_eq!( Kind::Npn.junction(), SILICON );
 }

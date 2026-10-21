@@ -361,7 +361,7 @@ fn it_lists_an_led_with_its_color_and_its_forward_drop()
 	let drop = elements[ 22 ] - elements[ 23 ];
 
 	assert_eq!( [ elements[ 14 ], elements[ 19 ] ], [ 17.0, 2.0 ] );
-	assert!( drop > 1.8 && drop < 2.0 );
+	assert!( drop > 2.9 && drop < 3.05 );
 	assert_eq!( circuit.set_value( 1, 1.0 ).ok(), Some( 1 ) );
 	assert_eq!( circuit.elements()[ 19 ], 1.0 );
 	assert!( circuit.set_value( 1, 3.0 ).is_err() );

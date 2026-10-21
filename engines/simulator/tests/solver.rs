@@ -274,18 +274,21 @@ fn it_drops_about_0_65_v_across_a_diode_in_the_forward_direction()
 }
 
 #[test]
-fn it_drops_about_1_9_v_across_an_led_in_the_forward_direction()
+fn it_drops_about_1_9_v_in_red_2_v_in_green_and_3_v_in_blue_across_an_led_in_the_forward_direction()
 {
-	let solution = solve( &loop_with( &[
-		element( Kind::Led { color : 0 }, ( 4, 0 ), ( 4, 2 ) ),
-		element( Kind::Resistor { ohms : 300.0 }, ( 4, 2 ), ( 4, 4 ) ),
-	] ), &History::default(), STEP ).unwrap();
+	for ( color, low, high ) in [ ( 0, 1.8, 2.0 ), ( 1, 1.95, 2.1 ), ( 2, 2.9, 3.05 ) ]
+	{
+		let solution = solve( &loop_with( &[
+			element( Kind::Led { color }, ( 4, 0 ), ( 4, 2 ) ),
+			element( Kind::Resistor { ohms : 300.0 }, ( 4, 2 ), ( 4, 4 ) ),
+		] ), &History::default(), STEP ).unwrap();
 
-	let led = &solution.readings[ 4 ];
-	let drop = led.potentials[ 0 ] - led.potentials[ 1 ];
+		let led = &solution.readings[ 4 ];
+		let drop = led.potentials[ 0 ] - led.potentials[ 1 ];
 
-	assert!( drop > 1.8 && drop < 2.0 );
-	assert!( ( led.currents[ 0 ] - ( 5.0 - drop ) / 300.0 ).abs() < 1e-9 );
+		assert!( drop > low && drop < high );
+		assert!( ( led.currents[ 0 ] - ( 5.0 - drop ) / 300.0 ).abs() < 1e-9 );
+	}
 }
 
 #[test]
