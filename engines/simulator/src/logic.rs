@@ -1,5 +1,5 @@
 use std::cmp::Reverse;
-use std::collections::BinaryHeap;
+use std::collections::{ BinaryHeap, HashMap };
 
 use crate::{ Action, Event };
 
@@ -15,6 +15,7 @@ pub struct Logic
 	pub states : Vec<usize>,
 	pub sensed : Vec<Vec<bool>>,
 	pub stamps : Vec<u64>,
+	pub memory : HashMap<u32, ( usize, usize )>,
 	queue : BinaryHeap<Reverse<Event>>,
 	sequence : u64,
 }

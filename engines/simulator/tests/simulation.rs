@@ -1149,3 +1149,16 @@ fn it_counts_the_rising_edges_of_a_clock_with_flip_flops_and_keeps_the_count_aft
 
 	assert_eq!( count( &simulation ), ( start + 8 ) % 16 );
 }
+
+#[test]
+fn it_keeps_the_count_of_the_flip_flops_after_a_visit_inside_one_of_them()
+{
+	let mut simulation = counter();
+	let start = count( &simulation );
+
+	simulation.advance( 100 );
+	simulation.focus( &[ 1 ] ).unwrap();
+	simulation.focus( &[] ).unwrap();
+
+	assert_eq!( count( &simulation ), ( start + 5 ) % 16 );
+}

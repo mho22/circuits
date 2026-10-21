@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::flatten::HIGH;
 use crate::{ solve, Action, Branch, Device, Element, Error, History, Kind, Logic, Model, Plan, Reading, Solution, Source, FLOOR, THRESHOLD };
 
@@ -52,7 +50,8 @@ impl<'a> Run<'a>
 	{
 		let time = self.logic.time;
 		let size = self.devices.len();
-		let memory : HashMap<u32, ( usize, usize )> = self.logic.keys.iter().copied().zip( self.logic.applied.iter().copied().zip( self.logic.states.iter().copied() ) ).collect();
+
+		self.logic.memory.extend( self.logic.keys.iter().copied().zip( self.logic.applied.iter().copied().zip( self.logic.states.iter().copied() ) ) );
 
 		self.logic.keys = self.devices.iter().map( | device | self.elements[ device.outputs[ 0 ].1 ].id ).collect();
 		self.logic.levels = vec![ 0.0; self.plan.nets.len() ];
@@ -67,7 +66,7 @@ impl<'a> Run<'a>
 		{
 			let table = self.tables[ device ];
 			let width = 1 << self.plan.inputs[ device ].len();
-			let Some( &( entry, state ) ) = memory.get( &self.logic.keys[ device ] ).filter( | &&( entry, state ) | entry < table.rows.len() && state * width < table.rows.len() ) else { continue; };
+			let Some( &( entry, state ) ) = self.logic.memory.get( &self.logic.keys[ device ] ).filter( | &&( entry, state ) | entry < table.rows.len() && state * width < table.rows.len() ) else { continue; };
 
 			self.logic.applied[ device ] = entry;
 			self.logic.states[ device ] = state;
