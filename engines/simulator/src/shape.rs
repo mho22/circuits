@@ -7,7 +7,6 @@ pub const FINE : i32 = 4;
 #[derive( Clone, Debug, PartialEq )]
 pub enum Shape
 {
-	Rectangle { from : Point, to : Point },
 	Circle { center : Point, radius : i32 },
 	Line { from : Point, to : Point },
 }
@@ -18,7 +17,6 @@ impl Shape
 	{
 		let sized = match self
 		{
-			Shape::Rectangle { from, to } => from.x != to.x && from.y != to.y,
 			Shape::Circle { radius, .. } => *radius > 0,
 			Shape::Line { from, to } => from != to,
 		};
@@ -30,7 +28,6 @@ impl Shape
 	{
 		let points = match self
 		{
-			Shape::Rectangle { from, to } => vec![ *from, *to ],
 			Shape::Circle { center, radius } => vec![ Point { x : center.x - radius, y : center.y - radius }, Point { x : center.x + radius, y : center.y + radius } ],
 			Shape::Line { from, to } => vec![ *from, *to ],
 		};

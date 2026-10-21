@@ -48,21 +48,30 @@ function at( value : unknown ) : Point
 	return { x, y };
 }
 
-function shape( value : Record<string, unknown> | null ) : Shape
+function sides( from : Point, to : Point ) : Shape[]
+{
+	const corners = [ from, { x : to.x, y : from.y }, to, { x : from.x, y : to.y } ];
+
+	return corners.map( ( corner, index ) => ( { figure : Figure.Line, from : corner, to : corners[ ( index + 1 ) % 4 ] } ) );
+}
+
+function shape( value : Record<string, unknown> | null ) : Shape[]
 {
 	if( typeof value !== 'object' || value === null ) unreadable();
 
+	if( value.shape === 'rectangle' ) return sides( at( value.from ), at( value.to ) );
+
 	const figure = SHAPES.find( figure => FIGURES[ figure ].toLowerCase() === value.shape ) ?? unreadable();
 
-	if( figure === Figure.Circle ) return { figure, center : at( value.center ), radius : Number.isInteger( value.radius ) ? value.radius as number : unreadable() };
+	if( figure === Figure.Circle ) return [ { figure, center : at( value.center ), radius : Number.isInteger( value.radius ) ? value.radius as number : unreadable() } ];
 
-	return { figure, from : at( value.from ), to : at( value.to ) };
+	return [ { figure, from : at( value.from ), to : at( value.to ) } ];
 }
 
 function drawing( value : unknown ) : number[]
 {
 	const shapes = Array.isArray( value ?? [] ) ? ( value ?? [] ) as Record<string, unknown>[] : unreadable();
-	const rows = encode( shapes.map( shape ) );
+	const rows = encode( shapes.flatMap( shape ) );
 
 	return [ rows.length, ... rows ];
 }

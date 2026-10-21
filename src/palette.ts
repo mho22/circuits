@@ -3,11 +3,10 @@ import { FIGURES as KEYS } from './keyboard.ts';
 
 
 const HINTS : Record<Figure, string> = {
-	[ Figure.Rectangle ] : 'Drag from one corner to the other.',
-	[ Figure.Circle ] : 'Press on the center and drag to the radius.',
+	[ Figure.Circle ] : 'Press on the center and drag to the radius, or click for a dot.',
 	[ Figure.Line ] : 'Drag from one end to the other.',
 };
-const MENU = 'Right-click a line to delete it, another shape or a pin to change it.';
+const MENU = 'Right-click a line to delete it, a circle or a pin to change it.';
 const FIGURES = Object.keys( NAMES ).map( Number ) as Figure[];
 
 

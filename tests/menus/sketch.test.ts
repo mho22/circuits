@@ -11,28 +11,27 @@ describe( 'sketch menu', () =>
 
 	const labels = ( menu : HTMLElement ) => Array.from( menu.children ).map( item => item.textContent );
 
-	it( 'opens at a position with every change for a rectangle', () =>
+	it( 'opens at a position with every change for a circle', () =>
 	{
-		const menu = open( document.body, { x : 10, y : 20 }, Figure.Rectangle, () => {} );
+		const menu = open( document.body, { x : 10, y : 20 }, Figure.Circle, () => {} );
 
 		expect( [ menu.style.left, menu.style.top ] ).toEqual( [ '10px', '20px' ] );
-		expect( labels( menu ) ).toEqual( [ 'Move', 'Rotate', 'Delete' ] );
+		expect( labels( menu ) ).toEqual( [ 'Move', 'Delete' ] );
 	} );
 
-	it( 'offers only the changes that alter a circle or a pin', () =>
+	it( 'offers only the move for a pin', () =>
 	{
-		expect( labels( open( document.body, { x : 0, y : 0 }, Figure.Circle, () => {} ) ) ).toEqual( [ 'Move', 'Delete' ] );
 		expect( labels( open( document.body, { x : 0, y : 0 }, null, () => {} ) ) ).toEqual( [ 'Move' ] );
 	} );
 
 	it( 'runs the picked change and closes', () =>
 	{
 		const act = vi.fn();
-		const menu = open( document.body, { x : 0, y : 0 }, Figure.Rectangle, act );
+		const menu = open( document.body, { x : 0, y : 0 }, Figure.Circle, act );
 
 		( menu.children[ 1 ] as HTMLButtonElement ).click();
 
-		expect( act ).toHaveBeenCalledWith( 'rotate' );
+		expect( act ).toHaveBeenCalledWith( 'delete' );
 		expect( menu.isConnected ).toBe( false );
 	} );
 } );

@@ -1,19 +1,17 @@
-import { Figure } from '../enums/figure.ts';
+import type { Figure } from '../enums/figure.ts';
 import type { Change } from '../types/change.ts';
 import type { Point } from '../types/point.ts';
 import { open as context } from './context.ts';
 
 
-const LABELS : Record<Change, string> = { move : 'Move', rotate : 'Rotate', delete : 'Delete' };
+const LABELS : Record<Change, string> = { move : 'Move', delete : 'Delete' };
 
 
 function changes( figure : Figure | null ) : Change[]
 {
 	if( figure === null ) return [ 'move' ];
 
-	if( figure === Figure.Circle ) return [ 'move', 'delete' ];
-
-	return [ 'move', 'rotate', 'delete' ];
+	return [ 'move', 'delete' ];
 }
 
 

@@ -101,7 +101,6 @@ describe( 'file decoder', () =>
 		const symbol = element( { kind : Kind.Symbol, value : 1, from : { x : 5, y : 5 }, to : { x : 5, y : 5 } } );
 		const pin = element( { kind : Kind.Output, label : 'bar', from : { x : 1, y : 0 }, to : { x : 0, y : 0 } } );
 		const drawing = [
-			{ figure : Figure.Rectangle as const, from : { x : -4, y : -4 }, to : { x : 4, y : 4 } },
 			{ figure : Figure.Circle as const, center : { x : 0, y : 0 }, radius : 2 },
 			{ figure : Figure.Line as const, from : { x : -1, y : 0 }, to : { x : 1, y : 1 } },
 		];
@@ -111,9 +110,16 @@ describe( 'file decoder', () =>
 		expect( contents.labels ).toEqual( [ '', 'bar', '' ] );
 		expect( Array.from( contents.layers ) ).toEqual( [ 1, 2 ] );
 		expect( contents.names ).toEqual( [ 'foo', 'baz' ] );
-		expect( Array.from( contents.drawings ) ).toEqual( [ 14, 0, -4, -4, 4, 4, 1, 0, 0, 2, 2, -1, 0, 1, 1, 0 ] );
+		expect( Array.from( contents.drawings ) ).toEqual( [ 9, 1, 0, 0, 2, 2, -1, 0, 1, 1, 0 ] );
 		expect( Array.from( contents.layouts ) ).toEqual( [ 1, 2, -1, 0 ] );
 		expect( Array.from( contents.delays ) ).toEqual( [ 1e-9, 2e-9 ] );
+	} );
+
+	it( 'reads a rectangle of an older file as its four sides', () =>
+	{
+		const contents = decode( '{ "version" : 1, "parts" : [], "symbols" : [ { "layer" : 1, "drawing" : [ { "shape" : "rectangle", "from" : [ -4, -2 ], "to" : [ 4, 2 ] } ], "parts" : [] } ] }' );
+
+		expect( Array.from( contents.drawings ) ).toEqual( [ 20, 2, -4, -2, 4, -2, 2, 4, -2, 4, 2, 2, 4, 2, -4, 2, 2, -4, 2, -4, -2 ] );
 	} );
 
 	it( 'reads the level of an input as its value', () =>

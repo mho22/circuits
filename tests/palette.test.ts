@@ -28,7 +28,7 @@ describe( 'palette', () =>
 		const palette = new Palette( nav, document.body, () => {}, () => {} );
 
 		expect( [ group().hidden, bar().hidden ] ).toEqual( [ true, true ] );
-		expect( buttons().map( button => button.textContent ) ).toEqual( [ 'RectangleR', 'CircleC', 'LineL' ] );
+		expect( buttons().map( button => button.textContent ) ).toEqual( [ 'CircleC', 'LineL' ] );
 
 		palette.open();
 
@@ -44,14 +44,14 @@ describe( 'palette', () =>
 		const pick = vi.fn();
 		const palette = new Palette( nav, document.body, pick, () => {} );
 
-		buttons()[ 2 ].click();
+		buttons()[ 1 ].click();
 
 		expect( pick ).toHaveBeenCalledWith( Figure.Line );
 
 		palette.select( Figure.Circle );
 
-		expect( buttons().map( button => button.classList.contains( 'active' ) ) ).toEqual( [ false, true, false ] );
-		expect( bar().querySelector( 'span' )!.textContent ).toBe( 'Press on the center and drag to the radius. Right-click a line to delete it, another shape or a pin to change it.' );
+		expect( buttons().map( button => button.classList.contains( 'active' ) ) ).toEqual( [ true, false ] );
+		expect( bar().querySelector( 'span' )!.textContent ).toBe( 'Press on the center and drag to the radius, or click for a dot. Right-click a line to delete it, a circle or a pin to change it.' );
 	} );
 
 	it( 'calls done from its bar', () =>

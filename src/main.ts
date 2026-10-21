@@ -43,7 +43,6 @@ import { MoveTool } from './tools/move.ts';
 import { PlaceTool } from './tools/place.ts';
 import { SelectTool } from './tools/select.ts';
 import { toggle } from './tools/toggle.ts';
-import { rotate } from './transform.ts';
 import type { Action } from './types/action.ts';
 import type { Area } from './types/area.ts';
 import type { Branch } from './types/branch.ts';
@@ -337,9 +336,7 @@ function change( found : Target, anchor : Point, choice : Change ) : void
 
 	if( choice === 'move' ) { carrier.start( found, anchor ); return; }
 
-	if( choice === 'delete' ) { drawer.shapes.splice( index, 1 ); return; }
-
-	drawer.shapes[ index ] = rotate( drawer.shapes[ index ] );
+	drawer.shapes.splice( index, 1 );
 }
 
 function drop() : void

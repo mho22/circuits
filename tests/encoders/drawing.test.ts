@@ -8,12 +8,11 @@ describe( 'drawing encoder', () =>
 	it( 'writes the figure then its numbers for each shape', () =>
 	{
 		const shapes = [
-			{ figure : Figure.Rectangle as const, from : { x : -4, y : -4 }, to : { x : 4, y : 4 } },
 			{ figure : Figure.Circle as const, center : { x : 0, y : 1 }, radius : 2 },
 			{ figure : Figure.Line as const, from : { x : -1, y : 0 }, to : { x : 1, y : 1 } },
 		];
 
-		expect( Array.from( encode( shapes ) ) ).toEqual( [ 0, -4, -4, 4, 4, 1, 0, 1, 2, 2, -1, 0, 1, 1 ] );
+		expect( Array.from( encode( shapes ) ) ).toEqual( [ 1, 0, 1, 2, 2, -1, 0, 1, 1 ] );
 	} );
 
 	it( 'writes nothing for an empty drawing', () =>

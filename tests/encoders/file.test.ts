@@ -107,12 +107,11 @@ describe( 'file encoder', () =>
 	{
 		const pin = element( { kind : Kind.Input, label : 'b"ar', from : { x : 0, y : 0 }, to : { x : 1, y : 0 } } );
 		const drawing = [
-			{ figure : Figure.Rectangle as const, from : { x : -4, y : -4 }, to : { x : 4, y : 4 } },
 			{ figure : Figure.Circle as const, center : { x : 0, y : 1 }, radius : 2 },
 			{ figure : Figure.Line as const, from : { x : -1, y : 0 }, to : { x : 1, y : 1 } },
 		];
 		const text = encode( [], [ { number : 1, definition : { name : 'foo', drawing, labels : [], layout : [ { x : -3, y : 0 }, { x : 2, y : 1 } ], delay : 1e-9 }, parts : [ pin ] } ] );
-		const shapes = '{ "shape" : "rectangle", "from" : [ -4, -4 ], "to" : [ 4, 4 ] }, { "shape" : "circle", "center" : [ 0, 1 ], "radius" : 2 }, { "shape" : "line", "from" : [ -1, 0 ], "to" : [ 1, 1 ] }';
+		const shapes = '{ "shape" : "circle", "center" : [ 0, 1 ], "radius" : 2 }, { "shape" : "line", "from" : [ -1, 0 ], "to" : [ 1, 1 ] }';
 
 		expect( text ).toContain( `\t\t\t"layer" : 1,\n\t\t\t"name" : "foo",\n\t\t\t"drawing" : [ ${ shapes } ],\n\t\t\t"layout" : [ [ -3, 0 ], [ 2, 1 ] ],\n\t\t\t"parts" : [` );
 		expect( text ).toContain( '{ "kind" : "input", "label" : "b\\"ar", "from" : [ 0, 0 ], "to" : [ 1, 0 ] }' );

@@ -5,34 +5,16 @@ import { DrawTool } from '../../src/tools/draw.ts';
 
 describe( 'draw tool', () =>
 {
-	it( 'draws a rectangle between the half-step dots nearest the press and the release and skips a flat one', () =>
+	it( 'draws a circle on the half-step dot nearest the press with a radius of whole half steps and a dot on a click', () =>
 	{
 		const tool = new DrawTool();
 
-		tool.press( { x : 0.8, y : 0.6 } );
-		tool.move( { x : 5.6, y : 6.4 } );
-
-		expect( tool.preview() ).toEqual( { figure : Figure.Rectangle, from : { x : 0, y : 0 }, to : { x : 6, y : 6 } } );
-
-		tool.release( { x : 9.4, y : 5.4 } );
-		tool.press( { x : 0, y : 0 } );
-		tool.release( { x : 8.4, y : 0.6 } );
-
-		expect( tool.shapes ).toEqual( [ { figure : Figure.Rectangle, from : { x : 0, y : 0 }, to : { x : 10, y : 6 } } ] );
-		expect( tool.preview() ).toBeNull();
-	} );
-
-	it( 'draws a circle on the half-step dot nearest the press with a radius of whole half steps and skips a click', () =>
-	{
-		const tool = new DrawTool();
-
-		tool.figure = Figure.Circle;
 		tool.press( { x : 5.4, y : 3.6 } );
 		tool.release( { x : 12.2, y : 4.4 } );
 		tool.press( { x : 4, y : 4 } );
 		tool.release( { x : 4.6, y : 4.4 } );
 
-		expect( tool.shapes ).toEqual( [ { figure : Figure.Circle, center : { x : 6, y : 4 }, radius : 6 } ] );
+		expect( tool.shapes ).toEqual( [ { figure : Figure.Circle, center : { x : 6, y : 4 }, radius : 6 }, { figure : Figure.Circle, center : { x : 4, y : 4 }, radius : 1 } ] );
 	} );
 
 	it( 'draws a line between the half-step dots nearest the press and the release, in any direction, and skips a click', () =>
@@ -75,7 +57,7 @@ describe( 'draw tool', () =>
 
 		tool.shapes = [
 			{ figure : Figure.Circle, center : { x : 0, y : 0 }, radius : 2 },
-			{ figure : Figure.Rectangle, from : { x : 2, y : -2 }, to : { x : 4, y : 2 } },
+			{ figure : Figure.Line, from : { x : 2, y : -2 }, to : { x : 4, y : 2 } },
 		];
 
 		tool.undo();

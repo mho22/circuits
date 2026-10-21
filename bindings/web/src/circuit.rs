@@ -22,7 +22,6 @@ fn shapes( data : &[ i32 ] ) -> Result<Vec<Shape>, JsError>
 	{
 		let ( size, shape ) = match ( code, tail )
 		{
-			( 0, [ from_x, from_y, to_x, to_y, .. ] ) => ( 4, Shape::Rectangle { from : Point { x : *from_x, y : *from_y }, to : Point { x : *to_x, y : *to_y } } ),
 			( 1, [ x, y, radius, .. ] ) => ( 3, Shape::Circle { center : Point { x : *x, y : *y }, radius : *radius } ),
 			( 2, [ from_x, from_y, to_x, to_y, .. ] ) => ( 4, Shape::Line { from : Point { x : *from_x, y : *from_y }, to : Point { x : *to_x, y : *to_y } } ),
 			_ => return Err( JsError::new( "Unknown shape." ) ),
@@ -39,7 +38,6 @@ fn flat( shapes : &[ Shape ] ) -> Vec<i32>
 {
 	shapes.iter().flat_map( | shape | match shape
 	{
-		Shape::Rectangle { from, to } => vec![ 0, from.x, from.y, to.x, to.y ],
 		Shape::Circle { center, radius } => vec![ 1, center.x, center.y, *radius ],
 		Shape::Line { from, to } => vec![ 2, from.x, from.y, to.x, to.y ],
 	} ).collect()

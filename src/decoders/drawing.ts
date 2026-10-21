@@ -23,7 +23,7 @@ export function decode( data : Int32Array ) : Shape[]
 
 		const [ fromX, fromY, toX, toY ] = data.subarray( index + 1, index + 5 );
 
-		shapes.push( { figure : figure as Figure.Rectangle | Figure.Line, from : { x : fromX, y : fromY }, to : { x : toX, y : toY } } );
+		shapes.push( { figure : figure as Figure.Line, from : { x : fromX, y : fromY }, to : { x : toX, y : toY } } );
 		index += 5;
 	}
 

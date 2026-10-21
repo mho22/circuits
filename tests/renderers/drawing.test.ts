@@ -12,7 +12,7 @@ describe( 'drawing renderer', () =>
 	{
 		const { context, calls } = record();
 		const shapes = [
-			{ figure : Figure.Rectangle as const, from : { x : -1, y : -1 }, to : { x : 1, y : 2 } },
+			{ figure : Figure.Line as const, from : { x : -1, y : -1 }, to : { x : 1, y : 2 } },
 			{ figure : Figure.Circle as const, center : { x : 2, y : 0 }, radius : 1 },
 		];
 
@@ -23,10 +23,7 @@ describe( 'drawing renderer', () =>
 			[ 'set', 'lineWidth', 2 ],
 			[ 'beginPath' ],
 			[ 'moveTo', 90, 40 ],
-			[ 'lineTo', 110, 40 ],
 			[ 'lineTo', 110, 70 ],
-			[ 'lineTo', 90, 70 ],
-			[ 'lineTo', 90, 40 ],
 			[ 'moveTo', 130, 50 ],
 			[ 'arc', 120, 50, 10, 0, 2 * Math.PI ],
 			[ 'stroke' ],

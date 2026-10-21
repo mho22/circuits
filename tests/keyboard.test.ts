@@ -53,7 +53,7 @@ describe( 'keyboard', () =>
 	{
 		const key = ( key : string, modified = false ) => shape( { key, ctrlKey : modified, metaKey : false } );
 
-		expect( [ 'r', 'C', 'l', 'w' ].map( letter => key( letter ) ) ).toEqual( [ Figure.Rectangle, Figure.Circle, Figure.Line, undefined ] );
+		expect( [ 'C', 'l', 'r' ].map( letter => key( letter ) ) ).toEqual( [ Figure.Circle, Figure.Line, undefined ] );
 		expect( key( 'l', true ) ).toBeUndefined();
 	} );
 } );
