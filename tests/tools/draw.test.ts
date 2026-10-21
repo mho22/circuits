@@ -9,6 +9,7 @@ describe( 'draw tool', () =>
 	{
 		const tool = new DrawTool();
 
+		tool.figure = Figure.Circle;
 		tool.press( { x : 5.4, y : 3.6 } );
 		tool.release( { x : 12.2, y : 4.4 } );
 		tool.press( { x : 4, y : 4 } );
@@ -21,7 +22,6 @@ describe( 'draw tool', () =>
 	{
 		const tool = new DrawTool();
 
-		tool.figure = Figure.Line;
 		tool.press( { x : 0.8, y : 0.6 } );
 		tool.move( { x : 11.2, y : 5.4 } );
 

@@ -10,7 +10,7 @@ const DOT = 1;
 
 export class DrawTool
 {
-	figure = Figure.Circle;
+	figure = Figure.Line;
 
 	shapes : Shape[] = [];
 

@@ -8,7 +8,7 @@ const HINTS : Record<Figure, string> = {
 	[ Figure.Curve ] : 'Drag between the ends, then click a dot on the curve.',
 };
 const MENU = 'Right-click a line or a curve to delete it, a circle or a pin to change it.';
-const FIGURES = Object.keys( NAMES ).map( Number ) as Figure[];
+const FIGURES = [ Figure.Line, Figure.Circle, Figure.Curve ];
 
 
 export class Palette

@@ -28,7 +28,7 @@ describe( 'palette', () =>
 		const palette = new Palette( nav, document.body, () => {}, () => {} );
 
 		expect( [ group().hidden, bar().hidden ] ).toEqual( [ true, true ] );
-		expect( buttons().map( button => button.textContent ) ).toEqual( [ 'CircleC', 'LineL', 'CurveU' ] );
+		expect( buttons().map( button => button.textContent ) ).toEqual( [ 'LineL', 'CircleC', 'CurveU' ] );
 
 		palette.open();
 
@@ -44,13 +44,13 @@ describe( 'palette', () =>
 		const pick = vi.fn();
 		const palette = new Palette( nav, document.body, pick, () => {} );
 
-		buttons()[ 1 ].click();
+		buttons()[ 0 ].click();
 
 		expect( pick ).toHaveBeenCalledWith( Figure.Line );
 
 		palette.select( Figure.Circle );
 
-		expect( buttons().map( button => button.classList.contains( 'active' ) ) ).toEqual( [ true, false, false ] );
+		expect( buttons().map( button => button.classList.contains( 'active' ) ) ).toEqual( [ false, true, false ] );
 		expect( bar().querySelector( 'span' )!.textContent ).toBe( 'Press on the center and drag to the radius, or click for a dot. Right-click a line or a curve to delete it, a circle or a pin to change it.' );
 	} );
 
