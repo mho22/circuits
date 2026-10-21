@@ -257,9 +257,21 @@ function purge( layer : number ) : void
 	attempt( () => circuit.purge() );
 }
 
+function enter( symbol : Element ) : void
+{
+	circuit.enter( symbol.id );
+
+	const area = span( parts() );
+	const middle = area ? { x : Math.floor( ( area.low.x + area.high.x ) / 2 ), y : Math.floor( ( area.low.y + area.high.y ) / 2 ) } : symbol.from;
+
+	view.enter( circuit.layer, symbol.from, middle );
+}
+
 function follow() : void
 {
 	const layer = circuit.layer;
+
+	view.follow( layer );
 
 	if( maker.area || ( maker.layer ?? 0 ) === layer ) return;
 
@@ -378,7 +390,7 @@ function present() : void
 
 	context.setTransform( devicePixelRatio, 0, 0, devicePixelRatio, - view.x * devicePixelRatio, - view.y * devicePixelRatio );
 
-	grid.draw( context, view.x, view.y, innerWidth, innerHeight );
+	grid.draw( context, view.x, view.y, innerWidth, innerHeight, true );
 
 	context.setTransform( devicePixelRatio, 0, 0, devicePixelRatio, 0, 0 );
 
@@ -405,7 +417,7 @@ function paint( elements : Element[], branches : Branch[], seconds : number ) : 
 
 	context.setTransform( devicePixelRatio, 0, 0, devicePixelRatio, - view.x * devicePixelRatio, - view.y * devicePixelRatio );
 
-	grid.draw( context, view.x, view.y, innerWidth, innerHeight );
+	grid.draw( context, view.x, view.y, innerWidth, innerHeight, false );
 
 	elements.forEach( item => element.draw( context, item, scale ) );
 
@@ -579,7 +591,7 @@ canvas.addEventListener( 'dblclick', ( event : MouseEvent ) =>
 
 	if( maker.area ) return;
 
-	if( symbol ) { circuit.enter( symbol.id ); return; }
+	if( symbol ) { enter( symbol ); return; }
 
 	if( ! target ) return;
 

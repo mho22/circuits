@@ -1,5 +1,5 @@
 import { Figure } from '../enums/figure.ts';
-import { FINE, snap } from '../grid.ts';
+import { HALF, snap } from '../grid.ts';
 import type { Point } from '../types/point.ts';
 import type { Shape } from '../types/shape.ts';
 
@@ -59,7 +59,7 @@ export class DrawTool
 
 		if( this.figure === Figure.Circle )
 		{
-			const radius = Math.round( Math.hypot( cursor.x - start.x, cursor.y - start.y ) / FINE ) * FINE;
+			const radius = Math.round( Math.hypot( cursor.x - start.x, cursor.y - start.y ) / HALF ) * HALF;
 
 			return radius > 0 ? { figure : Figure.Circle, center : start, radius } : null;
 		}

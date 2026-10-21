@@ -10,7 +10,7 @@ describe( 'grid renderer', () =>
 	{
 		const { context, calls } = record();
 
-		draw( context, 5, 7, SPACING, SPACING );
+		draw( context, 5, 7, SPACING, SPACING, false );
 
 		expect( calls.slice( 0, 2 ) ).toEqual( [ [ 'set', 'fillStyle', '#000000' ], [ 'fillRect', 5, 7, SPACING, SPACING ] ] );
 	} );
@@ -19,7 +19,7 @@ describe( 'grid renderer', () =>
 	{
 		const { context, calls } = record();
 
-		draw( context, 0, 0, SPACING, SPACING * 2 );
+		draw( context, 0, 0, SPACING, SPACING * 2, false );
 
 		const dots = calls.slice( 3 );
 
@@ -37,8 +37,26 @@ describe( 'grid renderer', () =>
 	{
 		const { context, calls } = record();
 
-		draw( context, - SPACING * 3 - 5, SPACING * 2 + 5, SPACING, SPACING );
+		draw( context, - SPACING * 3 - 5, SPACING * 2 + 5, SPACING, SPACING, false );
 
 		expect( calls.slice( 3 ) ).toEqual( [ [ 'fillRect', - SPACING * 3 - 1, SPACING * 3 - 1, 2, 2 ] ] );
+	} );
+
+	it( 'draws faint dots on the half steps between the grid points', () =>
+	{
+		const { context, calls } = record();
+		const half = SPACING / 2;
+
+		draw( context, 0, 0, SPACING, SPACING, true );
+
+		expect( calls.slice( 7 ) ).toEqual( [
+			[ 'set', 'globalAlpha', 0.5 ],
+			[ 'fillRect', -1, half - 1, 2, 2 ],
+			[ 'fillRect', half - 1, -1, 2, 2 ],
+			[ 'fillRect', half - 1, half - 1, 2, 2 ],
+			[ 'fillRect', half - 1, SPACING - 1, 2, 2 ],
+			[ 'fillRect', SPACING - 1, half - 1, 2, 2 ],
+			[ 'set', 'globalAlpha', 1 ],
+		] );
 	} );
 } );

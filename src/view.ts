@@ -1,4 +1,4 @@
-import { SPACING, toGrid } from './grid.ts';
+import { SPACING, toGrid, toScreen } from './grid.ts';
 import type { Point } from './types/point.ts';
 
 
@@ -12,6 +12,8 @@ export class View
 	y = 0;
 
 	private grab : Point | null = null;
+
+	private entries : { layer : number, x : number, y : number }[] = [];
 
 
 	scroll( deltaX : number, deltaY : number, deltaMode : number ) : void
@@ -47,6 +49,25 @@ export class View
 	{
 		this.x = 0;
 		this.y = 0;
+	}
+
+	enter( layer : number, symbol : Point, middle : Point ) : void
+	{
+		this.entries.push( { layer, x : this.x, y : this.y } );
+
+		this.x += toScreen( middle.x - symbol.x );
+		this.y += toScreen( middle.y - symbol.y );
+	}
+
+	follow( layer : number ) : void
+	{
+		while( this.entries.length > 0 && this.entries[ this.entries.length - 1 ].layer !== layer )
+		{
+			const entry = this.entries.pop()!;
+
+			this.x = entry.x;
+			this.y = entry.y;
+		}
 	}
 
 	toGrid( x : number, y : number ) : Point

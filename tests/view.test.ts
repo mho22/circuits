@@ -69,4 +69,23 @@ describe( 'view', () =>
 
 		expect( view.toGrid( SPACING * 3, SPACING * 2 ) ).toEqual( { x : 13, y : -2 } );
 	} );
+
+	it( 'shows the middle of a layer on its symbol and comes back when the layer is left', () =>
+	{
+		const view = new View();
+
+		view.scroll( 30, 10, 0 );
+		view.enter( 2, { x : 10, y : 5 }, { x : 4, y : 8 } );
+
+		expect( [ view.x, view.y ] ).toEqual( [ 30 - SPACING * 6, 10 + SPACING * 3 ] );
+
+		view.follow( 2 );
+
+		expect( [ view.x, view.y ] ).toEqual( [ 30 - SPACING * 6, 10 + SPACING * 3 ] );
+
+		view.enter( 3, { x : 0, y : 0 }, { x : 1, y : 1 } );
+		view.follow( 0 );
+
+		expect( [ view.x, view.y ] ).toEqual( [ 30, 10 ] );
+	} );
 } );
