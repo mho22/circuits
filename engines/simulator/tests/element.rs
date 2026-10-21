@@ -20,6 +20,12 @@ fn it_gives_a_two_ended_part_its_two_ends()
 }
 
 #[test]
+fn it_gives_a_toggle_the_end_of_its_lead_as_its_only_end()
+{
+	assert_eq!( element( Kind::Toggle { high : true }, ( 0, 0 ), ( 2, 0 ) ).terminals(), points( &[ ( 2, 0 ), ( 2, 0 ) ] ) );
+}
+
+#[test]
 fn it_puts_the_collector_left_and_the_emitter_right_one_step_past_the_bar()
 {
 	assert_eq!( element( Kind::Npn, ( 0, 0 ), ( 2, 0 ) ).terminals(), points( &[ ( 0, 0 ), ( 3, -1 ), ( 3, 1 ) ] ) );

@@ -1,4 +1,4 @@
-use simulator::{ Error, Kind };
+use simulator::{ Error, Kind, LIGHT, SILICON };
 
 
 #[test]
@@ -18,7 +18,8 @@ fn it_accepts_valid_values()
 	assert_eq!( Kind::Nmos.check(), Ok( () ) );
 	assert_eq!( Kind::Pmos.check(), Ok( () ) );
 	assert_eq!( Kind::Supply { volts : 5.0 }.check(), Ok( () ) );
-	assert_eq!( Kind::Pin.check(), Ok( () ) );
+	assert_eq!( Kind::Input { high : false }.check(), Ok( () ) );
+	assert_eq!( Kind::Output.check(), Ok( () ) );
 	assert_eq!( Kind::Symbol { layer : 1, rotation : 3 }.check(), Ok( () ) );
 }
 
@@ -123,9 +124,46 @@ fn it_rejects_a_closed_state_for_a_part_that_is_not_a_switch()
 }
 
 #[test]
+fn it_sets_the_level_of_an_input()
+{
+	assert_eq!( Kind::Input { high : false }.with_high( true ), Ok( Kind::Input { high : true } ) );
+	assert_eq!( Kind::Input { high : true }.with_high( false ), Ok( Kind::Input { high : false } ) );
+}
+
+#[test]
+fn it_sets_the_level_of_a_toggle()
+{
+	assert_eq!( Kind::Toggle { high : false }.with_high( true ), Ok( Kind::Toggle { high : true } ) );
+	assert_eq!( Kind::Toggle { high : true }.with_high( false ), Ok( Kind::Toggle { high : false } ) );
+}
+
+#[test]
+fn it_rejects_a_level_for_a_part_that_is_not_an_input()
+{
+	assert_eq!( Kind::Wire.with_high( true ), Err( Error::Inputless ) );
+	assert_eq!( Kind::Output.with_high( true ), Err( Error::Inputless ) );
+}
+
+#[test]
+fn it_tells_an_input_and_an_output_from_the_other_parts()
+{
+	assert!( Kind::Input { high : true }.pin() && Kind::Output.pin() );
+	assert!( ! Kind::Wire.pin() && ! Kind::Supply { volts : 5.0 }.pin() && ! Kind::Toggle { high : true }.pin() && ! Kind::Led.pin() && ! Kind::Symbol { layer : 1, rotation : 0 }.pin() );
+}
+
+#[test]
+fn it_gives_an_led_the_light_junction_and_every_other_part_the_silicon_junction()
+{
+	assert_eq!( Kind::Led.junction(), LIGHT );
+	assert_eq!( Kind::Diode.junction(), SILICON );
+	assert_eq!( Kind::Npn.junction(), SILICON );
+}
+
+#[test]
 fn it_lists_the_voltages_that_control_each_part()
 {
 	assert_eq!( Kind::Diode.controls(), &[ ( 0, 1 ) ] );
+	assert_eq!( Kind::Led.controls(), &[ ( 0, 1 ) ] );
 	assert_eq!( Kind::Npn.controls(), &[ ( 0, 2 ), ( 0, 1 ) ] );
 	assert_eq!( Kind::Pnp.controls(), &[ ( 2, 0 ), ( 1, 0 ) ] );
 	assert_eq!( Kind::Nmos.controls(), &[ ( 0, 2 ), ( 1, 2 ) ] );

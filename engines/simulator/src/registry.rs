@@ -15,4 +15,9 @@ impl Registry
 
 		*self.ids.entry( path.to_vec() ).or_insert( next )
 	}
+
+	pub fn find( &self, path : &[ u32 ] ) -> Option<u32>
+	{
+		self.ids.get( path ).copied()
+	}
 }

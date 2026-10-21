@@ -1,11 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { encode } from '../../src/encoders/file.ts';
+import { Figure } from '../../src/enums/figure.ts';
 import { Kind } from '../../src/enums/kind.ts';
 import { element } from '../stubs/element.ts';
 
 
 describe( 'file encoder', () =>
 {
+	const BLANK = { name : '', drawing : [], labels : [], layout : [] };
+
 	it( 'writes one part per line with its kind, its value and its ends', () =>
 	{
 		const elements = [
@@ -39,8 +42,68 @@ describe( 'file encoder', () =>
 		expect( encode( [ element( { kind : Kind.Nmos, value : 1, mirrored : true } ) ] ) ).toContain( '{ "kind" : "nmos", "mirrored" : true, "from"' );
 	} );
 
+	it( 'writes a symbol with its layer and its rotation, and the parts of each layer after the drawing', () =>
+	{
+		const symbol = element( { kind : Kind.Symbol, value : 1, rotation : 1, from : { x : 5, y : 5 }, to : { x : 5, y : 5 } } );
+		const pin = element( { kind : Kind.Output, from : { x : 1, y : 0 }, to : { x : 0, y : 0 } } );
+
+		expect( encode( [ symbol ], [ { number : 1, definition : BLANK, parts : [ pin, element() ] }, { number : 2, definition : BLANK, parts : [] } ] ) ).toBe( [
+			'{',
+			'\t"version" : 1,',
+			'\t"parts" : [',
+			'\t\t{ "kind" : "symbol", "layer" : 1, "rotation" : 1, "from" : [ 5, 5 ], "to" : [ 5, 5 ] }',
+			'\t],',
+			'\t"symbols" : [',
+			'\t\t{',
+			'\t\t\t"layer" : 1,',
+			'\t\t\t"parts" : [',
+			'\t\t\t\t{ "kind" : "output", "from" : [ 1, 0 ], "to" : [ 0, 0 ] },',
+			'\t\t\t\t{ "kind" : "wire", "from" : [ 0, 0 ], "to" : [ 2, 0 ] }',
+			'\t\t\t]',
+			'\t\t},',
+			'\t\t{',
+			'\t\t\t"layer" : 2,',
+			'\t\t\t"parts" : []',
+			'\t\t}',
+			'\t]',
+			'}',
+			'',
+		].join( '\n' ) );
+	} );
+
 	it( 'writes an empty drawing', () =>
 	{
 		expect( encode( [] ) ).toBe( '{\n\t"version" : 1,\n\t"parts" : []\n}\n' );
+	} );
+
+	it( 'writes the level of an input only when it is 1', () =>
+	{
+		const low = element( { kind : Kind.Input, from : { x : 0, y : 0 }, to : { x : 1, y : 0 } } );
+		const high = element( { kind : Kind.Input, value : 1, from : { x : 0, y : 2 }, to : { x : 1, y : 2 } } );
+
+		expect( encode( [ low, high ] ) ).toContain( '{ "kind" : "input", "from" : [ 0, 0 ], "to" : [ 1, 0 ] },\n\t\t{ "kind" : "input", "level" : 1, "from" : [ 0, 2 ], "to" : [ 1, 2 ] }' );
+	} );
+
+	it( 'writes the level of a toggle only when it is 1', () =>
+	{
+		const low = element( { kind : Kind.Toggle, from : { x : 0, y : 0 }, to : { x : 1, y : 0 } } );
+		const high = element( { kind : Kind.Toggle, value : 1, from : { x : 2, y : 0 }, to : { x : 3, y : 0 } } );
+
+		expect( encode( [ low, high ] ) ).toContain( '{ "kind" : "toggle", "from" : [ 0, 0 ], "to" : [ 1, 0 ] },\n\t\t{ "kind" : "toggle", "level" : 1, "from" : [ 2, 0 ], "to" : [ 3, 0 ] }' );
+	} );
+
+	it( 'writes the name, the drawing and the layout of a layer and the label of an input or an output', () =>
+	{
+		const pin = element( { kind : Kind.Input, label : 'b"ar', from : { x : 0, y : 0 }, to : { x : 1, y : 0 } } );
+		const drawing = [
+			{ figure : Figure.Rectangle as const, from : { x : -4, y : -4 }, to : { x : 4, y : 4 } },
+			{ figure : Figure.Circle as const, center : { x : 0, y : 1 }, radius : 2 },
+			{ figure : Figure.Line as const, from : { x : -1, y : 0 }, to : { x : 1, y : 1 } },
+		];
+		const text = encode( [], [ { number : 1, definition : { name : 'foo', drawing, labels : [], layout : [ { x : -3, y : 0 }, { x : 2, y : 1 } ] }, parts : [ pin ] } ] );
+		const shapes = '{ "shape" : "rectangle", "from" : [ -4, -4 ], "to" : [ 4, 4 ] }, { "shape" : "circle", "center" : [ 0, 1 ], "radius" : 2 }, { "shape" : "line", "from" : [ -1, 0 ], "to" : [ 1, 1 ] }';
+
+		expect( text ).toContain( `\t\t\t"layer" : 1,\n\t\t\t"name" : "foo",\n\t\t\t"drawing" : [ ${ shapes } ],\n\t\t\t"layout" : [ [ -3, 0 ], [ 2, 1 ] ],\n\t\t\t"parts" : [` );
+		expect( text ).toContain( '{ "kind" : "input", "label" : "b\\"ar", "from" : [ 0, 0 ], "to" : [ 1, 0 ] }' );
 	} );
 } );

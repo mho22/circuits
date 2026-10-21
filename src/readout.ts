@@ -1,4 +1,5 @@
-import { Kind, NAMES, UNITS } from './enums/kind.ts';
+import { bit } from './bit.ts';
+import { Kind, NAMES, PINS, UNITS } from './enums/kind.ts';
 import { format } from './si.ts';
 import type { Branch } from './types/branch.ts';
 import type { Element } from './types/element.ts';
@@ -15,15 +16,25 @@ function detail( element : Element ) : string | undefined
 
 	if( element.kind === Kind.Switch ) return element.value ? 'closed' : 'open';
 
+	if( element.kind === Kind.Symbol ) return String( element.value );
+
+	if( PINS.includes( element.kind ) ) return element.label;
+
 	return undefined;
 }
 
 
 export function describe( element : Element, branch : Branch | undefined ) : string
 {
-	const title = [ NAMES[ element.kind ], detail( element ) ].filter( Boolean ).join( ' ' );
+	const title = element.definition?.name || [ NAMES[ element.kind ], detail( element ) ].filter( Boolean ).join( ' ' );
 
 	if( element.kind === Kind.Wire ) return [ title, format( element.potentials[ 0 ], 'V' ), format( Math.abs( branch?.current ?? NaN ), 'A' ) ].join( ' · ' );
+
+	if( element.kind === Kind.Symbol ) return [ title, ... element.potentials.map( potential => format( potential, 'V' ) ) ].join( ' · ' );
+
+	if( PINS.includes( element.kind ) ) return [ title, String( bit( element.potentials[ 0 ] ) ), format( element.potentials[ 0 ], 'V' ) ].join( ' · ' );
+
+	if( element.kind === Kind.Toggle ) return [ title, String( element.value ), format( element.potentials[ 1 ], 'V' ), format( Math.abs( element.currents[ 0 ] ), 'A' ) ].join( ' · ' );
 
 	if( element.kind === Kind.Supply ) return [ title, format( Math.abs( element.currents[ 0 ] ), 'A' ) ].join( ' · ' );
 

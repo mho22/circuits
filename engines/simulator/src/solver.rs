@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{ companion, distribute, eliminate, limit, Branch, Element, Error, History, Kind, Netlist, Reading, Segment, Solution, UnionFind };
+use crate::{ companion, distribute, eliminate, Branch, Element, Error, History, Kind, Netlist, Reading, Segment, Solution, UnionFind };
 
 
 const ITERATIONS : usize = 100;
@@ -19,7 +19,7 @@ pub fn solve( elements : &[ Element ], history : &History, step : f64 ) -> Resul
 
 	for ( element, nets ) in elements.iter().zip( &terminals )
 	{
-		if matches!( element.kind, Kind::Wire | Kind::Ground | Kind::Pin | Kind::Switch { .. } ) { continue; }
+		if matches!( element.kind, Kind::Wire | Kind::Ground | Kind::Input { .. } | Kind::Output | Kind::Switch { .. } ) { continue; }
 
 		for &net in &nets[ 1 .. ] { islands.union( nets[ 0 ], net ); }
 	}
@@ -117,7 +117,7 @@ pub fn solve( elements : &[ Element ], history : &History, step : f64 ) -> Resul
 				next[ index ] = match element.kind
 				{
 					Kind::Nmos | Kind::Pmos => across,
-					_ => limit( across, guess[ index ] ),
+					_ => element.kind.junction().limit( across, guess[ index ] ),
 				};
 			}
 
@@ -161,7 +161,7 @@ pub fn solve( elements : &[ Element ], history : &History, step : f64 ) -> Resul
 
 	for ( element, reading ) in elements.iter().zip( &readings )
 	{
-		if matches!( element.kind, Kind::Wire | Kind::Ground | Kind::Pin | Kind::Switch { .. } ) { continue; }
+		if matches!( element.kind, Kind::Wire | Kind::Ground | Kind::Input { .. } | Kind::Output | Kind::Switch { .. } ) { continue; }
 
 		let points : Vec<usize> = match element.kind
 		{

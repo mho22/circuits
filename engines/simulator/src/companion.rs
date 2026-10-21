@@ -1,4 +1,4 @@
-use crate::{ conduct, linearize, Element, History, Kind, Stamp };
+use crate::{ conduct, Element, History, Kind, Stamp };
 
 
 const FORWARD_GAIN : f64 = 100.0;
@@ -19,7 +19,7 @@ pub fn companion( element : &Element, history : &History, step : f64, guesses : 
 
 	let junction = | index : usize, weights : [ f64; 3 ] |
 	{
-		let ( conductance, source ) = linearize( guesses[ index ] );
+		let ( conductance, source ) = element.kind.junction().linearize( guesses[ index ] );
 
 		Stamp { across : element.kind.controls()[ index ], conductance, source, weights }
 	};
@@ -43,7 +43,7 @@ pub fn companion( element : &Element, history : &History, step : f64, guesses : 
 		Kind::Resistor { ohms } => vec![ through( 1.0 / ohms, 0.0 ) ],
 		Kind::Capacitor { farads } => vec![ through( farads / step, farads / step * stored ) ],
 		Kind::Inductor { henries } => vec![ through( step / henries, - stored ) ],
-		Kind::Diode => vec![ junction( 0, THROUGH ) ],
+		Kind::Diode | Kind::Led => vec![ junction( 0, THROUGH ) ],
 		Kind::Npn => vec![ junction( 0, FORWARD ), junction( 1, REVERSE ) ],
 		Kind::Pnp => vec![ junction( 0, FORWARD.map( | weight | - weight ) ), junction( 1, REVERSE.map( | weight | - weight ) ) ],
 		Kind::Nmos => channel( 1.0 ),

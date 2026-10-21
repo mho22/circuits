@@ -11,6 +11,17 @@ describe( 'terminals', () =>
 		expect( terminals( Kind.Diode, { x : 0, y : 0 }, { x : 0, y : 2 }, true ) ).toEqual( [ { x : 0, y : 0 }, { x : 0, y : 2 } ] );
 	} );
 
+	it( 'gives an input or an output the end of its lead only', () =>
+	{
+		expect( terminals( Kind.Input, { x : 0, y : 0 }, { x : 2, y : 0 }, false ) ).toEqual( [ { x : 2, y : 0 }, { x : 2, y : 0 } ] );
+		expect( terminals( Kind.Output, { x : 2, y : 0 }, { x : 0, y : 0 }, false ) ).toEqual( [ { x : 0, y : 0 }, { x : 0, y : 0 } ] );
+	} );
+
+	it( 'gives a toggle the end of its lead only', () =>
+	{
+		expect( terminals( Kind.Toggle, { x : 0, y : 0 }, { x : 0, y : 2 }, false ) ).toEqual( [ { x : 0, y : 2 }, { x : 0, y : 2 } ] );
+	} );
+
 	it( 'puts the collector left and the emitter right one step past the bar', () =>
 	{
 		expect( terminals( Kind.Npn, { x : 0, y : 0 }, { x : 2, y : 0 }, false ) ).toEqual( [ { x : 0, y : 0 }, { x : 3, y : -1 }, { x : 3, y : 1 } ] );

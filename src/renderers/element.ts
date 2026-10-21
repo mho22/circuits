@@ -6,10 +6,14 @@ import * as capacitor from './capacitor.ts';
 import * as diode from './diode.ts';
 import * as ground from './ground.ts';
 import * as inductor from './inductor.ts';
+import * as led from './led.ts';
 import * as mosfet from './mosfet.ts';
+import * as pin from './pin.ts';
 import * as resistor from './resistor.ts';
 import * as supply from './supply.ts';
+import * as symbol from './symbol.ts';
 import * as toggle from './switch.ts';
+import * as slider from './toggle.ts';
 import * as transistor from './transistor.ts';
 import * as wire from './wire.ts';
 
@@ -28,6 +32,11 @@ const RENDERERS : Record<Kind, ( context : CanvasRenderingContext2D, element : E
 	[ Kind.Nmos ] : mosfet.draw,
 	[ Kind.Pmos ] : mosfet.draw,
 	[ Kind.Supply ] : supply.draw,
+	[ Kind.Input ] : pin.draw,
+	[ Kind.Symbol ] : symbol.draw,
+	[ Kind.Output ] : pin.draw,
+	[ Kind.Toggle ] : slider.draw,
+	[ Kind.Led ] : led.draw,
 };
 
 

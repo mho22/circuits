@@ -1,4 +1,4 @@
-use crate::Error;
+use crate::{ Error, Junction, LIGHT, SILICON };
 
 
 #[derive( Clone, Copy, Debug, PartialEq )]
@@ -17,8 +17,11 @@ pub enum Kind
 	Nmos,
 	Pmos,
 	Supply { volts : f64 },
-	Pin,
+	Input { high : bool },
+	Output,
 	Symbol { layer : u32, rotation : u8 },
+	Toggle { high : bool },
+	Led,
 }
 
 impl Kind
@@ -42,13 +45,20 @@ impl Kind
 	{
 		match self
 		{
-			Kind::Diode => &[ ( 0, 1 ) ],
+			Kind::Diode | Kind::Led => &[ ( 0, 1 ) ],
 			Kind::Npn => &[ ( 0, 2 ), ( 0, 1 ) ],
 			Kind::Pnp => &[ ( 2, 0 ), ( 1, 0 ) ],
 			Kind::Nmos => &[ ( 0, 2 ), ( 1, 2 ) ],
 			Kind::Pmos => &[ ( 2, 0 ), ( 2, 1 ) ],
 			_ => &[],
 		}
+	}
+
+	pub fn junction( &self ) -> Junction
+	{
+		if *self == Kind::Led { return LIGHT; }
+
+		SILICON
 	}
 
 	pub fn value( &self ) -> Option<f64>
@@ -85,5 +95,20 @@ impl Kind
 		let Kind::Switch { .. } = self else { return Err( Error::Switchless ); };
 
 		Ok( Kind::Switch { closed } )
+	}
+
+	pub fn with_high( &self, high : bool ) -> Result<Kind, Error>
+	{
+		match self
+		{
+			Kind::Input { .. } => Ok( Kind::Input { high } ),
+			Kind::Toggle { .. } => Ok( Kind::Toggle { high } ),
+			_ => Err( Error::Inputless ),
+		}
+	}
+
+	pub fn pin( &self ) -> bool
+	{
+		matches!( self, Kind::Input { .. } | Kind::Output )
 	}
 }

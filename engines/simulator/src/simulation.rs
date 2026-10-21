@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::flatten::STRIDE;
-use crate::{ flatten, place, solve, stretch, Document, Element, Error, History, Kind, Operation, Outline, Point, Reading, Registry, Segment, Solution };
+use crate::{ enclose, flatten, place, solve, stretch, Document, Element, Enclosure, Error, History, Kind, Operation, Outline, Point, Reading, Registry, Segment, Shape, Solution };
 
 
 #[derive( Debug )]
@@ -10,6 +10,7 @@ pub struct Simulation
 	layers : Vec<Document>,
 	registry : Registry,
 	elements : Vec<Element>,
+	focus : Vec<u32>,
 	history : History,
 	solution : Result<Solution, Error>,
 	step : f64,
@@ -21,7 +22,7 @@ impl Simulation
 {
 	pub fn new( step : f64 ) -> Simulation
 	{
-		Simulation { layers : vec![ Document::default() ], registry : Registry::default(), elements : Vec::new(), history : History::default(), solution : Ok( Solution::default() ), step, undos : Vec::new(), redos : Vec::new() }
+		Simulation { layers : vec![ Document::default() ], registry : Registry::default(), elements : Vec::new(), focus : Vec::new(), history : History::default(), solution : Ok( Solution::default() ), step, undos : Vec::new(), redos : Vec::new() }
 	}
 
 	pub fn create( &mut self ) -> usize
@@ -48,10 +49,13 @@ impl Simulation
 	{
 		let document = self.document( layer ).ok_or( Error::Layerless )?;
 		let before = *document.elements().iter().find( | element | element.id == id ).ok_or( Error::Missing )?;
-		let mut operations = stretch( document.elements(), &before, &Element { kind, segment, mirrored, ..before }, | element | self.terminals( element ) );
+		let others : Vec<Element> = document.elements().iter().filter( | element | element.id != id ).copied().collect();
+		let after = Element { kind, segment, mirrored, ..before };
+		let ( old, new ) = ( self.terminals( &before ), self.terminals( &after ) );
+		let mut operations = stretch( &others, &old, &new, self.zone( &after ), | element | self.terminals( element ) );
 		let mut draft = document.clone();
 
-		for &operation in &operations { draft.apply( operation )?; }
+		for operation in &operations { draft.apply( operation.clone() )?; }
 
 		operations.extend( place( draft.elements(), kind, segment ) );
 		operations.pop();
@@ -62,13 +66,101 @@ impl Simulation
 		self.commit( &edits )
 	}
 
-	pub fn open( &mut self, parts : &[ ( Kind, Segment, bool ) ] ) -> Result<u32, Error>
+	pub fn shift( &mut self, layer : usize, low : Point, high : Point, dx : i32, dy : i32 ) -> Result<u32, Error>
 	{
-		let deletions = self.layers[ 0 ].elements().iter().map( | element | ( 0, Operation::Delete { id : element.id } ) );
-		let additions = parts.iter().map( | &( kind, segment, mirrored ) | ( 0, Operation::Add { kind, segment, mirrored } ) );
-		let edits : Vec<( usize, Operation )> = deletions.chain( additions ).collect();
+		let document = self.document( layer ).ok_or( Error::Layerless )?;
+		let enclosure = enclose( document.elements(), low, high, | element | self.terminals( element ) )?;
+		let ids : Vec<u32> = enclosure.inner.iter().map( | element | element.id ).collect();
+		let others : Vec<Element> = document.elements().iter().filter( | element | ! ids.contains( &element.id ) ).copied().collect();
+		let moved : Vec<Element> = enclosure.inner.iter().map( | element | Element { segment : element.segment.shifted( dx, dy ), ..*element } ).collect();
+		let old : Vec<Point> = enclosure.inner.iter().flat_map( | element | self.terminals( element ) ).collect();
+		let new : Vec<Point> = moved.iter().flat_map( | element | self.terminals( element ) ).collect();
+		let mut operations = stretch( &others, &old, &new, Segment { from : low, to : high }.shifted( dx, dy ), | element | self.terminals( element ) );
+		let mut draft = document.clone();
+
+		for operation in &operations { draft.apply( operation.clone() )?; }
+
+		for element in moved.iter().filter( | element | element.kind != Kind::Wire )
+		{
+			let outside : Vec<Element> = draft.elements().iter().filter( | other | ! ids.contains( &other.id ) ).copied().collect();
+			let mut cuts = place( &outside, element.kind, element.segment );
+
+			cuts.pop();
+
+			for operation in &cuts { draft.apply( operation.clone() )?; }
+
+			operations.extend( cuts );
+		}
+
+		operations.extend( moved.iter().map( | element | Operation::Move { id : element.id, kind : element.kind, segment : element.segment, mirrored : element.mirrored } ) );
+
+		let edits : Vec<( usize, Operation )> = operations.into_iter().map( | operation | ( layer, operation ) ).collect();
 
 		self.commit( &edits )
+	}
+
+	pub fn enclose( &mut self, layer : usize, low : Point, high : Point, name : &str, drawing : &[ Shape ], layout : &[ Point ] ) -> Result<u32, Error>
+	{
+		let ( enclosure, inside, inner ) = self.gather( layer, low, high, name, drawing, layout )?;
+		let center = Point { x : ( low.x + high.x ).div_euclid( 2 ), y : ( low.y + high.y ).div_euclid( 2 ) };
+		let mut draft = self.layers[ layer ].clone();
+
+		for operation in &enclosure.outside { draft.apply( operation.clone() )?; }
+
+		let outline = Outline::of( &inner );
+		let ends = outline.terminals( center, 0 );
+		let followed = stretch( draft.elements(), &enclosure.pins, &ends, outline.zone( center, 0 ), | element | self.terminals( element ) );
+		let next = self.layers.len();
+		let symbol = Operation::Add { kind : Kind::Symbol { layer : next as u32, rotation : 0 }, segment : Segment { from : center, to : center }, mirrored : false };
+		let inside = inside.into_iter().map( | operation | ( next, operation ) );
+		let outside = enclosure.outside.into_iter().chain( followed ).chain( [ symbol ] ).map( | operation | ( layer, operation ) );
+		let edits : Vec<( usize, Operation )> = inside.chain( outside ).collect();
+
+		self.layers.push( Document::default() );
+
+		let result = self.commit( &edits );
+
+		if result.is_err() { self.layers.pop(); }
+
+		result
+	}
+
+	pub fn erase( &mut self, layer : usize, ids : &[ u32 ] ) -> Result<u32, Error>
+	{
+		if ids.is_empty() { return Err( Error::Unselected ); }
+
+		let edits : Vec<( usize, Operation )> = ids.iter().map( | &id | ( layer, Operation::Delete { id } ) ).collect();
+
+		self.commit( &edits )
+	}
+
+	pub fn purge( &mut self, layer : usize ) -> Result<u32, Error>
+	{
+		if layer == 0 || layer >= self.layers.len() { return Err( Error::Layerless ); }
+
+		let copy = | element : &Element | matches!( element.kind, Kind::Symbol { layer : inner, .. } if inner as usize == layer );
+		let copies = self.layers.iter().enumerate().flat_map( | ( index, document ) | document.elements().iter().filter( | element | copy( element ) ).map( move | element | ( index, Operation::Delete { id : element.id } ) ) );
+		let parts = self.layers[ layer ].elements().iter().map( | element | ( layer, Operation::Delete { id : element.id } ) );
+		let edits : Vec<( usize, Operation )> = copies.chain( parts ).collect();
+
+		self.commit( &edits )
+	}
+
+	pub fn open( &mut self, additions : Vec<( usize, Operation )> ) -> Result<u32, Error>
+	{
+		let count = self.layers.len();
+		let needed = additions.iter().map( | addition | addition.0 + 1 ).max().unwrap_or( 0 );
+		let deletions = self.layers.iter().enumerate().flat_map( | ( layer, document ) | document.elements().iter().map( move | element | ( layer, Operation::Delete { id : element.id } ) ).chain( [ ( layer, Operation::Describe { name : String::new(), drawing : Vec::new(), layout : Vec::new() } ) ] ) );
+		let edits : Vec<( usize, Operation )> = deletions.chain( additions ).collect();
+
+		self.focus( &[] )?;
+		self.layers.resize_with( count.max( needed ), Document::default );
+
+		let result = self.commit( &edits );
+
+		if result.is_err() { self.layers.truncate( count ); }
+
+		result
 	}
 
 	pub fn undo( &mut self ) -> Result<Option<u32>, Error>
@@ -101,7 +193,7 @@ impl Simulation
 
 			if let Ok( solution ) = &solution { self.history = History::record( &self.elements, solution ); }
 
-			self.solution = solution.map( | solution | self.view( solution ) );
+			self.settle( solution );
 
 			if self.solution.is_err() { return; }
 		}
@@ -117,11 +209,77 @@ impl Simulation
 		self.solution.as_ref().map_err( | error | *error )
 	}
 
+	pub fn path( &self ) -> &[ u32 ]
+	{
+		&self.focus
+	}
+
+	pub fn focus( &mut self, path : &[ u32 ] ) -> Result<(), Error>
+	{
+		let layer = self.descend( path )?;
+
+		self.elements = flatten( &self.layers, &mut self.registry, layer, path )?;
+		self.focus = path.to_vec();
+
+		self.settle( solve( &self.elements, &self.history, self.step ) );
+
+		Ok( () )
+	}
+
+	pub fn descend( &self, path : &[ u32 ] ) -> Result<usize, Error>
+	{
+		path.iter().try_fold( 0, | layer, &id |
+		{
+			let element = self.layers[ layer ].elements().iter().find( | element | element.id == id ).ok_or( Error::Missing )?;
+			let Kind::Symbol { layer : inner, .. } = element.kind else { return Err( Error::Missing ); };
+
+			Ok( inner as usize )
+		} )
+	}
+
+	pub fn elements_at( &self, layer : usize, point : Point ) -> Vec<u32>
+	{
+		let Some( document ) = self.document( layer ) else { return Vec::new(); };
+
+		document.elements().iter().rev().filter( | element | self.covers( element, point ) ).map( | element | element.id ).collect()
+	}
+
 	pub fn terminals( &self, element : &Element ) -> Vec<Point>
 	{
 		let Kind::Symbol { layer, rotation } = element.kind else { return element.terminals(); };
 
-		self.layers.get( layer as usize ).map_or( Vec::new(), | document | Outline::of( document.elements() ).terminals( element.segment.from, rotation ) )
+		self.layers.get( layer as usize ).map_or( Vec::new(), | document | Outline::of( document ).terminals( element.segment.from, rotation ) )
+	}
+
+	fn gather( &self, layer : usize, low : Point, high : Point, name : &str, drawing : &[ Shape ], layout : &[ Point ] ) -> Result<( Enclosure, Vec<Operation>, Document ), Error>
+	{
+		let document = self.document( layer ).ok_or( Error::Layerless )?;
+		let enclosure = enclose( document.elements(), low, high, | element | self.terminals( element ) )?;
+		let parts = enclosure.inner.iter().map( | element | Operation::Add { kind : element.kind, segment : element.segment, mirrored : element.mirrored } );
+		let labels = enclosure.inner.iter().zip( 0 .. ).filter( | ( element, _ ) | ! document.label( element.id ).is_empty() ).map( | ( element, id ) | Operation::Label { id, label : document.label( element.id ).to_string() } );
+		let description = Operation::Describe { name : name.to_string(), drawing : drawing.to_vec(), layout : layout.to_vec() };
+		let inside : Vec<Operation> = parts.chain( labels ).chain( [ description ] ).collect();
+		let mut inner = Document::default();
+
+		for operation in &inside { inner.apply( operation.clone() )?; }
+
+		Ok( ( enclosure, inside, inner ) )
+	}
+
+	fn zone( &self, element : &Element ) -> Segment
+	{
+		let Kind::Symbol { layer, rotation } = element.kind else { return element.segment; };
+
+		self.layers.get( layer as usize ).map_or( element.segment, | document | Outline::of( document ).zone( element.segment.from, rotation ) )
+	}
+
+	fn covers( &self, element : &Element, point : Point ) -> bool
+	{
+		if ! matches!( element.kind, Kind::Symbol { .. } ) { return element.segment.contains( point ) || element.terminals().contains( &point ); }
+
+		let Segment { from, to } = self.zone( element );
+
+		( from.x - 1 ..= to.x + 1 ).contains( &point.x ) && ( from.y - 1 ..= to.y + 1 ).contains( &point.y )
 	}
 
 	fn commit( &mut self, edits : &[ ( usize, Operation ) ] ) -> Result<u32, Error>
@@ -139,21 +297,26 @@ impl Simulation
 		let mut inverses = Vec::new();
 		let mut result = Ok( 0 );
 
-		for &( layer, operation ) in edits
+		for ( layer, operation ) in edits
 		{
-			result = self.edit( layer, operation ).map( | ( id, inverse ) | { inverses.push( ( layer, inverse ) ); id } );
+			result = self.edit( *layer, operation.clone() ).map( | ( id, inverse ) | { inverses.push( ( *layer, inverse ) ); id } );
 
 			if result.is_err() { break; }
 		}
 
-		let result = result.and_then( | id | flatten( &self.layers, &mut self.registry ).map( | elements | ( id, elements ) ) );
+		let mut focus = self.focus.clone();
+
+		while self.descend( &focus ).is_err() { focus.pop(); }
+
+		let layer = self.descend( &focus )?;
+		let result = result.and_then( | id | flatten( &self.layers, &mut self.registry, layer, &focus ).map( | elements | ( id, elements ) ) );
 
 		let ( id, elements ) = match result
 		{
 			Ok( pair ) => pair,
 			Err( error ) =>
 			{
-				for &( layer, inverse ) in inverses.iter().rev() { self.layers[ layer ].apply( inverse ).ok(); }
+				for ( layer, inverse ) in inverses.iter().rev() { self.layers[ *layer ].apply( inverse.clone() ).ok(); }
 
 				return Err( error );
 			},
@@ -162,7 +325,9 @@ impl Simulation
 		inverses.reverse();
 
 		self.elements = elements;
-		self.solution = solve( &self.elements, &self.history, self.step ).map( | solution | self.view( solution ) );
+		self.focus = focus;
+
+		self.settle( solve( &self.elements, &self.history, self.step ) );
 
 		Ok( ( id, inverses ) )
 	}
@@ -170,27 +335,40 @@ impl Simulation
 	fn edit( &mut self, layer : usize, operation : Operation ) -> Result<( u32, Operation ), Error>
 	{
 		let document = self.layers.get_mut( layer ).ok_or( Error::Layerless )?;
-		let inverse = document.inverse( operation )?;
+		let inverse = document.inverse( &operation )?;
 
 		Ok( ( document.apply( operation )?, inverse ) )
 	}
 
-	fn view( &mut self, solution : Solution ) -> Solution
+	fn settle( &mut self, raw : Result<Solution, Error> )
 	{
+		self.solution = raw.map( | solution | self.view( &solution ) );
+	}
+
+	fn view( &self, solution : &Solution ) -> Solution
+	{
+		let path = self.focus.as_slice();
+		let layer = self.descend( path ).unwrap_or( 0 );
 		let positions : HashMap<u32, usize> = self.elements.iter().enumerate().map( | ( index, element ) | ( element.id, index ) ).collect();
-		let registry = &mut self.registry;
-		let layers = &self.layers;
+		let reading = | key : &[ u32 ] | &solution.readings[ positions[ &self.registry.find( key ).unwrap() ] ];
 
-		let readings = layers[ 0 ].elements().iter().map( | element |
+		let readings = self.layers[ layer ].elements().iter().map( | element |
 		{
-			let Kind::Symbol { layer, .. } = element.kind else { return solution.readings[ positions[ &registry.id( &[ element.id ] ) ] ].clone(); };
+			let key = [ path, &[ element.id ] ].concat();
 
-			let joins : Vec<&Reading> = layers[ layer as usize ].elements().iter().filter( | part | part.kind == Kind::Pin ).map( | pin | &solution.readings[ positions[ &registry.id( &[ element.id, pin.id ] ) ] ] ).collect();
+			match element.kind
+			{
+				Kind::Symbol { layer : inner, .. } =>
+				{
+					let joins : Vec<&Reading> = self.layers[ inner as usize ].elements().iter().filter( | part | part.kind.pin() ).map( | pin | reading( &[ key.as_slice(), &[ pin.id ] ].concat() ) ).collect();
 
-			Reading { potentials : joins.iter().map( | join | join.potentials[ 1 ] ).collect(), currents : joins.iter().map( | join | join.currents[ 1 ] ).collect() }
+					Reading { potentials : joins.iter().map( | join | join.potentials[ 1 ] ).collect(), currents : joins.iter().map( | join | join.currents[ 1 ] ).collect() }
+				},
+				_ => reading( &key ).clone(),
+			}
 		} ).collect();
 
-		let branches = solution.branches.into_iter().filter( | branch | branch.segment.from.x.abs() < STRIDE / 2 ).collect();
+		let branches = solution.branches.iter().filter( | branch | branch.segment.from.x.abs() < STRIDE / 2 ).copied().collect();
 
 		Solution { readings, branches }
 	}

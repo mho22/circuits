@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import { Figure } from '../src/enums/figure.ts';
 import { Kind } from '../src/enums/kind.ts';
-import { read } from '../src/keyboard.ts';
+import { read, shape } from '../src/keyboard.ts';
 
 
 describe( 'keyboard', () =>
@@ -12,7 +13,7 @@ describe( 'keyboard', () =>
 
 	it( 'picks a part with its letter in either case', () =>
 	{
-		expect( [ 'w', 'r', 'b', 'g', 'c', 'l', 's', 'd', 'n', 'p', 'm', 'f', 'v' ].map( key => press( key ) ) ).toEqual( [ Kind.Wire, Kind.Resistor, Kind.Battery, Kind.Ground, Kind.Capacitor, Kind.Inductor, Kind.Switch, Kind.Diode, Kind.Npn, Kind.Pnp, Kind.Nmos, Kind.Pmos, Kind.Supply ] );
+		expect( [ 'w', 'r', 'b', 'g', 'c', 'l', 's', 'd', 'n', 'p', 'm', 'f', 'v', 'i', 'o', 't', 'e' ].map( key => press( key ) ) ).toEqual( [ Kind.Wire, Kind.Resistor, Kind.Battery, Kind.Ground, Kind.Capacitor, Kind.Inductor, Kind.Switch, Kind.Diode, Kind.Npn, Kind.Pnp, Kind.Nmos, Kind.Pmos, Kind.Supply, Kind.Input, Kind.Output, Kind.Toggle, Kind.Led ] );
 		expect( press( 'R', { shiftKey : true } ) ).toBe( Kind.Resistor );
 	} );
 
@@ -46,5 +47,13 @@ describe( 'keyboard', () =>
 	{
 		expect( press( 'x' ) ).toBeUndefined();
 		expect( press( 'Escape' ) ).toBeUndefined();
+	} );
+
+	it( 'picks a figure with its letter in either case, without control or command', () =>
+	{
+		const key = ( key : string, modified = false ) => shape( { key, ctrlKey : modified, metaKey : false } );
+
+		expect( [ 'r', 'C', 'l', 'w' ].map( letter => key( letter ) ) ).toEqual( [ Figure.Rectangle, Figure.Circle, Figure.Line, undefined ] );
+		expect( key( 'l', true ) ).toBeUndefined();
 	} );
 } );

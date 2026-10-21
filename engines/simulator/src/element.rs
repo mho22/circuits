@@ -16,6 +16,8 @@ impl Element
 	{
 		let Segment { from, to } = self.segment;
 
+		if self.kind.pin() || matches!( self.kind, Kind::Toggle { .. } ) { return vec![ to, to ]; }
+
 		if ! matches!( self.kind, Kind::Npn | Kind::Pnp | Kind::Nmos | Kind::Pmos ) { return vec![ from, to ]; }
 
 		let dx = ( to.x - from.x ).signum();

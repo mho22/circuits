@@ -1,12 +1,17 @@
 import { Kind, NAMES } from './enums/kind.ts';
 import { SHORTCUTS } from './keyboard.ts';
+import type { Group } from './types/group.ts';
 
 
-const GROUPS : { name : string, kinds : Kind[] }[] = [
+export const PART_GROUPS : Group[] = [
 	{ name : 'Wiring', kinds : [ Kind.Wire, Kind.Switch ] },
 	{ name : 'Passive', kinds : [ Kind.Resistor, Kind.Capacitor, Kind.Inductor ] },
-	{ name : 'Semiconductors', kinds : [ Kind.Diode, Kind.Npn, Kind.Pnp, Kind.Nmos, Kind.Pmos ] },
-	{ name : 'Sources', kinds : [ Kind.Battery, Kind.Supply, Kind.Ground ] },
+	{ name : 'Semiconductors', kinds : [ Kind.Diode, Kind.Led, Kind.Npn, Kind.Pnp, Kind.Nmos, Kind.Pmos ] },
+	{ name : 'Sources', kinds : [ Kind.Battery, Kind.Supply, Kind.Toggle, Kind.Ground ] },
+];
+
+export const PIN_GROUPS : Group[] = [
+	{ name : 'Pins', kinds : [ Kind.Input, Kind.Output ] },
 ];
 
 
@@ -34,14 +39,16 @@ function label( element : HTMLButtonElement, kind : Kind ) : void
 
 export class Toolbar
 {
+	private containers : HTMLElement[] = [];
+
 	private picks : HTMLButtonElement[] = [];
 
 	private menus : HTMLElement[] = [];
 
 
-	constructor( parent : HTMLElement, pick : ( kind : Kind ) => void )
+	constructor( parent : HTMLElement, private groups : Group[], pick : ( kind : Kind ) => void )
 	{
-		GROUPS.forEach( group =>
+		groups.forEach( group =>
 		{
 			const container = document.createElement( 'div' );
 			const main = button( 'pick', group.kinds[ 0 ] );
@@ -53,6 +60,7 @@ export class Toolbar
 
 			parent.append( container );
 
+			this.containers.push( container );
 			this.picks.push( main );
 
 			if( group.kinds.length < 2 ) return;
@@ -95,16 +103,21 @@ export class Toolbar
 	}
 
 
-	select( kind : Kind ) : void
+	select( kind : Kind | null ) : void
 	{
-		GROUPS.forEach( ( group, index ) =>
+		this.groups.forEach( ( group, index ) =>
 		{
-			const member = group.kinds.includes( kind );
+			const member = kind !== null && group.kinds.includes( kind );
 
 			if( member ) label( this.picks[ index ], kind );
 
 			this.picks[ index ].classList.toggle( 'active', member );
 		} );
+	}
+
+	limit( kinds : Kind[] ) : void
+	{
+		this.groups.forEach( ( group, index ) => this.containers[ index ].hidden = ! group.kinds.some( kind => kinds.includes( kind ) ) );
 	}
 
 	close() : void

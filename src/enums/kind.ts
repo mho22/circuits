@@ -13,6 +13,11 @@ export enum Kind
 	Nmos = 10,
 	Pmos = 11,
 	Supply = 12,
+	Input = 13,
+	Symbol = 14,
+	Output = 15,
+	Toggle = 16,
+	Led = 17,
 }
 
 
@@ -30,13 +35,22 @@ export const NAMES : Record<Kind, string> = {
 	[ Kind.Nmos ] : 'NMOS',
 	[ Kind.Pmos ] : 'PMOS',
 	[ Kind.Supply ] : 'VCC',
+	[ Kind.Input ] : 'Input',
+	[ Kind.Symbol ] : 'Symbol',
+	[ Kind.Output ] : 'Output',
+	[ Kind.Toggle ] : 'Toggle',
+	[ Kind.Led ] : 'LED',
 };
 
-export const POINTS = [ Kind.Ground, Kind.Supply ];
+export const POINTS = [ Kind.Ground, Kind.Supply, Kind.Symbol ];
+
+export const PINS = [ Kind.Input, Kind.Output ];
+
+export const LEVELS = [ Kind.Input, Kind.Toggle ];
 
 export const TRANSISTORS = [ Kind.Npn, Kind.Pnp, Kind.Nmos, Kind.Pmos ];
 
-export const FIELDS : Partial<Record<Kind, string>> = { [ Kind.Resistor ] : 'ohms', [ Kind.Battery ] : 'volts', [ Kind.Capacitor ] : 'farads', [ Kind.Inductor ] : 'henries', [ Kind.Supply ] : 'volts' };
+export const FIELDS : Partial<Record<Kind, string>> = { [ Kind.Resistor ] : 'ohms', [ Kind.Battery ] : 'volts', [ Kind.Capacitor ] : 'farads', [ Kind.Inductor ] : 'henries', [ Kind.Supply ] : 'volts', [ Kind.Symbol ] : 'layer' };
 
 export const UNITS : Partial<Record<Kind, string>> = { [ Kind.Resistor ] : 'Ω', [ Kind.Battery ] : 'V', [ Kind.Capacitor ] : 'F', [ Kind.Inductor ] : 'H', [ Kind.Supply ] : 'V' };
 

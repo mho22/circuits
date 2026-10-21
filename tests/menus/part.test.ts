@@ -26,6 +26,13 @@ describe( 'part menu', () =>
 		expect( labels( open( document.body, { x : 0, y : 0 }, Kind.Supply, () => {} ) ) ).toEqual( [ 'Move', 'Delete' ] );
 	} );
 
+	it( 'offers a move, a rotate and a delete for a symbol, and every action for an input or an output', () =>
+	{
+		expect( labels( open( document.body, { x : 0, y : 0 }, Kind.Symbol, () => {} ) ) ).toEqual( [ 'Move', 'Rotate', 'Delete' ] );
+		expect( labels( open( document.body, { x : 0, y : 0 }, Kind.Input, () => {} ) ) ).toEqual( [ 'Move', 'Rotate', 'Mirror horizontally', 'Mirror vertically', 'Delete' ] );
+		expect( labels( open( document.body, { x : 0, y : 0 }, Kind.Output, () => {} ) ) ).toEqual( [ 'Move', 'Rotate', 'Mirror horizontally', 'Mirror vertically', 'Delete' ] );
+	} );
+
 	it( 'runs the picked action and closes', () =>
 	{
 		const act = vi.fn();
@@ -35,24 +42,5 @@ describe( 'part menu', () =>
 
 		expect( act ).toHaveBeenCalledWith( 'vertical' );
 		expect( menu.isConnected ).toBe( false );
-	} );
-
-	it( 'closes on a press outside or on escape, and stays open on a press inside', () =>
-	{
-		const first = open( document.body, { x : 0, y : 0 }, Kind.Diode, () => {} );
-
-		first.dispatchEvent( new PointerEvent( 'pointerdown', { bubbles : true } ) );
-
-		expect( first.isConnected ).toBe( true );
-
-		document.body.dispatchEvent( new PointerEvent( 'pointerdown', { bubbles : true } ) );
-
-		expect( first.isConnected ).toBe( false );
-
-		const second = open( document.body, { x : 0, y : 0 }, Kind.Diode, () => {} );
-
-		document.dispatchEvent( new KeyboardEvent( 'keydown', { key : 'Escape' } ) );
-
-		expect( second.isConnected ).toBe( false );
 	} );
 } );

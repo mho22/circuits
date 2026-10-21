@@ -1,4 +1,6 @@
-use crate::{ Element, Error, Kind, Operation, Point, Segment };
+use std::collections::HashMap;
+
+use crate::{ Element, Error, Kind, Operation, Point, Segment, Shape };
 
 
 #[derive( Clone, Debug, Default )]
@@ -6,6 +8,10 @@ pub struct Document
 {
 	elements : Vec<Element>,
 	next : u32,
+	name : String,
+	drawing : Vec<Shape>,
+	layout : Vec<Point>,
+	labels : HashMap<u32, String>,
 }
 
 impl Document
@@ -19,13 +25,16 @@ impl Document
 			Operation::Delete { id } => self.delete( id ),
 			Operation::SetValue { id, value } => self.set_value( id, value ),
 			Operation::SetClosed { id, closed } => self.set_closed( id, closed ),
+			Operation::SetHigh { id, high } => self.set_high( id, high ),
 			Operation::Move { id, kind, segment, mirrored } => self.move_to( id, kind, segment, mirrored ),
+			Operation::Describe { name, drawing, layout } => self.describe( name, drawing, layout ),
+			Operation::Label { id, label } => self.set_label( id, label ),
 		}
 	}
 
-	pub fn inverse( &self, operation : Operation ) -> Result<Operation, Error>
+	pub fn inverse( &self, operation : &Operation ) -> Result<Operation, Error>
 	{
-		match operation
+		match *operation
 		{
 			Operation::Add { .. } => Ok( Operation::Delete { id : self.next } ),
 			Operation::Insert { element, .. } => Ok( Operation::Delete { id : element.id } ),
@@ -47,13 +56,46 @@ impl Document
 
 				Ok( Operation::SetClosed { id, closed } )
 			},
+			Operation::SetHigh { id, .. } =>
+			{
+				let ( Kind::Input { high } | Kind::Toggle { high } ) = self.elements[ self.index( id )? ].kind else { return Err( Error::Inputless ); };
+
+				Ok( Operation::SetHigh { id, high } )
+			},
 			Operation::Move { id, .. } =>
 			{
 				let element = self.elements[ self.index( id )? ];
 
 				Ok( Operation::Move { id, kind : element.kind, segment : element.segment, mirrored : element.mirrored } )
 			},
+			Operation::Describe { .. } => Ok( Operation::Describe { name : self.name.clone(), drawing : self.drawing.clone(), layout : self.layout.clone() } ),
+			Operation::Label { id, .. } =>
+			{
+				if ! self.elements[ self.index( id )? ].kind.pin() { return Err( Error::Pinless ); }
+
+				Ok( Operation::Label { id, label : self.label( id ).to_string() } )
+			},
 		}
+	}
+
+	pub fn name( &self ) -> &str
+	{
+		&self.name
+	}
+
+	pub fn drawing( &self ) -> &[ Shape ]
+	{
+		&self.drawing
+	}
+
+	pub fn layout( &self ) -> &[ Point ]
+	{
+		&self.layout
+	}
+
+	pub fn label( &self, id : u32 ) -> &str
+	{
+		self.labels.get( &id ).map_or( "", | label | label.as_str() )
 	}
 
 	pub fn elements( &self ) -> &[ Element ]
@@ -61,14 +103,9 @@ impl Document
 		&self.elements
 	}
 
-	pub fn elements_at( &self, point : Point ) -> Vec<u32>
-	{
-		self.elements.iter().rev().filter( | element | element.segment.contains( point ) || element.terminals().contains( &point ) ).map( | element | element.id ).collect()
-	}
-
 	fn check( kind : Kind, segment : Segment ) -> Result<(), Error>
 	{
-		let point = matches!( kind, Kind::Ground | Kind::Supply { .. } | Kind::Pin | Kind::Symbol { .. } );
+		let point = matches!( kind, Kind::Ground | Kind::Supply { .. } | Kind::Symbol { .. } );
 
 		if point && ! segment.is_empty() { return Err( Error::Misplaced ); }
 
@@ -132,6 +169,15 @@ impl Document
 		Ok( id )
 	}
 
+	fn set_high( &mut self, id : u32, high : bool ) -> Result<u32, Error>
+	{
+		let index = self.index( id )?;
+
+		self.elements[ index ].kind = self.elements[ index ].kind.with_high( high )?;
+
+		Ok( id )
+	}
+
 	fn move_to( &mut self, id : u32, kind : Kind, segment : Segment, mirrored : bool ) -> Result<u32, Error>
 	{
 		let index = self.index( id )?;
@@ -141,6 +187,28 @@ impl Document
 		self.elements[ index ].kind = kind;
 		self.elements[ index ].segment = segment;
 		self.elements[ index ].mirrored = mirrored;
+
+		Ok( id )
+	}
+
+	fn describe( &mut self, name : String, drawing : Vec<Shape>, layout : Vec<Point> ) -> Result<u32, Error>
+	{
+		for shape in &drawing { shape.check()?; }
+
+		self.name = name;
+		self.drawing = drawing;
+		self.layout = layout;
+
+		Ok( 0 )
+	}
+
+	fn set_label( &mut self, id : u32, label : String ) -> Result<u32, Error>
+	{
+		let index = self.index( id )?;
+
+		if ! self.elements[ index ].kind.pin() { return Err( Error::Pinless ); }
+
+		self.labels.insert( id, label );
 
 		Ok( id )
 	}

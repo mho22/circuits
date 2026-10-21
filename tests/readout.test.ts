@@ -23,6 +23,36 @@ describe( 'readout', () =>
 		expect( read( element( { kind : Kind.Resistor, value : 2200, potentials : [ 5, 0 ], currents : [ 0.00227, -0.00227 ] } ), undefined ) ).toBe( 'Resistor 2.2 kΩ · 5 V across · 2.27 mA' );
 	} );
 
+	it( 'describes a symbol with its layer and the voltage of each pin', () =>
+	{
+		expect( read( element( { kind : Kind.Symbol, value : 2, potentials : [ 5, 0, 2.5 ], currents : [ 0.001, -0.001, 0 ] } ), undefined ) ).toBe( 'Symbol 2 · 5 V · 0 V · 2.5 V' );
+	} );
+
+	it( 'describes an input with its bit and its voltage', () =>
+	{
+		expect( read( element( { kind : Kind.Input, potentials : [ 3.3, 3.3 ] } ), undefined ) ).toBe( 'Input · 1 · 3.3 V' );
+	} );
+
+	it( 'describes a toggle with its level, its voltage and its current', () =>
+	{
+		expect( read( element( { kind : Kind.Toggle, value : 1, potentials : [ 0, 5 ], currents : [ 0.005, -0.005 ] } ), undefined ) ).toBe( 'Toggle · 1 · 5 V · 5 mA' );
+	} );
+
+	it( 'describes an led with its forward drop and its current', () =>
+	{
+		expect( read( element( { kind : Kind.Led, potentials : [ 5, 3.1 ], currents : [ 0.01, -0.01 ] } ), undefined ) ).toBe( 'LED · 1.9 V across · 10 mA' );
+	} );
+
+	it( 'describes a named symbol with its name', () =>
+	{
+		expect( read( element( { kind : Kind.Symbol, value : 2, potentials : [ 5 ], currents : [ 0 ], definition : { name : 'foo', drawing : [], labels : [], layout : [] } } ), undefined ) ).toBe( 'foo · 5 V' );
+	} );
+
+	it( 'describes an output with its label', () =>
+	{
+		expect( read( element( { kind : Kind.Output, label : 'bar', potentials : [ 0, 0 ] } ), undefined ) ).toBe( 'Output bar · 0 · 0 V' );
+	} );
+
 	it( 'describes a battery', () =>
 	{
 		expect( read( element( { kind : Kind.Battery, value : 9, potentials : [ 0, 9 ], currents : [ -0.5, 0.5 ] } ), undefined ) ).toBe( 'Battery 9 V · 9 V across · 500 mA' );

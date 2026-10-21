@@ -1,52 +1,64 @@
-use simulator::{ Element, Kind, Outline, Point, Segment };
+use simulator::{ Document, Kind, Operation, Outline, Point, Segment, Shape };
 
 
-fn pin( id : u32, x : i32, y : i32 ) -> Element
+fn point( x : i32, y : i32 ) -> Point
 {
-	Element { id, kind : Kind::Pin, segment : Segment { from : Point { x, y }, to : Point { x, y } }, mirrored : false }
+	Point { x, y }
+}
+
+fn layer( kinds : &[ Kind ], drawing : Vec<Shape>, layout : Vec<Point> ) -> Document
+{
+	let mut document = Document::default();
+
+	for ( index, &kind ) in kinds.iter().enumerate() { document.apply( Operation::Add { kind, segment : Segment { from : point( 0, 2 * index as i32 ), to : point( 1, 2 * index as i32 ) }, mirrored : false } ).unwrap(); }
+
+	document.apply( Operation::Describe { name : String::new(), drawing, layout } ).unwrap();
+
+	document
 }
 
 
 #[test]
-fn it_puts_each_pin_on_the_nearest_side_of_the_box()
+fn it_puts_the_inputs_in_a_left_column_and_the_outputs_in_a_right_column_in_their_order()
 {
-	let inverter = [ pin( 0, 0, 2 ), pin( 1, 8, 2 ), pin( 2, 4, 0 ) ];
+	let gate = layer( &[ Kind::Input { high : false }, Kind::Output, Kind::Wire, Kind::Input { high : true } ], vec![], vec![] );
 
-	assert_eq!( Outline::of( &inverter ), Outline { width : 4, height : 4, pins : vec![ Point { x : -2, y : 0 }, Point { x : 2, y : 0 }, Point { x : 0, y : -2 } ] } );
+	assert_eq!( Outline::of( &gate ), Outline { low : point( -2, -2 ), high : point( 2, 2 ), pins : vec![ point( -2, -1 ), point( 2, 0 ), point( -2, 1 ) ] } );
 }
 
 #[test]
-fn it_spreads_the_pins_of_one_side_in_their_order_along_it()
+fn it_places_the_pins_where_the_layout_puts_them_and_the_others_in_their_column()
 {
-	let gate = [ pin( 0, 8, 3 ), pin( 1, 0, 4 ), pin( 2, 0, 0 ), pin( 3, 4, 7 ) ];
+	let gate = layer( &[ Kind::Input { high : false }, Kind::Output, Kind::Output ], vec![], vec![ point( -4, 3 ) ] );
 
-	assert_eq!( Outline::of( &gate ), Outline { width : 4, height : 6, pins : vec![ Point { x : 2, y : 0 }, Point { x : -2, y : 1 }, Point { x : -2, y : -1 }, Point { x : 0, y : 3 } ] } );
+	assert_eq!( Outline::of( &gate ), Outline { low : point( -4, -2 ), high : point( 2, 3 ), pins : vec![ point( -4, 3 ), point( 2, -1 ), point( 2, 1 ) ] } );
 }
 
 #[test]
-fn it_keeps_the_order_of_the_parts_for_pins_level_on_one_side()
+fn it_bounds_the_pins_and_the_drawing_in_whole_grid_steps()
 {
-	let pins = [ pin( 0, 0, 2 ), pin( 1, 1, 2 ), pin( 2, 9, 0 ), pin( 3, 9, 4 ) ];
+	let drawing = vec![ Shape::Circle { center : point( 10, 0 ), radius : 3 }, Shape::Line { from : point( -9, 1 ), to : point( 0, -13 ) } ];
 
-	assert_eq!( Outline::of( &pins ).pins, vec![ Point { x : -2, y : -1 }, Point { x : -2, y : 1 }, Point { x : 2, y : -1 }, Point { x : 2, y : 1 } ] );
-}
-
-#[test]
-fn it_draws_a_square_box_without_pins()
-{
-	let wire = Element { id : 0, kind : Kind::Wire, segment : Segment { from : Point { x : 0, y : 0 }, to : Point { x : 2, y : 0 } }, mirrored : false };
-
-	assert_eq!( Outline::of( &[ wire ] ), Outline { width : 4, height : 4, pins : vec![] } );
+	assert_eq!( Outline::of( &layer( &[], drawing, vec![] ) ), Outline { low : point( -3, -4 ), high : point( 4, 2 ), pins : vec![] } );
 }
 
 #[test]
 fn it_turns_the_pins_around_the_center_by_quarter_turns()
 {
-	let outline = Outline::of( &[ pin( 0, 0, 2 ), pin( 1, 8, 2 ), pin( 2, 4, 0 ) ] );
-	let center = Point { x : 10, y : 10 };
+	let outline = Outline { low : point( -2, -2 ), high : point( 2, 2 ), pins : vec![ point( -2, 0 ), point( 2, 1 ) ] };
+	let center = point( 10, 10 );
 
-	assert_eq!( outline.terminals( center, 0 ), vec![ Point { x : 8, y : 10 }, Point { x : 12, y : 10 }, Point { x : 10, y : 8 } ] );
-	assert_eq!( outline.terminals( center, 1 ), vec![ Point { x : 10, y : 8 }, Point { x : 10, y : 12 }, Point { x : 12, y : 10 } ] );
-	assert_eq!( outline.terminals( center, 2 ), vec![ Point { x : 12, y : 10 }, Point { x : 8, y : 10 }, Point { x : 10, y : 12 } ] );
-	assert_eq!( outline.terminals( center, 3 ), vec![ Point { x : 10, y : 12 }, Point { x : 10, y : 8 }, Point { x : 8, y : 10 } ] );
+	assert_eq!( outline.terminals( center, 0 ), vec![ point( 8, 10 ), point( 12, 11 ) ] );
+	assert_eq!( outline.terminals( center, 1 ), vec![ point( 10, 8 ), point( 9, 12 ) ] );
+	assert_eq!( outline.terminals( center, 2 ), vec![ point( 12, 10 ), point( 8, 9 ) ] );
+	assert_eq!( outline.terminals( center, 3 ), vec![ point( 10, 12 ), point( 11, 8 ) ] );
+}
+
+#[test]
+fn it_gives_the_inside_of_its_bounds_one_step_from_each_side_after_a_turn()
+{
+	let outline = Outline { low : point( -2, -4 ), high : point( 3, 4 ), pins : vec![] };
+
+	assert_eq!( outline.zone( point( 10, 10 ), 0 ), Segment { from : point( 9, 7 ), to : point( 12, 13 ) } );
+	assert_eq!( outline.zone( point( 10, 10 ), 3 ), Segment { from : point( 7, 8 ), to : point( 13, 11 ) } );
 }

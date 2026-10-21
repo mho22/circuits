@@ -1,4 +1,4 @@
-use simulator::{ companion, conduct, linearize, Element, History, Kind, Point, Reading, Segment, Solution, Stamp };
+use simulator::{ companion, conduct, Element, History, Kind, Point, Reading, Segment, Solution, Stamp, LIGHT, SILICON };
 
 
 const STEP : f64 = 1e-3;
@@ -43,9 +43,17 @@ fn it_turns_an_inductor_into_a_conductance_and_its_stored_current()
 #[test]
 fn it_turns_a_diode_into_its_junction_at_the_guess()
 {
-	let ( conductance, source ) = linearize( 0.6 );
+	let ( conductance, source ) = SILICON.linearize( 0.6 );
 
 	assert_eq!( companion( &element( Kind::Diode ), &History::default(), STEP, [ 0.6, 0.0 ] ), vec![ Stamp { across : ( 0, 1 ), conductance, source, weights : THROUGH } ] );
+}
+
+#[test]
+fn it_turns_an_led_into_its_light_junction_at_the_guess()
+{
+	let ( conductance, source ) = LIGHT.linearize( 1.9 );
+
+	assert_eq!( companion( &element( Kind::Led ), &History::default(), STEP, [ 1.9, 0.0 ] ), vec![ Stamp { across : ( 0, 1 ), conductance, source, weights : THROUGH } ] );
 }
 
 #[test]
@@ -54,8 +62,8 @@ fn it_turns_an_npn_transistor_into_two_junctions_with_gain()
 	let stamps = companion( &element( Kind::Npn ), &History::default(), STEP, [ 0.65, -2.0 ] );
 
 	assert_eq!( stamps.iter().map( | stamp | stamp.across ).collect::<Vec<_>>(), vec![ ( 0, 2 ), ( 0, 1 ) ] );
-	assert_eq!( ( stamps[ 0 ].conductance, stamps[ 0 ].source ), linearize( 0.65 ) );
-	assert_eq!( ( stamps[ 1 ].conductance, stamps[ 1 ].source ), linearize( -2.0 ) );
+	assert_eq!( ( stamps[ 0 ].conductance, stamps[ 0 ].source ), SILICON.linearize( 0.65 ) );
+	assert_eq!( ( stamps[ 1 ].conductance, stamps[ 1 ].source ), SILICON.linearize( -2.0 ) );
 	assert_eq!( stamps[ 0 ].weights, [ 0.01, 1.0, -1.01 ] );
 	assert_eq!( stamps[ 1 ].weights, [ 1.0, -2.0, 1.0 ] );
 }
@@ -96,7 +104,7 @@ fn it_turns_a_pmos_transistor_into_a_reversed_channel()
 #[test]
 fn it_keeps_the_weights_of_every_junction_balanced()
 {
-	for kind in [ Kind::Diode, Kind::Npn, Kind::Pnp, Kind::Nmos, Kind::Pmos ]
+	for kind in [ Kind::Diode, Kind::Led, Kind::Npn, Kind::Pnp, Kind::Nmos, Kind::Pmos ]
 	{
 		for stamp in companion( &element( kind ), &History::default(), STEP, [ 0.0; 2 ] ) { assert!( stamp.weights.iter().sum::<f64>().abs() < 1e-12 ); }
 	}

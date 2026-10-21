@@ -18,7 +18,21 @@ describe( 'place tool', () =>
 		tool.press( { x : 0, y : 0 } );
 		tool.move( { x : 4, y : 5 } );
 
-		expect( tool.preview() ).toEqual( { id : -1, kind : Kind.Wire, from : { x : 0, y : 0 }, to : { x : 0, y : 5 }, value : 0, mirrored : false, potentials : [ 0, 0 ], currents : [ NaN, NaN ] } );
+		expect( tool.preview() ).toEqual( { id : -1, kind : Kind.Wire, from : { x : 0, y : 0 }, to : { x : 0, y : 5 }, value : 0, mirrored : false, rotation : 0, potentials : [ 0, 0 ], currents : [ NaN, NaN ] } );
+	} );
+
+	it( 'previews and adds nothing without a part', () =>
+	{
+		const circuit = new Circuit();
+		const tool = new PlaceTool( circuit );
+
+		tool.kind = null;
+		tool.press( { x : 0, y : 0 } );
+		tool.move( { x : 4, y : 0 } );
+
+		expect( tool.preview() ).toBeNull();
+		expect( tool.release() ).toBe( false );
+		expect( circuit.elements() ).toHaveLength( 0 );
 	} );
 
 	it( 'previews a transistor with one voltage and one current per terminal', () =>
@@ -29,7 +43,7 @@ describe( 'place tool', () =>
 		tool.press( { x : 0, y : 0 } );
 		tool.move( { x : 2, y : 0 } );
 
-		expect( tool.preview() ).toEqual( { id : -1, kind : Kind.Npn, from : { x : 0, y : 0 }, to : { x : 2, y : 0 }, value : 0, mirrored : false, potentials : [ 0, 0, 0 ], currents : [ NaN, NaN, NaN ] } );
+		expect( tool.preview() ).toEqual( { id : -1, kind : Kind.Npn, from : { x : 0, y : 0 }, to : { x : 2, y : 0 }, value : 0, mirrored : false, rotation : 0, potentials : [ 0, 0, 0 ], currents : [ NaN, NaN, NaN ] } );
 	} );
 
 	it( 'adds the previewed part with its default value on release', () =>
@@ -40,7 +54,8 @@ describe( 'place tool', () =>
 		tool.kind = Kind.Resistor;
 		tool.press( { x : 0, y : 0 } );
 		tool.move( { x : 6, y : 1 } );
-		tool.release();
+
+		expect( tool.release() ).toBe( true );
 
 		for( const kind of [ Kind.Battery, Kind.Capacitor, Kind.Inductor, Kind.Switch, Kind.Diode ] )
 		{
@@ -91,6 +106,26 @@ describe( 'place tool', () =>
 		expect( decode( circuit.elements() ).map( element => [ element.kind, element.value, element.from, element.to ] ) ).toEqual( [ [ Kind.Supply, 5, { x : 2, y : 2 }, { x : 2, y : 2 } ] ] );
 	} );
 
+	it( 'places a symbol of its layer with a click', () =>
+	{
+		const circuit = new Circuit();
+		const tool = new PlaceTool( circuit );
+
+		circuit.add( Kind.Wire, 0, 0, 0, 2, 0 );
+		circuit.enclose( -1, -1, 3, 1, '', new Int32Array(), new Int32Array() );
+
+		tool.kind = Kind.Symbol;
+		tool.layer = 1;
+		tool.press( { x : 8, y : 8 } );
+		tool.move( { x : 8, y : 9 } );
+
+		expect( tool.preview()?.value ).toBe( 1 );
+
+		tool.release();
+
+		expect( decode( circuit.elements() ).filter( element => element.kind === Kind.Symbol ).map( element => [ element.value, element.from ] ) ).toEqual( [ [ 1, { x : 1, y : 0 } ], [ 1, { x : 8, y : 8 } ] ] );
+	} );
+
 	it( 'places no second ground or vcc on a point that holds one', () =>
 	{
 		const circuit = new Circuit();
@@ -106,14 +141,34 @@ describe( 'place tool', () =>
 		expect( decode( circuit.elements() ).map( element => element.kind ) ).toEqual( [ Kind.Supply, Kind.Ground ] );
 	} );
 
+	it( 'places a ground or a vcc on a pin of a symbol and nowhere else on its box', () =>
+	{
+		const circuit = new Circuit();
+		const tool = new PlaceTool( circuit );
+
+		circuit.add( Kind.Input, 0, 0, 0, -1, 0 );
+		circuit.add( Kind.Output, 0, 2, 0, 3, 0 );
+		circuit.enclose( -1, -1, 3, 1, '', new Int32Array(), new Int32Array() );
+
+		for( const [ kind, x ] of [ [ Kind.Ground, 1 ], [ Kind.Supply, 2 ], [ Kind.Symbol, 1 ], [ Kind.Ground, -1 ] ] )
+		{
+			tool.kind = kind;
+			tool.layer = 1;
+			tool.press( { x, y : 0 } );
+			tool.release();
+		}
+
+		expect( decode( circuit.elements() ).filter( element => element.kind !== Kind.Wire ).map( element => [ element.kind, element.from ] ) ).toEqual( [ [ Kind.Symbol, { x : 1, y : 0 } ], [ Kind.Ground, { x : -1, y : 0 } ] ] );
+	} );
+
 	it( 'adds nothing for a click without a drag', () =>
 	{
 		const circuit = new Circuit();
 		const tool = new PlaceTool( circuit );
 
 		tool.press( { x : 2, y : 2 } );
-		tool.release();
 
+		expect( tool.release() ).toBe( false );
 		expect( circuit.elements() ).toHaveLength( 0 );
 	} );
 

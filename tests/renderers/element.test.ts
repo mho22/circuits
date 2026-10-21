@@ -32,5 +32,11 @@ describe( 'element renderer', () =>
 		expect( drawn( Kind.Pnp ).filter( call => call[ 0 ] === 'fill' ) ).toHaveLength( 1 );
 		expect( drawn( Kind.Nmos ).filter( call => call[ 0 ] === 'stroke' ) ).toHaveLength( 5 );
 		expect( drawn( Kind.Pmos ).filter( call => call[ 0 ] === 'fill' ) ).toHaveLength( 1 );
+		expect( drawn( Kind.Supply ).filter( call => call[ 0 ] === 'fillText' ) ).toHaveLength( 1 );
+		expect( drawn( Kind.Input ).filter( call => call[ 0 ] === 'roundRect' ) ).toEqual( [ [ 'roundRect', -7, -7, 14, 14, 0 ] ] );
+		expect( drawn( Kind.Output ).filter( call => call[ 0 ] === 'roundRect' ) ).toEqual( [ [ 'roundRect', -7, -7, 14, 14, 4 ] ] );
+		expect( drawn( Kind.Symbol ) ).toEqual( [] );
+		expect( drawn( Kind.Toggle ).filter( call => call[ 0 ] === 'roundRect' ) ).toEqual( [ [ 'roundRect', -11, -6, 22, 12, 6 ] ] );
+		expect( drawn( Kind.Led ).filter( call => call[ 0 ] === 'stroke' ) ).toHaveLength( 5 );
 	} );
 } );

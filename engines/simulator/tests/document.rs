@@ -1,4 +1,4 @@
-use simulator::{ Document, Element, Error, Kind, Operation, Point, Segment };
+use simulator::{ Document, Element, Error, Kind, Operation, Point, Segment, Shape };
 
 
 const FOO : Point = Point { x : 0, y : 0 };
@@ -56,13 +56,22 @@ fn it_puts_a_vcc_on_one_point()
 }
 
 #[test]
-fn it_puts_a_pin_and_a_symbol_on_one_point()
+fn it_puts_a_toggle_on_two_points()
 {
 	let mut document = Document::default();
 
-	assert_eq!( document.apply( add( Kind::Pin, FOO, FOO ) ), Ok( 0 ) );
+	assert_eq!( document.apply( add( Kind::Toggle { high : false }, FOO, BAR ) ), Ok( 0 ) );
+	assert_eq!( document.apply( add( Kind::Toggle { high : false }, FOO, FOO ) ), Err( Error::Empty ) );
+}
+
+#[test]
+fn it_puts_a_symbol_on_one_point_and_an_input_or_an_output_on_two()
+{
+	let mut document = Document::default();
+
+	assert_eq!( document.apply( add( Kind::Input { high : false }, FOO, BAR ) ), Ok( 0 ) );
 	assert_eq!( document.apply( add( Kind::Symbol { layer : 1, rotation : 0 }, BAR, BAR ) ), Ok( 1 ) );
-	assert_eq!( document.apply( add( Kind::Pin, FOO, BAR ) ), Err( Error::Misplaced ) );
+	assert_eq!( document.apply( add( Kind::Output, FOO, FOO ) ), Err( Error::Empty ) );
 	assert_eq!( document.apply( add( Kind::Symbol { layer : 1, rotation : 0 }, FOO, BAR ) ), Err( Error::Misplaced ) );
 	assert_eq!( document.apply( add( Kind::Symbol { layer : 1, rotation : 4 }, BAZ, BAZ ) ), Err( Error::Rotation ) );
 }
@@ -156,31 +165,30 @@ fn it_closes_a_switch()
 }
 
 #[test]
-fn it_finds_the_parts_at_a_point_topmost_first()
+fn it_sets_the_level_of_an_input()
 {
 	let mut document = Document::default();
 
-	document.apply( add( Kind::Wire, FOO, BAR ) ).unwrap();
-	document.apply( add( Kind::Wire, BAR, BAZ ) ).unwrap();
-	document.apply( add( Kind::Ground, BAZ, BAZ ) ).unwrap();
+	document.apply( add( Kind::Input { high : false }, FOO, BAR ) ).unwrap();
+	document.apply( add( Kind::Output, BAR, BAZ ) ).unwrap();
 
-	assert_eq!( document.elements_at( Point { x : 2, y : 0 } ), vec![ 0 ] );
-	assert_eq!( document.elements_at( BAR ), vec![ 1, 0 ] );
-	assert_eq!( document.elements_at( BAZ ), vec![ 2, 1 ] );
-	assert!( document.elements_at( Point { x : 9, y : 9 } ).is_empty() );
+	assert_eq!( document.inverse( &Operation::SetHigh { id : 0, high : true } ), Ok( Operation::SetHigh { id : 0, high : false } ) );
+	assert_eq!( document.apply( Operation::SetHigh { id : 0, high : true } ), Ok( 0 ) );
+	assert_eq!( document.apply( Operation::SetHigh { id : 1, high : true } ), Err( Error::Inputless ) );
+	assert_eq!( document.inverse( &Operation::SetHigh { id : 1, high : true } ), Err( Error::Inputless ) );
+	assert_eq!( document.elements()[ 0 ].kind, Kind::Input { high : true } );
 }
 
 #[test]
-fn it_finds_a_transistor_at_its_collector_and_its_emitter()
+fn it_sets_the_level_of_a_toggle()
 {
 	let mut document = Document::default();
 
-	document.apply( add( Kind::Npn, FOO, Point { x : 2, y : 0 } ) ).unwrap();
+	document.apply( add( Kind::Toggle { high : true }, FOO, BAR ) ).unwrap();
 
-	assert_eq!( document.elements_at( Point { x : 1, y : 0 } ), vec![ 0 ] );
-	assert_eq!( document.elements_at( Point { x : 3, y : -1 } ), vec![ 0 ] );
-	assert_eq!( document.elements_at( Point { x : 3, y : 1 } ), vec![ 0 ] );
-	assert!( document.elements_at( Point { x : 3, y : 0 } ).is_empty() );
+	assert_eq!( document.inverse( &Operation::SetHigh { id : 0, high : false } ), Ok( Operation::SetHigh { id : 0, high : true } ) );
+	assert_eq!( document.apply( Operation::SetHigh { id : 0, high : false } ), Ok( 0 ) );
+	assert_eq!( document.elements()[ 0 ].kind, Kind::Toggle { high : false } );
 }
 
 #[test]
@@ -231,11 +239,11 @@ fn it_gives_the_operation_that_cancels_each_operation()
 
 	let resistor = document.elements()[ 0 ];
 
-	assert_eq!( document.inverse( add( Kind::Wire, FOO, BAZ ) ), Ok( Operation::Delete { id : 2 } ) );
-	assert_eq!( document.inverse( Operation::Insert { element : resistor, index : 0 } ), Ok( Operation::Delete { id : 0 } ) );
-	assert_eq!( document.inverse( Operation::Delete { id : 0 } ), Ok( Operation::Insert { element : resistor, index : 0 } ) );
-	assert_eq!( document.inverse( Operation::SetValue { id : 0, value : 220.0 } ), Ok( Operation::SetValue { id : 0, value : 1000.0 } ) );
-	assert_eq!( document.inverse( Operation::SetClosed { id : 1, closed : true } ), Ok( Operation::SetClosed { id : 1, closed : false } ) );
+	assert_eq!( document.inverse( &add( Kind::Wire, FOO, BAZ ) ), Ok( Operation::Delete { id : 2 } ) );
+	assert_eq!( document.inverse( &Operation::Insert { element : resistor, index : 0 } ), Ok( Operation::Delete { id : 0 } ) );
+	assert_eq!( document.inverse( &Operation::Delete { id : 0 } ), Ok( Operation::Insert { element : resistor, index : 0 } ) );
+	assert_eq!( document.inverse( &Operation::SetValue { id : 0, value : 220.0 } ), Ok( Operation::SetValue { id : 0, value : 1000.0 } ) );
+	assert_eq!( document.inverse( &Operation::SetClosed { id : 1, closed : true } ), Ok( Operation::SetClosed { id : 1, closed : false } ) );
 }
 
 #[test]
@@ -245,9 +253,9 @@ fn it_gives_no_inverse_for_an_operation_that_fails()
 
 	document.apply( add( Kind::Wire, FOO, BAR ) ).unwrap();
 
-	assert_eq!( document.inverse( Operation::Delete { id : 7 } ), Err( Error::Missing ) );
-	assert_eq!( document.inverse( Operation::SetValue { id : 0, value : 1.0 } ), Err( Error::Valueless ) );
-	assert_eq!( document.inverse( Operation::SetClosed { id : 0, closed : true } ), Err( Error::Switchless ) );
+	assert_eq!( document.inverse( &Operation::Delete { id : 7 } ), Err( Error::Missing ) );
+	assert_eq!( document.inverse( &Operation::SetValue { id : 0, value : 1.0 } ), Err( Error::Valueless ) );
+	assert_eq!( document.inverse( &Operation::SetClosed { id : 0, closed : true } ), Err( Error::Switchless ) );
 }
 
 #[test]
@@ -258,7 +266,7 @@ fn it_moves_a_part_and_gives_the_move_back_as_its_inverse()
 	document.apply( add( Kind::Npn, FOO, Point { x : 2, y : 0 } ) ).unwrap();
 
 	let segment = Segment { from : BAR, to : Point { x : 6, y : 0 } };
-	let inverse = document.inverse( Operation::Move { id : 0, kind : Kind::Npn, segment, mirrored : true } ).unwrap();
+	let inverse = document.inverse( &Operation::Move { id : 0, kind : Kind::Npn, segment, mirrored : true } ).unwrap();
 
 	assert_eq!( document.apply( Operation::Move { id : 0, kind : Kind::Npn, segment, mirrored : true } ), Ok( 0 ) );
 	assert_eq!( document.elements()[ 0 ], Element { id : 0, kind : Kind::Npn, segment, mirrored : true } );
@@ -287,9 +295,57 @@ fn it_changes_the_kind_of_a_moved_part_and_gives_it_back_as_its_inverse()
 	document.apply( add( Kind::Symbol { layer : 1, rotation : 0 }, FOO, FOO ) ).unwrap();
 
 	let turned = Operation::Move { id : 0, kind : Kind::Symbol { layer : 1, rotation : 1 }, segment : Segment { from : FOO, to : FOO }, mirrored : false };
-	let inverse = document.inverse( turned ).unwrap();
+	let inverse = document.inverse( &turned ).unwrap();
 
 	assert_eq!( document.apply( turned ), Ok( 0 ) );
 	assert_eq!( document.elements()[ 0 ].kind, Kind::Symbol { layer : 1, rotation : 1 } );
 	assert_eq!( inverse, Operation::Move { id : 0, kind : Kind::Symbol { layer : 1, rotation : 0 }, segment : Segment { from : FOO, to : FOO }, mirrored : false } );
+}
+
+#[test]
+fn it_names_draws_and_lays_out_the_document_and_gives_the_old_description_back_as_its_inverse()
+{
+	let mut document = Document::default();
+	let drawing = vec![ Shape::Circle { center : FOO, radius : 2 }, Shape::Line { from : FOO, to : BAR } ];
+	let describe = Operation::Describe { name : "foo".to_string(), drawing : drawing.clone(), layout : vec![ BAR, BAZ ] };
+	let inverse = document.inverse( &describe ).unwrap();
+
+	document.apply( describe ).unwrap();
+
+	assert_eq!( ( document.name(), document.drawing(), document.layout() ), ( "foo", drawing.as_slice(), [ BAR, BAZ ].as_slice() ) );
+	assert_eq!( inverse, Operation::Describe { name : String::new(), drawing : Vec::new(), layout : Vec::new() } );
+}
+
+#[test]
+fn it_keeps_the_old_name_and_drawing_when_a_shape_has_no_size()
+{
+	let mut document = Document::default();
+
+	assert_eq!( document.apply( Operation::Describe { name : "foo".to_string(), drawing : vec![ Shape::Circle { center : FOO, radius : 0 } ], layout : Vec::new() } ), Err( Error::Flat ) );
+	assert_eq!( ( document.name(), document.drawing() ), ( "", [].as_slice() ) );
+}
+
+#[test]
+fn it_labels_an_input_or_an_output_and_keeps_the_label_through_a_deletion()
+{
+	let mut document = Document::default();
+
+	document.apply( add( Kind::Output, FOO, BAR ) ).unwrap();
+	document.apply( add( Kind::Wire, BAR, BAZ ) ).unwrap();
+
+	let label = Operation::Label { id : 0, label : "bar".to_string() };
+
+	assert_eq!( document.inverse( &label ), Ok( Operation::Label { id : 0, label : String::new() } ) );
+	assert_eq!( document.apply( label ), Ok( 0 ) );
+	assert_eq!( document.label( 0 ), "bar" );
+
+	let pin = document.elements()[ 0 ];
+
+	document.apply( Operation::Delete { id : 0 } ).unwrap();
+	document.apply( Operation::Insert { element : pin, index : 0 } ).unwrap();
+
+	assert_eq!( document.label( 0 ), "bar" );
+	assert_eq!( document.label( 1 ), "" );
+	assert_eq!( document.apply( Operation::Label { id : 1, label : "baz".to_string() } ), Err( Error::Pinless ) );
+	assert_eq!( document.inverse( &Operation::Label { id : 1, label : "baz".to_string() } ), Err( Error::Pinless ) );
 }

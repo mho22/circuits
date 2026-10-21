@@ -1,30 +1,60 @@
 import init, { Circuit } from '../bindings/web/pkg/web.js';
+import { fit, locate } from './board.ts';
 import { Clock } from './clock.ts';
 import { parse, write } from './decimal.ts';
 import { decode as decodeBranches } from './decoders/branch.ts';
+import { decode as decodeDrawing } from './decoders/drawing.ts';
 import { decode as decodeElements } from './decoders/element.ts';
 import { decode as decodeFile } from './decoders/file.ts';
+import { decode as decodeLayout } from './decoders/layout.ts';
+import { decode as decodeOutline } from './decoders/outline.ts';
 import { Drift } from './drift.ts';
 import { download } from './download.ts';
 import { edit } from './editors/value.ts';
+import { encode as encodeDrawing } from './encoders/drawing.ts';
 import { encode } from './encoders/file.ts';
-import { INPUTS, Kind, POINTS } from './enums/kind.ts';
-import { read } from './keyboard.ts';
+import { Figure } from './enums/figure.ts';
+import { INPUTS, Kind, NAMES, PINS, POINTS } from './enums/kind.ts';
+import { snap } from './grid.ts';
+import { read, shape } from './keyboard.ts';
 import { leads } from './leads.ts';
+import { Library } from './library.ts';
+import { Maker } from './maker.ts';
 import { open } from './menus/part.ts';
+import { open as offer } from './menus/selection.ts';
+import { open as amend } from './menus/sketch.ts';
+import { Palette } from './palette.ts';
 import { describe } from './readout.ts';
+import * as area from './renderers/area.ts';
+import * as board from './renderers/board.ts';
 import * as current from './renderers/current.ts';
 import * as cursor from './renderers/cursor.ts';
+import * as drawing from './renderers/drawing.ts';
 import * as element from './renderers/element.ts';
 import * as grid from './renderers/grid.ts';
+import * as mask from './renderers/mask.ts';
 import { measure } from './scale.ts';
-import { Toolbar } from './toolbar.ts';
+import { cover, inside, span } from './selection.ts';
+import { target } from './target.ts';
+import { PART_GROUPS, PIN_GROUPS, Toolbar } from './toolbar.ts';
+import { CarryTool } from './tools/carry.ts';
+import { DrawTool } from './tools/draw.ts';
 import { MoveTool } from './tools/move.ts';
 import { PlaceTool } from './tools/place.ts';
+import { SelectTool } from './tools/select.ts';
 import { toggle } from './tools/toggle.ts';
+import { rotate } from './transform.ts';
 import type { Action } from './types/action.ts';
+import type { Area } from './types/area.ts';
+import type { Branch } from './types/branch.ts';
+import type { Change } from './types/change.ts';
+import type { Choice } from './types/choice.ts';
+import type { Definition } from './types/definition.ts';
 import type { Element } from './types/element.ts';
+import type { Pin } from './types/pin.ts';
 import type { Point } from './types/point.ts';
+import type { Shape } from './types/shape.ts';
+import type { Target } from './types/target.ts';
 import { View } from './view.ts';
 
 
@@ -34,6 +64,7 @@ await init();
 const STEPS_PER_SECOND = 1000;
 const STEPS_PER_FRAME = 100;
 const SEPARATOR = ( 1.5 ).toLocaleString().charAt( 1 );
+const KINDS = Object.keys( NAMES ).map( Number ) as Kind[];
 
 const canvas = document.querySelector( 'canvas' )!;
 const context = canvas.getContext( '2d' )!;
@@ -42,7 +73,15 @@ const picker = document.querySelector( 'input[type=file]' ) as HTMLInputElement;
 const circuit = new Circuit();
 const tool = new PlaceTool( circuit );
 const mover = new MoveTool( circuit );
-const toolbar = new Toolbar( document.querySelector( 'nav' )!, select );
+const selector = new SelectTool();
+const drawer = new DrawTool();
+const carrier = new CarryTool();
+const slot = document.createElement( 'div' );
+const toolbar = new Toolbar( document.querySelector( 'nav' )!, [ ... PART_GROUPS, ... PIN_GROUPS ], pick );
+const pinbar = new Toolbar( slot, PIN_GROUPS, pick );
+const library = new Library( document.querySelector( 'nav' )!, place );
+const maker = new Maker( document.body, slot, make, sketch, discard, purge );
+const palette = new Palette( document.querySelector( 'nav' )!, document.body, figure, unsketch );
 const clock = new Clock( STEPS_PER_SECOND, STEPS_PER_FRAME );
 const drift = new Drift();
 const view = new View();
@@ -53,18 +92,74 @@ let notice : string | null = null;
 let previous : number | null = null;
 let spaced = false;
 let pressed : Point | null = null;
+let marked : { area : Area, menu : HTMLElement } | null = null;
+let sketching = false;
+let origin : Point = { x : 0, y : 0 };
+let pins : Pin[] = [];
+let aim : Point | null = null;
 
 
-function select( kind : Kind ) : void
+function select( kind : Kind | null ) : void
 {
 	tool.kind = kind;
 
 	toolbar.select( kind );
+	pinbar.select( kind );
+	library.select( kind === Kind.Symbol ? tool.layer : null );
+}
+
+function pick( kind : Kind ) : void
+{
+	select( kind === tool.kind ? null : kind );
+}
+
+function allowed() : Kind[]
+{
+	if( maker.area ) return PINS;
+
+	return circuit.layer === 0 ? KINDS.filter( kind => ! PINS.includes( kind ) ) : KINDS;
+}
+
+function place( layer : number ) : void
+{
+	const same = tool.kind === Kind.Symbol && tool.layer === layer;
+
+	tool.layer = layer;
+
+	select( same ? null : Kind.Symbol );
+}
+
+function define( layer : number ) : Definition
+{
+	return { name : circuit.name( layer ), drawing : decodeDrawing( circuit.drawing( layer ) ), labels : circuit.labels( layer ), layout : decodeLayout( circuit.layout( layer ) ) };
+}
+
+function outlined( item : Element ) : Element
+{
+	return item.kind === Kind.Symbol ? { ... item, outline : decodeOutline( circuit.outline( item.value ) ), definition : define( item.value ) } : item;
+}
+
+function labelled( elements : Element[], layer : number ) : Element[]
+{
+	const labels = circuit.labels( layer );
+	let index = 0;
+
+	return elements.map( item => PINS.includes( item.kind ) ? { ... item, label : labels[ index++ ] } : item );
+}
+
+function parts() : Element[]
+{
+	return labelled( decodeElements( circuit.elements() ), circuit.layer ).map( outlined );
+}
+
+function layered( layer : number ) : Element[]
+{
+	return labelled( decodeElements( circuit.contents( layer ) ), layer );
 }
 
 async function save() : Promise<void>
 {
-	try { name = await download( encode( decodeElements( circuit.elements() ) ), name ); }
+	try { name = await download( encode( layered( 0 ), Array.from( circuit.symbols(), layer => ( { number : layer, definition : define( layer ), parts : layered( layer ) } ) ) ), name ); }
 
 	catch( error ) { if( ( error as Error ).name !== 'AbortError' ) notice = ( error as Error ).message; }
 }
@@ -77,7 +172,14 @@ async function load() : Promise<void>
 
 	if( ! file ) return;
 
-	try { circuit.open( decodeFile( await file.text() ) ); name = file.name; }
+	try
+	{
+		const contents = decodeFile( await file.text() );
+
+		circuit.open( contents.parts, contents.labels, contents.layers, contents.names, contents.drawings, contents.layouts );
+
+		name = file.name;
+	}
 
 	catch( error ) { notice = ( error as Error ).message; }
 }
@@ -91,7 +193,7 @@ function attempt( change : () => void ) : void
 
 function act( target : Element, anchor : Point, action : Action ) : void
 {
-	if( action === 'move' ) { mover.start( target, anchor ); return; }
+	if( action === 'move' ) { mover.start( [ target ], anchor, null ); return; }
 
 	attempt( () =>
 	{
@@ -105,10 +207,154 @@ function act( target : Element, anchor : Point, action : Action ) : void
 	} );
 }
 
+function settle( area : Area, anchor : Point, choice : Choice ) : void
+{
+	const elements = parts();
+	const ids = inside( elements, area );
+
+	if( choice === 'move' ) { mover.start( elements.filter( item => ids.includes( item.id ) ), anchor, area ); return; }
+
+	attempt( () =>
+	{
+		if( choice === 'symbol' ) maker.open( area );
+
+		if( choice === 'delete' ) circuit.erase( new Uint32Array( ids ) );
+	} );
+}
+
+function make( target : Area | number, name : string, shapes : Shape[], layout : Point[] ) : void
+{
+	if( typeof target === 'number' ) { rename( target, name, shapes, layout ); return; }
+
+	const area = target;
+
+	attempt( () => circuit.enclose( area.low.x, area.low.y, area.high.x, area.high.y, name, encodeDrawing( shapes ), new Int32Array( layout.flatMap( point => [ point.x, point.y ] ) ) ) );
+}
+
+function rename( layer : number, name : string, shapes : Shape[], layout : Point[] ) : void
+{
+	const before = define( layer );
+	const same = before.name === name && JSON.stringify( before.drawing ) === JSON.stringify( shapes ) && JSON.stringify( before.layout ) === JSON.stringify( layout );
+
+	if( ! same ) attempt( () => circuit.describe( name, encodeDrawing( shapes ), new Int32Array( layout.flatMap( point => [ point.x, point.y ] ) ) ) );
+
+	circuit.leave();
+}
+
+function discard( steps : number, layer : number | null ) : void
+{
+	for( let index = 0; index < steps; index++ ) circuit.undo();
+
+	if( layer !== null ) circuit.leave();
+}
+
+function purge( layer : number ) : void
+{
+	const name = circuit.name( layer ) || 'this symbol';
+	const copies = Array.from( circuit.symbols() ).flatMap( inner => layered( inner ) ).concat( layered( 0 ) ).filter( item => item.kind === Kind.Symbol && item.value === layer ).length;
+
+	if( ! confirm( `Delete ${ name } and its ${ copies } ${ copies === 1 ? 'copy' : 'copies' }?` ) ) return;
+
+	attempt( () => circuit.purge() );
+}
+
+function follow() : void
+{
+	const layer = circuit.layer;
+
+	if( maker.area || ( maker.layer ?? 0 ) === layer ) return;
+
+	if( layer === 0 ) { maker.close(); return; }
+
+	maker.edit( layer, define( layer ) );
+}
+
+function zone( elements : Element[] ) : Area | null
+{
+	return maker.area ?? ( maker.layer === null ? null : span( elements ) );
+}
+
+function sketch() : void
+{
+	const elements = parts();
+	const area = zone( elements );
+
+	if( ! area ) return;
+
+	const ids = inside( elements, area );
+	const ends = elements.filter( item => PINS.includes( item.kind ) && ids.includes( item.id ) );
+	const fixed = maker.layer === null ? [] : decodeOutline( circuit.outline( maker.layer ) ).pins;
+
+	origin = { x : Math.floor( ( area.low.x + area.high.x ) / 2 ), y : Math.floor( ( area.low.y + area.high.y ) / 2 ) };
+	sketching = true;
+	pins = ends.map( ( item, index ) => ( { point : maker.layout[ index ] ?? fixed[ index ] ?? { x : item.from.x - origin.x, y : item.from.y - origin.y }, output : item.kind === Kind.Output, label : item.label ?? '' } ) );
+	drawer.shapes = [ ... maker.drawing ];
+
+	figure( drawer.figure );
+	palette.open();
+}
+
+function unsketch() : void
+{
+	drawer.cancel();
+	carrier.cancel();
+
+	maker.drawing = drawer.shapes;
+	maker.layout = pins.map( pin => pin.point );
+	sketching = false;
+	aim = null;
+
+	palette.close();
+}
+
+function figure( choice : Figure ) : void
+{
+	drawer.cancel();
+	drawer.figure = choice;
+
+	palette.select( choice );
+}
+
+function fine( event : MouseEvent ) : Point
+{
+	return locate( fit( origin, view.x, view.y ), event.clientX, event.clientY );
+}
+
+function change( found : Target, anchor : Point, choice : Change ) : void
+{
+	const { index } = found;
+
+	if( choice === 'move' ) { carrier.start( found, anchor ); return; }
+
+	if( choice === 'delete' ) { drawer.shapes.splice( index, 1 ); return; }
+
+	drawer.shapes[ index ] = rotate( drawer.shapes[ index ] );
+}
+
+function drop() : void
+{
+	drawer.shapes = carrier.shapes( drawer.shapes );
+	pins = carrier.pins( pins );
+
+	carrier.cancel();
+}
+
+function modify( event : MouseEvent ) : void
+{
+	const point = fine( event );
+	const found = target( drawer.shapes, pins, point );
+
+	if( ! found ) return;
+
+	if( ! found.pin && drawer.shapes[ found.index ].figure === Figure.Line ) { drawer.shapes.splice( found.index, 1 ); return; }
+
+	amend( document.body, { x : event.clientX, y : event.clientY }, found.pin ? null : drawer.shapes[ found.index ].figure, choice => change( found, point, choice ) );
+}
+
 function menu( event : MouseEvent ) : void
 {
 	const point = view.toGrid( event.clientX, event.clientY );
-	const elements = decodeElements( circuit.elements() );
+	const elements = parts();
 	const targets = Array.from( circuit.elementsAt( point.x, point.y ) ).map( id => elements.find( item => item.id === id )! );
 	const target = targets.find( item => item.kind !== Kind.Wire ) ?? targets[ 0 ];
 
@@ -126,19 +372,36 @@ function report( text : string, error : boolean ) : void
 	status.classList.toggle( 'error', error );
 }
 
-function frame( time : number ) : void
+function present() : void
 {
-	const seconds = previous === null ? 0 : ( time - previous ) / 1000;
+	const place = fit( origin, view.x, view.y );
+	const draft = drawer.preview();
 
-	previous = time;
+	context.setTransform( devicePixelRatio, 0, 0, devicePixelRatio, - view.x * devicePixelRatio, - view.y * devicePixelRatio );
 
-	circuit.advance( clock.tick( seconds ) );
+	grid.draw( context, view.x, view.y, innerWidth, innerHeight );
 
-	const elements = decodeElements( circuit.elements() );
-	const branches = decodeBranches( circuit.branches() );
+	context.setTransform( devicePixelRatio, 0, 0, devicePixelRatio, 0, 0 );
+
+	board.draw( context, place, carrier.pins( pins ), aim );
+	drawing.draw( context, carrier.shapes( drawer.shapes ), place, 0, place.unit );
+
+	context.globalAlpha = 0.5;
+
+	if( draft ) drawing.draw( context, [ draft ], place, 0, place.unit );
+
+	context.globalAlpha = 1;
+}
+
+function paint( elements : Element[], branches : Branch[], seconds : number ) : void
+{
+	if( sketching ) { present(); return; }
+
 	const scale = measure( elements, branches );
-	const preview = mover.preview() ?? tool.preview();
-	const paths = [ ... branches, ... elements.filter( item => item.kind !== Kind.Wire && ! POINTS.includes( item.kind ) ).flatMap( leads ) ];
+	const draft = selector.preview() ? null : tool.preview();
+	const previews = draft ? [ ... mover.preview(), draft ] : mover.preview();
+	const selection = selector.preview() ?? mover.zone() ?? ( marked?.menu.isConnected ? marked.area : null );
+	const paths = [ ... branches, ... elements.filter( item => item.kind !== Kind.Wire && ! POINTS.includes( item.kind ) && ! PINS.includes( item.kind ) ).flatMap( leads ) ];
 	const distances = drift.advance( paths, scale.current, seconds );
 
 	context.setTransform( devicePixelRatio, 0, 0, devicePixelRatio, - view.x * devicePixelRatio, - view.y * devicePixelRatio );
@@ -149,16 +412,49 @@ function frame( time : number ) : void
 
 	paths.forEach( ( path, index ) => current.draw( context, path.from, path.to, path.current, scale.current, distances[ index ] ) );
 
-	if( preview )
+	context.globalAlpha = 0.5;
+
+	previews.forEach( item => element.draw( context, outlined( item ), { voltage : 0, current : 0 } ) );
+
+	context.globalAlpha = 1;
+
+	if( selection ) area.draw( context, selection );
+
+	const zoned = zone( elements );
+
+	if( zoned )
 	{
-		context.globalAlpha = 0.5;
-
-		element.draw( context, preview, { voltage : 0, current : 0 } );
-
-		context.globalAlpha = 1;
+		mask.draw( context, zoned, view.x, view.y, innerWidth, innerHeight );
+		area.draw( context, zoned );
 	}
 
-	cursor.draw( context, hover );
+	cursor.draw( context, tool.kind === null ? null : hover );
+}
+
+function frame( time : number ) : void
+{
+	const seconds = previous === null ? 0 : ( time - previous ) / 1000;
+
+	previous = time;
+
+	circuit.advance( clock.tick( seconds ) );
+
+	const elements = parts();
+	const branches = decodeBranches( circuit.branches() );
+
+	paint( elements, branches, seconds );
+
+	library.update( Array.from( circuit.symbols(), layer => [ layer, circuit.name( layer ) ] ) );
+
+	const kinds = allowed();
+
+	toolbar.limit( maker.area ? [] : kinds );
+
+	if( tool.kind !== null && ! kinds.includes( tool.kind ) ) select( kinds[ 0 ] );
+
+	follow();
+
+	canvas.classList.toggle( 'idle', tool.kind === null && ! sketching );
 
 	const error = circuit.error();
 	const [ id ] = hover ? circuit.elementsAt( hover.x, hover.y ) : [];
@@ -183,6 +479,12 @@ canvas.addEventListener( 'pointerdown', ( event : PointerEvent ) =>
 
 	notice = null;
 
+	if( sketching && event.button === 0 && carrier.target ) { drop(); return; }
+
+	if( sketching && event.button === 0 ) { canvas.setPointerCapture( event.pointerId ); drawer.press( fine( event ) ); }
+
+	if( sketching ) return;
+
 	if( event.button === 1 || ( event.button === 0 && spaced ) )
 	{
 		event.preventDefault();
@@ -194,7 +496,11 @@ canvas.addEventListener( 'pointerdown', ( event : PointerEvent ) =>
 		return;
 	}
 
-	if( event.button === 0 && mover.element ) { attempt( () => mover.drop() ); return; }
+	if( maker.area && event.button !== 0 ) return;
+
+	if( event.button === 2 ) { canvas.setPointerCapture( event.pointerId ); selector.press( point ); return; }
+
+	if( event.button === 0 && mover.elements.length > 0 ) { attempt( () => mover.drop() ); return; }
 
 	if( event.button === 0 ) pressed = point;
 
@@ -208,23 +514,40 @@ canvas.addEventListener( 'pointerdown', ( event : PointerEvent ) =>
 
 canvas.addEventListener( 'pointermove', ( event : PointerEvent ) =>
 {
+	if( sketching ) { aim = snap( fine( event ) ); carrier.move( aim ); drawer.move( aim ); return; }
+
 	hover = view.toGrid( event.clientX, event.clientY );
 
 	if( view.move( { x : event.clientX, y : event.clientY } ) ) return;
 
 	mover.move( hover );
+	selector.move( hover );
 	tool.move( hover );
 } );
 
 canvas.addEventListener( 'pointerup', ( event : PointerEvent ) =>
 {
 	const point = view.toGrid( event.clientX, event.clientY );
-	const clicked = pressed && pressed.x === point.x && pressed.y === point.y && ! POINTS.includes( tool.kind );
+	const same = pressed && pressed.x === point.x && pressed.y === point.y;
+	const selection = selector.release();
 
 	pressed = null;
 
 	view.release();
-	tool.release();
+
+	const draft = tool.preview();
+	const added = tool.release();
+	const clicked = same && ! added;
+
+	if( added && draft && maker.area ) { maker.steps++; maker.area = cover( maker.area, [ draft.from, draft.to ] ); }
+
+	if( sketching ) { if( event.button === 0 ) drawer.release( fine( event ) ); if( event.button === 2 ) modify( event ); return; }
+
+	if( maker.area ) { if( clicked && toggle( circuit, point ) ) maker.steps++; return; }
+
+	if( selection ) marked = { area : selection, menu : offer( document.body, { x : event.clientX, y : event.clientY }, choice => settle( selection, point, choice ) ) };
+
+	if( ! selection && event.button === 2 ) menu( event );
 
 	if( clicked ) toggle( circuit, point );
 } );
@@ -233,7 +556,7 @@ canvas.addEventListener( 'wheel', ( event : WheelEvent ) =>
 {
 	event.preventDefault();
 
-	if( event.ctrlKey ) return;
+	if( event.ctrlKey || sketching ) return;
 
 	view.scroll( event.deltaX, event.deltaY, event.deltaMode );
 
@@ -246,8 +569,14 @@ canvas.addEventListener( 'dblclick', ( event : MouseEvent ) =>
 {
 	const point = view.toGrid( event.clientX, event.clientY );
 	const ids = Array.from( circuit.elementsAt( point.x, point.y ) );
-	const elements = decodeElements( circuit.elements() );
-	const target = ids.map( id => elements.find( item => item.id === id )! ).find( item => INPUTS[ item.kind ] );
+	const elements = parts();
+	const items = ids.map( id => elements.find( item => item.id === id )! );
+	const symbol = items.find( item => item.kind === Kind.Symbol );
+	const target = items.find( item => INPUTS[ item.kind ] );
+
+	if( maker.area ) return;
+
+	if( symbol ) { circuit.enter( symbol.id ); return; }
 
 	if( ! target ) return;
 
@@ -267,6 +596,7 @@ canvas.addEventListener( 'dblclick', ( event : MouseEvent ) =>
 
 document.querySelector( 'button.center' )!.addEventListener( 'click', () => view.center() );
 
+
 document.querySelector( 'button.save' )!.addEventListener( 'click', save );
 
 document.querySelector( 'button.load' )!.addEventListener( 'click', () => picker.click() );
@@ -277,22 +607,45 @@ canvas.addEventListener( 'contextmenu', ( event : MouseEvent ) =>
 {
 	event.preventDefault();
 
-	menu( event );
+	if( event.button !== 2 ) menu( event );
 } );
 
 addEventListener( 'keydown', ( event : KeyboardEvent ) =>
 {
 	if( event.target instanceof HTMLInputElement ) return;
 
+	if( sketching )
+	{
+		if( event.key === 'Escape' && carrier.target ) { carrier.cancel(); return; }
+
+		if( event.key === 'Escape' && ! drawer.cancel() ) unsketch();
+
+		const choice = shape( event );
+
+		if( choice !== undefined ) figure( choice );
+
+		if( read( event ) === 'undo' ) { event.preventDefault(); drawer.undo(); }
+
+		return;
+	}
+
 	if( event.key === ' ' ) { event.preventDefault(); spaced = true; canvas.classList.add( 'grab' ); return; }
 
-	if( event.key === 'Escape' ) { mover.cancel(); return; }
+	if( event.key === 'Escape' && mover.elements.length > 0 ) { mover.cancel(); return; }
+
+	if( event.key === 'Escape' && maker.area ) { maker.cancel(); return; }
+
+	if( event.key === 'Escape' ) { select( null ); return; }
 
 	const command = read( event );
 
 	if( command === undefined ) return;
 
 	event.preventDefault();
+
+	if( command === 'undo' && maker.steps > 0 ) { maker.steps--; circuit.undo(); return; }
+
+	if( maker.area && ( command === 'undo' || command === 'redo' ) ) return;
 
 	if( command === 'undo' ) { circuit.undo(); return; }
 
@@ -302,7 +655,7 @@ addEventListener( 'keydown', ( event : KeyboardEvent ) =>
 
 	if( command === 'open' ) { picker.click(); return; }
 
-	select( command );
+	if( allowed().includes( command ) ) pick( command );
 } );
 
 addEventListener( 'keyup', ( event : KeyboardEvent ) =>
@@ -317,6 +670,6 @@ addEventListener( 'keyup', ( event : KeyboardEvent ) =>
 addEventListener( 'resize', resize );
 
 
-select( Kind.Wire );
+select( null );
 resize();
 requestAnimationFrame( frame );

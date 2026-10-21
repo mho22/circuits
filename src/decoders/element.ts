@@ -1,24 +1,23 @@
 import { TRANSISTORS } from '../enums/kind.ts';
-import { terminals } from '../terminals.ts';
 import type { Element } from '../types/element.ts';
 
 
-const STRIDE = 13;
+const HEAD = 9;
 
 
 export function decode( data : Float64Array ) : Element[]
 {
 	const elements : Element[] = [];
 
-	for( let index = 0; index < data.length; index += STRIDE )
+	for( let index = 0; index < data.length; )
 	{
-		const [ id, kind, fromX, fromY, toX, toY, value, ... rest ] = data.subarray( index, index + STRIDE );
-		const from = { x : fromX, y : fromY };
-		const to = { x : toX, y : toY };
+		const [ id, kind, fromX, fromY, toX, toY, value, rotation, count ] = data.subarray( index, index + HEAD );
+		const readings = Array.from( data.subarray( index + HEAD, index + HEAD + 2 * count ) );
 		const mirrored = TRANSISTORS.includes( kind ) && value === 1;
-		const count = terminals( kind, from, to, mirrored ).length;
 
-		elements.push( { id, kind, from, to, value, mirrored, potentials : rest.slice( 0, count ), currents : rest.slice( 3, 3 + count ) } );
+		elements.push( { id, kind, from : { x : fromX, y : fromY }, to : { x : toX, y : toY }, value, mirrored, rotation, potentials : readings.slice( 0, count ), currents : readings.slice( count ) } );
+
+		index += HEAD + 2 * count;
 	}
 
 	return elements;

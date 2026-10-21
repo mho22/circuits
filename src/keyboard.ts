@@ -1,8 +1,12 @@
+import { Figure } from './enums/figure.ts';
 import { Kind } from './enums/kind.ts';
 import type { Command } from './types/command.ts';
 
 
-export const SHORTCUTS : Record<string, Kind> = { w : Kind.Wire, r : Kind.Resistor, b : Kind.Battery, g : Kind.Ground, c : Kind.Capacitor, l : Kind.Inductor, s : Kind.Switch, d : Kind.Diode, n : Kind.Npn, p : Kind.Pnp, m : Kind.Nmos, f : Kind.Pmos, v : Kind.Supply };
+export const SHORTCUTS : Record<string, Kind> = { w : Kind.Wire, r : Kind.Resistor, b : Kind.Battery, g : Kind.Ground, c : Kind.Capacitor, l : Kind.Inductor, s : Kind.Switch, d : Kind.Diode, n : Kind.Npn, p : Kind.Pnp, m : Kind.Nmos, f : Kind.Pmos, v : Kind.Supply, i : Kind.Input, o : Kind.Output, t : Kind.Toggle, e : Kind.Led };
+
+
+export const FIGURES : Record<string, Figure> = { r : Figure.Rectangle, c : Figure.Circle, l : Figure.Line };
 
 
 export function read( event : Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'metaKey' | 'shiftKey'> ) : Command | undefined
@@ -23,4 +27,11 @@ export function read( event : Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'metaKey' 
 	if( modified ) return undefined;
 
 	return SHORTCUTS[ key ];
+}
+
+export function shape( event : Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'metaKey'> ) : Figure | undefined
+{
+	if( event.ctrlKey || event.metaKey ) return undefined;
+
+	return FIGURES[ event.key.toLowerCase() ];
 }
