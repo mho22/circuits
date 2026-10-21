@@ -47,14 +47,12 @@ import { toggle } from './tools/toggle.ts';
 import type { Action } from './types/action.ts';
 import type { Area } from './types/area.ts';
 import type { Branch } from './types/branch.ts';
-import type { Change } from './types/change.ts';
 import type { Choice } from './types/choice.ts';
 import type { Definition } from './types/definition.ts';
 import type { Element } from './types/element.ts';
 import type { Pin } from './types/pin.ts';
 import type { Point } from './types/point.ts';
 import type { Shape } from './types/shape.ts';
-import type { Target } from './types/target.ts';
 import { View } from './view.ts';
 
 
@@ -333,18 +331,8 @@ function fine( event : MouseEvent ) : Point
 	return locate( fit( origin, view.x, view.y ), event.clientX, event.clientY );
 }
 
-function change( found : Target, anchor : Point, choice : Change ) : void
-{
-	const { index } = found;
-
-	if( choice === 'move' ) { carrier.start( found, anchor ); return; }
-
-	drawer.shapes.splice( index, 1 );
-}
-
 function drop() : void
 {
-	drawer.shapes = carrier.shapes( drawer.shapes );
 	pins = carrier.pins( pins );
 
 	carrier.cancel();
@@ -357,9 +345,9 @@ function modify( event : MouseEvent ) : void
 
 	if( ! found ) return;
 
-	if( ! found.pin && drawer.shapes[ found.index ].figure !== Figure.Circle ) { drawer.shapes.splice( found.index, 1 ); return; }
+	if( ! found.pin ) { drawer.shapes.splice( found.index, 1 ); return; }
 
-	amend( document.body, { x : event.clientX, y : event.clientY }, found.pin ? null : drawer.shapes[ found.index ].figure, choice => change( found, point, choice ) );
+	amend( document.body, { x : event.clientX, y : event.clientY }, () => carrier.start( found.index, point ) );
 }
 
 function menu( event : MouseEvent ) : void
@@ -395,7 +383,7 @@ function present() : void
 	context.setTransform( devicePixelRatio, 0, 0, devicePixelRatio, 0, 0 );
 
 	board.draw( context, place, carrier.pins( pins ), aim );
-	drawing.draw( context, carrier.shapes( drawer.shapes ), place, 0, place.unit );
+	drawing.draw( context, drawer.shapes, place, 0, place.unit );
 
 	context.globalAlpha = 0.5;
 
@@ -494,7 +482,7 @@ canvas.addEventListener( 'pointerdown', ( event : PointerEvent ) =>
 
 	notice = null;
 
-	if( sketching && event.button === 0 && carrier.target ) { drop(); return; }
+	if( sketching && event.button === 0 && carrier.index !== null ) { drop(); return; }
 
 	if( sketching && event.button === 0 ) { canvas.setPointerCapture( event.pointerId ); drawer.press( fine( event ) ); }
 
@@ -631,7 +619,7 @@ addEventListener( 'keydown', ( event : KeyboardEvent ) =>
 
 	if( sketching )
 	{
-		if( event.key === 'Escape' && carrier.target ) { carrier.cancel(); return; }
+		if( event.key === 'Escape' && carrier.index !== null ) { carrier.cancel(); return; }
 
 		if( event.key === 'Escape' && ! drawer.cancel() ) unsketch();
 

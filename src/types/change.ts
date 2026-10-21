@@ -1,1 +1,1 @@
-export type Change = 'move' | 'delete';
+export type Change = 'move';
