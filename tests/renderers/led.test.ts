@@ -7,11 +7,11 @@ import { element } from '../stubs/element.ts';
 
 describe( 'led renderer', () =>
 {
-	function drawn( current : number ) : unknown[][]
+	function drawn( current : number, value = 0 ) : unknown[][]
 	{
 		const { context, calls } = record();
 
-		draw( context, element( { kind : Kind.Led, from : { x : 0, y : 0 }, to : { x : 4, y : 0 }, potentials : [ 5, 3.1 ], currents : [ current, - current ] } ), { voltage : 5, current : 0 } );
+		draw( context, element( { kind : Kind.Led, value, from : { x : 0, y : 0 }, to : { x : 4, y : 0 }, potentials : [ 5, 3.1 ], currents : [ current, - current ] } ), { voltage : 5, current : 0 } );
 
 		return calls;
 	}
@@ -33,5 +33,11 @@ describe( 'led renderer', () =>
 		expect( drawn( 0.05 ).filter( call => call[ 1 ] === 'fillStyle' )[ 0 ][ 2 ] ).toBe( 'rgba(255, 48, 48, 0.5)' );
 		expect( drawn( 0.01 ) ).toContainEqual( [ 'arc', 40, 0, 14, 0, 2 * Math.PI ] );
 		expect( drawn( 0.01 ).filter( call => call[ 1 ] === 'strokeStyle' ).slice( -2 ).map( call => call[ 2 ] ) ).toEqual( [ 'rgb(255, 48, 48)', 'rgb(255, 48, 48)' ] );
+	} );
+
+	it( 'glows in the color of the led', () =>
+	{
+		expect( drawn( 0.01, 1 ).filter( call => call[ 1 ] === 'fillStyle' )[ 0 ][ 2 ] ).toBe( 'rgba(48, 220, 96, 0.5)' );
+		expect( drawn( 0.01, 2 ).filter( call => call[ 1 ] === 'strokeStyle' ).slice( -1 )[ 0 ][ 2 ] ).toBe( 'rgb(48, 128, 255)' );
 	} );
 } );

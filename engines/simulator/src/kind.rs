@@ -1,6 +1,9 @@
 use crate::{ Error, Junction, LIGHT, SILICON };
 
 
+const COLORS : u8 = 3;
+
+
 #[derive( Clone, Copy, Debug, PartialEq )]
 pub enum Kind
 {
@@ -21,7 +24,7 @@ pub enum Kind
 	Output,
 	Symbol { layer : u32, rotation : u8 },
 	Toggle { high : bool },
-	Led,
+	Led { color : u8 },
 	Clock { hertz : f64 },
 }
 
@@ -39,6 +42,7 @@ impl Kind
 			Kind::Inductor { henries } if ! positive( henries ) => Err( Error::Inductance ),
 			Kind::Symbol { rotation, .. } if rotation > 3 => Err( Error::Rotation ),
 			Kind::Clock { hertz } if ! positive( hertz ) => Err( Error::Frequency ),
+			Kind::Led { color } if color >= COLORS => Err( Error::Color ),
 			_ => Ok( () ),
 		}
 	}
@@ -47,7 +51,7 @@ impl Kind
 	{
 		match self
 		{
-			Kind::Diode | Kind::Led => &[ ( 0, 1 ) ],
+			Kind::Diode | Kind::Led { .. } => &[ ( 0, 1 ) ],
 			Kind::Npn => &[ ( 0, 2 ), ( 0, 1 ) ],
 			Kind::Pnp => &[ ( 2, 0 ), ( 1, 0 ) ],
 			Kind::Nmos => &[ ( 0, 2 ), ( 1, 2 ) ],
@@ -58,7 +62,7 @@ impl Kind
 
 	pub fn junction( &self ) -> Junction
 	{
-		if *self == Kind::Led { return LIGHT; }
+		if let Kind::Led { .. } = self { return LIGHT; }
 
 		SILICON
 	}
@@ -72,6 +76,7 @@ impl Kind
 			Kind::Capacitor { farads } => Some( farads ),
 			Kind::Inductor { henries } => Some( henries ),
 			Kind::Clock { hertz } => Some( hertz ),
+			Kind::Led { color } => Some( color as f64 ),
 			_ => None,
 		}
 	}
@@ -86,6 +91,8 @@ impl Kind
 			Kind::Capacitor { .. } => Kind::Capacitor { farads : value },
 			Kind::Inductor { .. } => Kind::Inductor { henries : value },
 			Kind::Clock { .. } => Kind::Clock { hertz : value },
+			Kind::Led { .. } if value.fract() == 0.0 && ( 0.0 .. COLORS as f64 ).contains( &value ) => Kind::Led { color : value as u8 },
+			Kind::Led { .. } => return Err( Error::Color ),
 			_ => return Err( Error::Valueless ),
 		};
 

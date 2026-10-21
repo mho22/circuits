@@ -65,6 +65,7 @@ describe( 'file decoder', () =>
 			'{ "version" : 1, "parts" : [ { "kind" : "wire", "from" : [ 0 ], "to" : [ 2, 0 ] } ] }',
 			'{ "version" : 1, "parts" : [ { "kind" : "wire", "from" : [ 0.5, 0 ], "to" : [ 2, 0 ] } ] }',
 			'{ "version" : 1, "parts" : [ { "kind" : "npn", "mirrored" : 1, "from" : [ 0, 0 ], "to" : [ 2, 0 ] } ] }',
+			'{ "version" : 1, "parts" : [ { "kind" : "led", "color" : "foo", "from" : [ 0, 0 ], "to" : [ 2, 0 ] } ] }',
 			'{ "version" : 1, "parts" : [ { "kind" : "symbol", "layer" : 0, "from" : [ 0, 0 ], "to" : [ 0, 0 ] } ] }',
 			'{ "version" : 1, "parts" : [ { "kind" : "symbol", "layer" : 1.5, "from" : [ 0, 0 ], "to" : [ 0, 0 ] } ] }',
 			'{ "version" : 1, "parts" : [ { "kind" : "symbol", "layer" : 1, "rotation" : 4, "from" : [ 0, 0 ], "to" : [ 0, 0 ] } ] }',
@@ -138,12 +139,13 @@ describe( 'file decoder', () =>
 		expect( Array.from( decode( encode( [ clock ] ) ).parts ) ).toEqual( [ 0, Kind.Clock, 6e7, 0, 0, 0, 2, 0 ] );
 	} );
 
-	it( 'reads the level of a toggle as its value and an led', () =>
+	it( 'reads the level of a toggle and the color of an led as their values, with red for an led without a color', () =>
 	{
 		const toggle = element( { kind : Kind.Toggle, value : 1, from : { x : 0, y : 0 }, to : { x : 1, y : 0 } } );
-		const led = element( { kind : Kind.Led, from : { x : 0, y : 2 }, to : { x : 2, y : 2 } } );
+		const red = element( { kind : Kind.Led, from : { x : 0, y : 2 }, to : { x : 2, y : 2 } } );
+		const green = element( { kind : Kind.Led, value : 1, from : { x : 0, y : 4 }, to : { x : 2, y : 4 } } );
 
-		expect( Array.from( decode( encode( [ toggle, led ] ) ).parts ) ).toEqual( [ 0, Kind.Toggle, 1, 0, 0, 0, 1, 0, 0, Kind.Led, 0, 0, 0, 2, 2, 2 ] );
+		expect( Array.from( decode( encode( [ toggle, red, green ] ) ).parts ) ).toEqual( [ 0, Kind.Toggle, 1, 0, 0, 0, 1, 0, 0, Kind.Led, 0, 0, 0, 2, 2, 2, 0, Kind.Led, 1, 0, 0, 4, 2, 4 ] );
 	} );
 
 	it( 'reads an input without a label and a level, and a layer without a name, a drawing and a layout', () =>

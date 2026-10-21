@@ -3,6 +3,7 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { Kind } from '../../src/enums/kind.ts';
 import { open } from '../../src/menus/part.ts';
+import { element } from '../stubs/element.ts';
 
 
 describe( 'part menu', () =>
@@ -13,7 +14,7 @@ describe( 'part menu', () =>
 
 	it( 'opens at a position with every action for a part with two ends', () =>
 	{
-		const menu = open( document.body, { x : 10, y : 20 }, Kind.Resistor, () => {} );
+		const menu = open( document.body, { x : 10, y : 20 }, element( { kind : Kind.Resistor } ), () => {} );
 
 		expect( menu.parentElement ).toBe( document.body );
 		expect( [ menu.style.left, menu.style.top ] ).toEqual( [ '10px', '20px' ] );
@@ -22,21 +23,29 @@ describe( 'part menu', () =>
 
 	it( 'offers only a move and a delete for a ground or a vcc', () =>
 	{
-		expect( labels( open( document.body, { x : 0, y : 0 }, Kind.Ground, () => {} ) ) ).toEqual( [ 'Move', 'Delete' ] );
-		expect( labels( open( document.body, { x : 0, y : 0 }, Kind.Supply, () => {} ) ) ).toEqual( [ 'Move', 'Delete' ] );
+		expect( labels( open( document.body, { x : 0, y : 0 }, element( { kind : Kind.Ground } ), () => {} ) ) ).toEqual( [ 'Move', 'Delete' ] );
+		expect( labels( open( document.body, { x : 0, y : 0 }, element( { kind : Kind.Supply } ), () => {} ) ) ).toEqual( [ 'Move', 'Delete' ] );
 	} );
 
 	it( 'offers a move, a rotate and a delete for a symbol, and every action for an input or an output', () =>
 	{
-		expect( labels( open( document.body, { x : 0, y : 0 }, Kind.Symbol, () => {} ) ) ).toEqual( [ 'Move', 'Rotate', 'Delete' ] );
-		expect( labels( open( document.body, { x : 0, y : 0 }, Kind.Input, () => {} ) ) ).toEqual( [ 'Move', 'Rotate', 'Mirror horizontally', 'Mirror vertically', 'Delete' ] );
-		expect( labels( open( document.body, { x : 0, y : 0 }, Kind.Output, () => {} ) ) ).toEqual( [ 'Move', 'Rotate', 'Mirror horizontally', 'Mirror vertically', 'Delete' ] );
+		expect( labels( open( document.body, { x : 0, y : 0 }, element( { kind : Kind.Symbol } ), () => {} ) ) ).toEqual( [ 'Move', 'Rotate', 'Delete' ] );
+		expect( labels( open( document.body, { x : 0, y : 0 }, element( { kind : Kind.Input } ), () => {} ) ) ).toEqual( [ 'Move', 'Rotate', 'Mirror horizontally', 'Mirror vertically', 'Delete' ] );
+		expect( labels( open( document.body, { x : 0, y : 0 }, element( { kind : Kind.Output } ), () => {} ) ) ).toEqual( [ 'Move', 'Rotate', 'Mirror horizontally', 'Mirror vertically', 'Delete' ] );
+	} );
+
+	it( 'offers to change an led to the next color, from red to green to blue and back to red', () =>
+	{
+		const menu = ( value : number ) => labels( open( document.body, { x : 0, y : 0 }, element( { kind : Kind.Led, value } ), () => {} ) );
+
+		expect( menu( 0 ) ).toEqual( [ 'Move', 'Rotate', 'Mirror horizontally', 'Mirror vertically', 'Change in green', 'Delete' ] );
+		expect( [ menu( 1 )[ 4 ], menu( 2 )[ 4 ] ] ).toEqual( [ 'Change in blue', 'Change in red' ] );
 	} );
 
 	it( 'runs the picked action and closes', () =>
 	{
 		const act = vi.fn();
-		const menu = open( document.body, { x : 0, y : 0 }, Kind.Npn, act );
+		const menu = open( document.body, { x : 0, y : 0 }, element( { kind : Kind.Npn } ), act );
 
 		( menu.children[ 3 ] as HTMLButtonElement ).click();
 

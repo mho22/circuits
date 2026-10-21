@@ -1,4 +1,5 @@
 import { encode } from '../encoders/drawing.ts';
+import { Color, NAMES as COLORS } from '../enums/color.ts';
 import { Figure, NAMES as FIGURES } from '../enums/figure.ts';
 import { FIELDS, Kind, LEVELS, NAMES, PINS, TRANSISTORS } from '../enums/kind.ts';
 import { NANO } from '../si.ts';
@@ -10,6 +11,7 @@ import type { Shape } from '../types/shape.ts';
 const VERSION = 1;
 const KINDS = Object.keys( NAMES ).map( Number ) as Kind[];
 const SHAPES = Object.keys( FIGURES ).map( Number ) as Figure[];
+const SHADES = Object.keys( COLORS ).map( Number ) as Color[];
 
 
 function unreadable() : never
@@ -95,6 +97,11 @@ function level( value : unknown ) : number
 	return value === 0 || value === 1 ? value : unreadable();
 }
 
+function color( value : unknown ) : number
+{
+	return SHADES.find( shade => COLORS[ shade ].toLowerCase() === value ) ?? unreadable();
+}
+
 function row( layer : number, part : Record<string, unknown> | null ) : [ number[], string ]
 {
 	if( typeof part !== 'object' || part === null ) unreadable();
@@ -103,7 +110,7 @@ function row( layer : number, part : Record<string, unknown> | null ) : [ number
 	const field = FIELDS[ kind ];
 	const closed = kind === Kind.Switch && ( typeof part.closed === 'boolean' ? part.closed : unreadable() );
 	const mirrored = TRANSISTORS.includes( kind ) && ( typeof ( part.mirrored ?? false ) === 'boolean' ? part.mirrored === true : unreadable() );
-	const value = field ? number( part[ field ] ) : LEVELS.includes( kind ) ? level( part.level ?? 0 ) : Number( closed || mirrored );
+	const value = field ? number( part[ field ] ) : LEVELS.includes( kind ) ? level( part.level ?? 0 ) : kind === Kind.Led ? color( part.color ?? 'red' ) : Number( closed || mirrored );
 	const turn = kind === Kind.Symbol ? rotation( part.rotation ?? 0 ) : 0;
 
 	if( kind === Kind.Symbol && ! ( Number.isInteger( value ) && value > 0 ) ) unreadable();

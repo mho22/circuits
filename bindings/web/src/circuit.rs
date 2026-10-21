@@ -349,7 +349,7 @@ impl Circuit
 				Kind::Symbol { layer, rotation } => ( 14.0, layer as f64, rotation ),
 				Kind::Output => ( 15.0, 0.0, 0 ),
 				Kind::Toggle { high } => ( 16.0, if high { 1.0 } else { 0.0 }, 0 ),
-				Kind::Led => ( 17.0, 0.0, 0 ),
+				Kind::Led { color } => ( 17.0, color as f64, 0 ),
 				Kind::Clock { hertz } => ( 18.0, hertz, 0 ),
 			};
 
@@ -413,7 +413,7 @@ impl Circuit
 			14 => Kind::Symbol { layer : value as u32, rotation : 0 },
 			15 => Kind::Output,
 			16 => Kind::Toggle { high : value != 0.0 },
-			17 => Kind::Led,
+			17 => Kind::Led { color : value as u8 },
 			18 => Kind::Clock { hertz : value },
 			_ => return Err( JsError::new( "Unknown part kind." ) ),
 		};

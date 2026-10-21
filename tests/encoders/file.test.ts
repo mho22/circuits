@@ -97,6 +97,14 @@ describe( 'file encoder', () =>
 		expect( encode( [ low, high ] ) ).toContain( '{ "kind" : "toggle", "from" : [ 0, 0 ], "to" : [ 1, 0 ] },\n\t\t{ "kind" : "toggle", "level" : 1, "from" : [ 2, 0 ], "to" : [ 3, 0 ] }' );
 	} );
 
+	it( 'writes the color of an led only when it is not red', () =>
+	{
+		const red = element( { kind : Kind.Led, from : { x : 0, y : 0 }, to : { x : 2, y : 0 } } );
+		const blue = element( { kind : Kind.Led, value : 2, from : { x : 0, y : 2 }, to : { x : 2, y : 2 } } );
+
+		expect( encode( [ red, blue ] ) ).toContain( '{ "kind" : "led", "from" : [ 0, 0 ], "to" : [ 2, 0 ] },\n\t\t{ "kind" : "led", "color" : "blue", "from" : [ 0, 2 ], "to" : [ 2, 2 ] }' );
+	} );
+
 	it( 'writes the delay of a layer only when it is not one nanosecond', () =>
 	{
 		expect( encode( [], [ { number : 1, definition : { ... BLANK, delay : 3e-9 }, parts : [] } ] ) ).toContain( '\t\t\t"layer" : 1,\n\t\t\t"delay" : 3e-9,\n' );

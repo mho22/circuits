@@ -1,3 +1,4 @@
+import { Color, NAMES as COLORS } from '../enums/color.ts';
 import { Figure, NAMES as FIGURES } from '../enums/figure.ts';
 import { FIELDS, Kind, NAMES, PINS } from '../enums/kind.ts';
 import { NANO } from '../si.ts';
@@ -16,6 +17,8 @@ function detail( element : Element ) : string
 	if( element.kind === Kind.Symbol ) return `, "layer" : ${ element.value }, "rotation" : ${ element.rotation }`;
 
 	if( element.kind === Kind.Toggle ) return element.value ? ', "level" : 1' : '';
+
+	if( element.kind === Kind.Led ) return element.value ? `, "color" : "${ COLORS[ element.value as Color ].toLowerCase() }"` : '';
 
 	if( PINS.includes( element.kind ) ) return [ element.label ? `, "label" : ${ JSON.stringify( element.label ) }` : '', element.value ? ', "level" : 1' : '' ].join( '' );
 

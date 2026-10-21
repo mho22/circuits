@@ -43,7 +43,7 @@ pub fn companion( element : &Element, history : &History, step : f64, guesses : 
 		Kind::Resistor { ohms } => vec![ through( 1.0 / ohms, 0.0 ) ],
 		Kind::Capacitor { farads } => vec![ through( farads / step, farads / step * stored ) ],
 		Kind::Inductor { henries } => vec![ through( step / henries, - stored ) ],
-		Kind::Diode | Kind::Led => vec![ junction( 0, THROUGH ) ],
+		Kind::Diode | Kind::Led { .. } => vec![ junction( 0, THROUGH ) ],
 		Kind::Npn => vec![ junction( 0, FORWARD ), junction( 1, REVERSE ) ],
 		Kind::Pnp => vec![ junction( 0, FORWARD.map( | weight | - weight ) ), junction( 1, REVERSE.map( | weight | - weight ) ) ],
 		Kind::Nmos => channel( 1.0 ),

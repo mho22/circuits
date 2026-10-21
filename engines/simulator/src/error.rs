@@ -5,6 +5,7 @@ use std::fmt;
 pub enum Error
 {
 	Capacitance,
+	Color,
 	Crooked,
 	Delay,
 	Empty,
@@ -37,6 +38,7 @@ impl fmt::Display for Error
 		let message = match self
 		{
 			Error::Capacitance => "A capacitance must be greater than 0 F.",
+			Error::Color => "An LED is red, green or blue.",
 			Error::Crooked => "A part must run at 0° or 90°.",
 			Error::Delay => "A delay must be greater than 0 s.",
 			Error::Empty => "A part must have a length.",

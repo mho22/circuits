@@ -13,6 +13,7 @@ import { download } from './download.ts';
 import { edit } from './editors/value.ts';
 import { encode as encodeDrawing } from './encoders/drawing.ts';
 import { encode } from './encoders/file.ts';
+import { Color, NEXT } from './enums/color.ts';
 import { Figure } from './enums/figure.ts';
 import { INPUTS, Kind, NAMES, PINS, POINTS } from './enums/kind.ts';
 import { snap } from './grid.ts';
@@ -201,6 +202,8 @@ function act( target : Element, anchor : Point, action : Action ) : void
 
 		if( action === 'vertical' ) circuit.mirror( target.id, true );
 
+		if( action === 'color' ) circuit.setValue( target.id, NEXT[ target.value as Color ] );
+
 		if( action === 'delete' ) circuit.delete( target.id );
 	} );
 }
@@ -370,7 +373,7 @@ function menu( event : MouseEvent ) : void
 
 	if( target.kind === Kind.Wire ) { circuit.delete( target.id ); return; }
 
-	open( document.body, { x : event.clientX, y : event.clientY }, target.kind, action => act( target, point, action ) );
+	open( document.body, { x : event.clientX, y : event.clientY }, target, action => act( target, point, action ) );
 }
 
 function report( text : string, error : boolean ) : void

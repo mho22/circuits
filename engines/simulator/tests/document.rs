@@ -139,6 +139,18 @@ fn it_sets_the_value_of_a_part()
 }
 
 #[test]
+fn it_sets_the_color_of_an_led_and_gives_the_old_color_back_as_its_inverse()
+{
+	let mut document = Document::default();
+
+	document.apply( add( Kind::Led { color : 0 }, FOO, BAR ) ).unwrap();
+
+	assert_eq!( document.inverse( &Operation::SetValue { id : 0, value : 1.0 } ), Ok( Operation::SetValue { id : 0, value : 0.0 } ) );
+	assert_eq!( document.apply( Operation::SetValue { id : 0, value : 1.0 } ), Ok( 0 ) );
+	assert_eq!( document.elements()[ 0 ].kind, Kind::Led { color : 1 } );
+}
+
+#[test]
 fn it_keeps_the_value_when_the_new_one_is_invalid()
 {
 	let mut document = Document::default();

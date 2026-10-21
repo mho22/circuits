@@ -22,6 +22,13 @@ fn it_accepts_valid_values()
 	assert_eq!( Kind::Output.check(), Ok( () ) );
 	assert_eq!( Kind::Symbol { layer : 1, rotation : 3 }.check(), Ok( () ) );
 	assert_eq!( Kind::Clock { hertz : 1e7 }.check(), Ok( () ) );
+	assert_eq!( Kind::Led { color : 2 }.check(), Ok( () ) );
+}
+
+#[test]
+fn it_rejects_an_led_color_past_blue()
+{
+	assert_eq!( Kind::Led { color : 3 }.check(), Err( Error::Color ) );
 }
 
 #[test]
@@ -80,6 +87,7 @@ fn it_reads_the_value_of_a_part()
 	assert_eq!( Kind::Capacitor { farads : 1e-6 }.value(), Some( 1e-6 ) );
 	assert_eq!( Kind::Inductor { henries : 1e-3 }.value(), Some( 1e-3 ) );
 	assert_eq!( Kind::Clock { hertz : 1e7 }.value(), Some( 1e7 ) );
+	assert_eq!( Kind::Led { color : 1 }.value(), Some( 1.0 ) );
 	assert_eq!( Kind::Wire.value(), None );
 	assert_eq!( Kind::Ground.value(), None );
 	assert_eq!( Kind::Switch { closed : true }.value(), None );
@@ -97,6 +105,7 @@ fn it_replaces_the_value_of_a_part()
 	assert_eq!( Kind::Capacitor { farads : 1.0 }.with_value( 1e-6 ), Ok( Kind::Capacitor { farads : 1e-6 } ) );
 	assert_eq!( Kind::Inductor { henries : 1.0 }.with_value( 1e-3 ), Ok( Kind::Inductor { henries : 1e-3 } ) );
 	assert_eq!( Kind::Clock { hertz : 1.0 }.with_value( 6e7 ), Ok( Kind::Clock { hertz : 6e7 } ) );
+	assert_eq!( Kind::Led { color : 0 }.with_value( 2.0 ), Ok( Kind::Led { color : 2 } ) );
 }
 
 #[test]
@@ -108,6 +117,10 @@ fn it_rejects_an_invalid_new_value()
 	assert_eq!( Kind::Capacitor { farads : 1.0 }.with_value( 0.0 ), Err( Error::Capacitance ) );
 	assert_eq!( Kind::Inductor { henries : 1.0 }.with_value( -1.0 ), Err( Error::Inductance ) );
 	assert_eq!( Kind::Clock { hertz : 1.0 }.with_value( 0.0 ), Err( Error::Frequency ) );
+	assert_eq!( Kind::Led { color : 0 }.with_value( 3.0 ), Err( Error::Color ) );
+	assert_eq!( Kind::Led { color : 0 }.with_value( 0.5 ), Err( Error::Color ) );
+	assert_eq!( Kind::Led { color : 0 }.with_value( -1.0 ), Err( Error::Color ) );
+	assert_eq!( Kind::Led { color : 0 }.with_value( f64::NAN ), Err( Error::Color ) );
 }
 
 #[test]
@@ -160,13 +173,13 @@ fn it_rejects_a_level_for_a_part_that_is_not_an_input()
 fn it_tells_an_input_and_an_output_from_the_other_parts()
 {
 	assert!( Kind::Input { high : true }.pin() && Kind::Output.pin() );
-	assert!( ! Kind::Wire.pin() && ! Kind::Supply { volts : 5.0 }.pin() && ! Kind::Toggle { high : true }.pin() && ! Kind::Led.pin() && ! Kind::Symbol { layer : 1, rotation : 0 }.pin() );
+	assert!( ! Kind::Wire.pin() && ! Kind::Supply { volts : 5.0 }.pin() && ! Kind::Toggle { high : true }.pin() && ! Kind::Led { color : 0 }.pin() && ! Kind::Symbol { layer : 1, rotation : 0 }.pin() );
 }
 
 #[test]
 fn it_gives_an_led_the_light_junction_and_every_other_part_the_silicon_junction()
 {
-	assert_eq!( Kind::Led.junction(), LIGHT );
+	assert_eq!( Kind::Led { color : 2 }.junction(), LIGHT );
 	assert_eq!( Kind::Diode.junction(), SILICON );
 	assert_eq!( Kind::Npn.junction(), SILICON );
 }
@@ -175,7 +188,7 @@ fn it_gives_an_led_the_light_junction_and_every_other_part_the_silicon_junction(
 fn it_lists_the_voltages_that_control_each_part()
 {
 	assert_eq!( Kind::Diode.controls(), &[ ( 0, 1 ) ] );
-	assert_eq!( Kind::Led.controls(), &[ ( 0, 1 ) ] );
+	assert_eq!( Kind::Led { color : 0 }.controls(), &[ ( 0, 1 ) ] );
 	assert_eq!( Kind::Npn.controls(), &[ ( 0, 2 ), ( 0, 1 ) ] );
 	assert_eq!( Kind::Pnp.controls(), &[ ( 2, 0 ), ( 1, 0 ) ] );
 	assert_eq!( Kind::Nmos.controls(), &[ ( 0, 2 ), ( 1, 2 ) ] );

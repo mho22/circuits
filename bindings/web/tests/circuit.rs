@@ -348,20 +348,23 @@ fn it_lists_a_toggle_with_its_level_and_switches_it()
 }
 
 #[wasm_bindgen_test]
-fn it_lists_an_led_with_its_forward_drop()
+fn it_lists_an_led_with_its_color_and_its_forward_drop()
 {
 	let mut circuit = Circuit::new();
 
 	circuit.add( 2, 5.0, 0, 2, 0, 0 ).ok();
-	circuit.add( 17, 0.0, 0, 0, 2, 0 ).ok();
+	circuit.add( 17, 2.0, 0, 0, 2, 0 ).ok();
 	circuit.add( 1, 300.0, 2, 0, 2, 2 ).ok();
 	circuit.add( 0, 0.0, 2, 2, 0, 2 ).ok();
 
 	let elements = circuit.elements();
 	let drop = elements[ 22 ] - elements[ 23 ];
 
-	assert_eq!( elements[ 14 ], 17.0 );
+	assert_eq!( [ elements[ 14 ], elements[ 19 ] ], [ 17.0, 2.0 ] );
 	assert!( drop > 1.8 && drop < 2.0 );
+	assert_eq!( circuit.set_value( 1, 1.0 ).ok(), Some( 1 ) );
+	assert_eq!( circuit.elements()[ 19 ], 1.0 );
+	assert!( circuit.set_value( 1, 3.0 ).is_err() );
 }
 
 #[wasm_bindgen_test]

@@ -277,7 +277,7 @@ fn it_drops_about_0_65_v_across_a_diode_in_the_forward_direction()
 fn it_drops_about_1_9_v_across_an_led_in_the_forward_direction()
 {
 	let solution = solve( &loop_with( &[
-		element( Kind::Led, ( 4, 0 ), ( 4, 2 ) ),
+		element( Kind::Led { color : 0 }, ( 4, 0 ), ( 4, 2 ) ),
 		element( Kind::Resistor { ohms : 300.0 }, ( 4, 2 ), ( 4, 4 ) ),
 	] ), &History::default(), STEP ).unwrap();
 

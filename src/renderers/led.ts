@@ -1,3 +1,4 @@
+import { Color } from '../enums/color.ts';
 import { toScreen } from '../grid.ts';
 import type { Element } from '../types/element.ts';
 import type { Scale } from '../types/scale.ts';
@@ -11,7 +12,7 @@ const HALO = 14;
 const GAP = 10;
 const RAY = 5;
 const SPREAD = 3;
-const LIT = '255, 48, 48';
+const LIT : Record<Color, string> = { [ Color.Red ] : '255, 48, 48', [ Color.Green ] : '48, 220, 96', [ Color.Blue ] : '48, 128, 255' };
 const DARK = '#5c5c5c';
 
 
@@ -28,10 +29,11 @@ export function draw( context : CanvasRenderingContext2D, element : Element, sca
 	const middleY = ( fromY + toY ) / 2;
 	const current = element.currents[ 0 ];
 	const glow = current >= THRESHOLD ? Math.min( 1, current / FULL ) : 0;
+	const lit = LIT[ element.value as Color ];
 
 	if( glow > 0 )
 	{
-		context.fillStyle = `rgba(${ LIT }, ${ glow / 2 })`;
+		context.fillStyle = `rgba(${ lit }, ${ glow / 2 })`;
 		context.beginPath();
 		context.arc( middleX, middleY, HALO, 0, 2 * Math.PI );
 		context.fill();
@@ -46,6 +48,6 @@ export function draw( context : CanvasRenderingContext2D, element : Element, sca
 		const startX = middleX + alongY * GAP + alongX * shift;
 		const startY = middleY - alongX * GAP + alongY * shift;
 
-		line.draw( context, glow > 0 ? `rgb(${ LIT })` : DARK, 2, startX, startY, startX + ( alongY + alongX ) * RAY, startY + ( alongY - alongX ) * RAY );
+		line.draw( context, glow > 0 ? `rgb(${ lit })` : DARK, 2, startX, startY, startX + ( alongY + alongX ) * RAY, startY + ( alongY - alongX ) * RAY );
 	}
 }

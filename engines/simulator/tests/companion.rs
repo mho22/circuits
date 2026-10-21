@@ -53,7 +53,7 @@ fn it_turns_an_led_into_its_light_junction_at_the_guess()
 {
 	let ( conductance, source ) = LIGHT.linearize( 1.9 );
 
-	assert_eq!( companion( &element( Kind::Led ), &History::default(), STEP, [ 1.9, 0.0 ] ), vec![ Stamp { across : ( 0, 1 ), conductance, source, weights : THROUGH } ] );
+	assert_eq!( companion( &element( Kind::Led { color : 0 } ), &History::default(), STEP, [ 1.9, 0.0 ] ), vec![ Stamp { across : ( 0, 1 ), conductance, source, weights : THROUGH } ] );
 }
 
 #[test]
@@ -104,7 +104,7 @@ fn it_turns_a_pmos_transistor_into_a_reversed_channel()
 #[test]
 fn it_keeps_the_weights_of_every_junction_balanced()
 {
-	for kind in [ Kind::Diode, Kind::Led, Kind::Npn, Kind::Pnp, Kind::Nmos, Kind::Pmos ]
+	for kind in [ Kind::Diode, Kind::Led { color : 0 }, Kind::Npn, Kind::Pnp, Kind::Nmos, Kind::Pmos ]
 	{
 		for stamp in companion( &element( kind ), &History::default(), STEP, [ 0.0; 2 ] ) { assert!( stamp.weights.iter().sum::<f64>().abs() < 1e-12 ); }
 	}

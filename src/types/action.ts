@@ -1,1 +1,1 @@
-export type Action = 'move' | 'rotate' | 'horizontal' | 'vertical' | 'delete';
+export type Action = 'move' | 'rotate' | 'horizontal' | 'vertical' | 'color' | 'delete';
