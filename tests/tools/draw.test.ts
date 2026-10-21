@@ -35,6 +35,48 @@ describe( 'draw tool', () =>
 		expect( tool.preview() ).toBeNull();
 	} );
 
+	it( 'draws a curve from a drag between its ends and a click on the dot it passes through, and waits while that dot is on the line', () =>
+	{
+		const tool = new DrawTool();
+
+		tool.figure = Figure.Curve;
+		tool.press( { x : 0, y : -4 } );
+		tool.move( { x : 0, y : 4 } );
+
+		expect( tool.preview() ).toEqual( { figure : Figure.Line, from : { x : 0, y : -4 }, to : { x : 0, y : 4 } } );
+
+		tool.release( { x : 0, y : 4 } );
+		tool.move( { x : 4.4, y : 0.6 } );
+
+		expect( [ tool.shapes, tool.preview() ] ).toEqual( [ [], { figure : Figure.Curve, from : { x : 0, y : -4 }, through : { x : 4, y : 0 }, to : { x : 0, y : 4 } } ] );
+
+		tool.press( { x : 0, y : 0 } );
+		tool.release( { x : 0, y : 0 } );
+
+		expect( tool.shapes ).toEqual( [] );
+
+		tool.press( { x : 4, y : 0 } );
+		tool.release( { x : 4, y : 0 } );
+
+		expect( tool.shapes ).toEqual( [ { figure : Figure.Curve, from : { x : 0, y : -4 }, through : { x : 4, y : 0 }, to : { x : 0, y : 4 } } ] );
+		expect( tool.preview() ).toBeNull();
+	} );
+
+	it( 'cancels a curve waiting for the dot it passes through', () =>
+	{
+		const tool = new DrawTool();
+
+		tool.figure = Figure.Curve;
+		tool.press( { x : 0, y : 0 } );
+		tool.release( { x : 4, y : 0 } );
+
+		expect( [ tool.cancel(), tool.cancel() ] ).toEqual( [ true, false ] );
+
+		tool.release( { x : 2, y : 2 } );
+
+		expect( tool.shapes ).toEqual( [] );
+	} );
+
 	it( 'cancels a shape in progress and tells whether one was in progress', () =>
 	{
 		const tool = new DrawTool();

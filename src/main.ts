@@ -354,7 +354,7 @@ function modify( event : MouseEvent ) : void
 
 	if( ! found ) return;
 
-	if( ! found.pin && drawer.shapes[ found.index ].figure === Figure.Line ) { drawer.shapes.splice( found.index, 1 ); return; }
+	if( ! found.pin && drawer.shapes[ found.index ].figure !== Figure.Circle ) { drawer.shapes.splice( found.index, 1 ); return; }
 
 	amend( document.body, { x : event.clientX, y : event.clientY }, found.pin ? null : drawer.shapes[ found.index ].figure, choice => change( found, point, choice ) );
 }

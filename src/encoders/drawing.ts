@@ -6,6 +6,8 @@ function row( shape : Shape ) : number[]
 {
 	if( shape.figure === Figure.Circle ) return [ Figure.Circle, shape.center.x, shape.center.y, shape.radius ];
 
+	if( shape.figure === Figure.Curve ) return [ Figure.Curve, shape.from.x, shape.from.y, shape.through.x, shape.through.y, shape.to.x, shape.to.y ];
+
 	return [ shape.figure, shape.from.x, shape.from.y, shape.to.x, shape.to.y ];
 }
 

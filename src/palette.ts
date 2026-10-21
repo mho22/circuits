@@ -5,8 +5,9 @@ import { FIGURES as KEYS } from './keyboard.ts';
 const HINTS : Record<Figure, string> = {
 	[ Figure.Circle ] : 'Press on the center and drag to the radius, or click for a dot.',
 	[ Figure.Line ] : 'Drag from one end to the other.',
+	[ Figure.Curve ] : 'Drag between the ends, then click a dot on the curve.',
 };
-const MENU = 'Right-click a line to delete it, a circle or a pin to change it.';
+const MENU = 'Right-click a line or a curve to delete it, a circle or a pin to change it.';
 const FIGURES = Object.keys( NAMES ).map( Number ) as Figure[];
 
 

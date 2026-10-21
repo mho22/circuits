@@ -46,6 +46,8 @@ function figure( shape : Shape ) : string
 {
 	if( shape.figure === Figure.Circle ) return `"center" : ${ coordinates( shape.center ) }, "radius" : ${ shape.radius }`;
 
+	if( shape.figure === Figure.Curve ) return `"from" : ${ coordinates( shape.from ) }, "through" : ${ coordinates( shape.through ) }, "to" : ${ coordinates( shape.to ) }`;
+
 	return `"from" : ${ coordinates( shape.from ) }, "to" : ${ coordinates( shape.to ) }`;
 }
 

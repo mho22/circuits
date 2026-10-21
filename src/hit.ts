@@ -1,3 +1,4 @@
+import { arc } from './arc.ts';
 import { Figure } from './enums/figure.ts';
 import { path } from './path.ts';
 import type { Point } from './types/point.ts';
@@ -17,10 +18,27 @@ function near( point : Point, from : Point, to : Point ) : boolean
 	return Math.hypot( point.x - from.x - ratio * dx, point.y - from.y - ratio * dy ) <= REACH;
 }
 
+function ring( point : Point, center : Point, radius : number ) : boolean
+{
+	return Math.abs( Math.hypot( point.x - center.x, point.y - center.y ) - radius ) <= REACH;
+}
+
+function side( point : Point, from : Point, to : Point ) : number
+{
+	return Math.sign( ( to.x - from.x ) * ( point.y - from.y ) - ( to.y - from.y ) * ( point.x - from.x ) );
+}
+
 
 export function hit( shape : Shape, point : Point ) : boolean
 {
-	if( shape.figure === Figure.Circle ) return Math.abs( Math.hypot( point.x - shape.center.x, point.y - shape.center.y ) - shape.radius ) <= REACH;
+	if( shape.figure === Figure.Circle ) return ring( point, shape.center, shape.radius );
+
+	if( shape.figure === Figure.Curve )
+	{
+		const { center, radius } = arc( shape.from, shape.through, shape.to )!;
+
+		return ring( point, center, radius ) && side( point, shape.from, shape.to ) === side( shape.through, shape.from, shape.to );
+	}
 
 	const points = path( shape );
 

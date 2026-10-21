@@ -11,6 +11,7 @@ describe( 'drawing decoder', () =>
 		const shapes = [
 			{ figure : Figure.Line as const, from : { x : -1, y : 0 }, to : { x : 2, y : -3 } },
 			{ figure : Figure.Circle as const, center : { x : 0, y : 1 }, radius : 2 },
+			{ figure : Figure.Curve as const, from : { x : 0, y : -4 }, through : { x : 4, y : 0 }, to : { x : 0, y : 4 } },
 		];
 
 		expect( decode( encode( shapes ) ) ).toEqual( shapes );

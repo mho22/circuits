@@ -21,6 +21,16 @@ export function decode( data : Int32Array ) : Shape[]
 			continue;
 		}
 
+		if( figure === Figure.Curve )
+		{
+			const [ fromX, fromY, throughX, throughY, toX, toY ] = data.subarray( index + 1, index + 7 );
+
+			shapes.push( { figure, from : { x : fromX, y : fromY }, through : { x : throughX, y : throughY }, to : { x : toX, y : toY } } );
+			index += 7;
+
+			continue;
+		}
+
 		const [ fromX, fromY, toX, toY ] = data.subarray( index + 1, index + 5 );
 
 		shapes.push( { figure : figure as Figure.Line, from : { x : fromX, y : fromY }, to : { x : toX, y : toY } } );

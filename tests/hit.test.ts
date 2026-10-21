@@ -12,6 +12,13 @@ describe( 'hit', () =>
 		expect( [ { x : 4, y : 0 }, { x : 0, y : -5 }, { x : 1, y : 1 }, { x : 6, y : 0 } ].map( point => hit( shape, point ) ) ).toEqual( [ true, true, false, false ] );
 	} );
 
+	it( 'reaches a curve near its ring on the side of the point it passes through only', () =>
+	{
+		const shape = { figure : Figure.Curve as const, from : { x : 0, y : -4 }, through : { x : 4, y : 0 }, to : { x : 0, y : 4 } };
+
+		expect( [ { x : 4, y : 0 }, { x : 3, y : 3 }, { x : -4, y : 0 }, { x : 1, y : 0 } ].map( point => hit( shape, point ) ) ).toEqual( [ true, true, false, false ] );
+	} );
+
 	it( 'reaches a line along its length but not past its ends', () =>
 	{
 		const shape = { figure : Figure.Line as const, from : { x : 0, y : 0 }, to : { x : 4, y : 0 } };

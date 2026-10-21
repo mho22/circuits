@@ -1,3 +1,4 @@
+import { arc } from '../arc.ts';
 import { Figure } from '../enums/figure.ts';
 import { HALF, snap } from '../grid.ts';
 import type { Point } from '../types/point.ts';
@@ -16,6 +17,8 @@ export class DrawTool
 	private start : Point | null = null;
 
 	private cursor : Point | null = null;
+
+	private bend : { from : Point, to : Point } | null = null;
 
 
 	press( point : Point ) : void
@@ -37,14 +40,20 @@ export class DrawTool
 
 		this.start = null;
 
-		if( shape ) this.shapes.push( shape );
+		if( ! shape ) return;
+
+		if( this.figure === Figure.Curve && shape.figure === Figure.Line ) { this.bend = { from : shape.from, to : shape.to }; return; }
+
+		this.bend = null;
+		this.shapes.push( shape );
 	}
 
 	cancel() : boolean
 	{
-		const busy = this.start !== null;
+		const busy = this.start !== null || this.bend !== null;
 
 		this.start = null;
+		this.bend = null;
 
 		return busy;
 	}
@@ -56,9 +65,13 @@ export class DrawTool
 
 	preview() : Shape | null
 	{
-		const { start, cursor } = this;
+		const { start, cursor, bend } = this;
 
-		if( ! start || ! cursor ) return null;
+		if( ! cursor ) return null;
+
+		if( bend ) return arc( bend.from, cursor, bend.to ) ? { figure : Figure.Curve, from : bend.from, through : cursor, to : bend.to } : { figure : Figure.Line, ... bend };
+
+		if( ! start ) return null;
 
 		if( this.figure === Figure.Circle )
 		{

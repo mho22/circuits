@@ -24,6 +24,7 @@ fn shapes( data : &[ i32 ] ) -> Result<Vec<Shape>, JsError>
 		{
 			( 1, [ x, y, radius, .. ] ) => ( 3, Shape::Circle { center : Point { x : *x, y : *y }, radius : *radius } ),
 			( 2, [ from_x, from_y, to_x, to_y, .. ] ) => ( 4, Shape::Line { from : Point { x : *from_x, y : *from_y }, to : Point { x : *to_x, y : *to_y } } ),
+			( 3, [ from_x, from_y, through_x, through_y, to_x, to_y, .. ] ) => ( 6, Shape::Curve { from : Point { x : *from_x, y : *from_y }, through : Point { x : *through_x, y : *through_y }, to : Point { x : *to_x, y : *to_y } } ),
 			_ => return Err( JsError::new( "Unknown shape." ) ),
 		};
 
@@ -40,6 +41,7 @@ fn flat( shapes : &[ Shape ] ) -> Vec<i32>
 	{
 		Shape::Circle { center, radius } => vec![ 1, center.x, center.y, *radius ],
 		Shape::Line { from, to } => vec![ 2, from.x, from.y, to.x, to.y ],
+		Shape::Curve { from, through, to } => vec![ 3, from.x, from.y, through.x, through.y, to.x, to.y ],
 	} ).collect()
 }
 

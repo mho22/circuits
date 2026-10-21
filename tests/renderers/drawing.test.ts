@@ -30,6 +30,15 @@ describe( 'drawing renderer', () =>
 		] );
 	} );
 
+	it( 'strokes a curve as the arc of the circle through its three points', () =>
+	{
+		const { context, calls } = record();
+
+		draw( context, [ { figure : Figure.Curve, from : { x : 0, y : -1 }, through : { x : -1, y : 0 }, to : { x : 0, y : 1 } } ], center, 0, 10 );
+
+		expect( calls.slice( 3, 5 ) ).toEqual( [ [ 'moveTo', 100, 40 ], [ 'arc', 100, 50, 10, - Math.PI / 2, Math.PI / 2, true ] ] );
+	} );
+
 	it( 'turns each point with the rotation', () =>
 	{
 		const { context, calls } = record();

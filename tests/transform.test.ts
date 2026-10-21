@@ -7,6 +7,7 @@ describe( 'transform', () =>
 {
 	const circle = { figure : Figure.Circle as const, center : { x : 1, y : 1 }, radius : 2 };
 	const line = { figure : Figure.Line as const, from : { x : 0, y : 0 }, to : { x : 4, y : 2 } };
+	const curve = { figure : Figure.Curve as const, from : { x : 0, y : 0 }, through : { x : 2, y : 2 }, to : { x : 4, y : 0 } };
 
 	it( 'shifts every point of a shape by an offset', () =>
 	{
@@ -14,5 +15,6 @@ describe( 'transform', () =>
 
 		expect( shift( circle, offset ) ).toEqual( { ... circle, center : { x : 3, y : 0 } } );
 		expect( shift( line, offset ) ).toEqual( { ... line, from : { x : 2, y : -1 }, to : { x : 6, y : 1 } } );
+		expect( shift( curve, offset ) ).toEqual( { ... curve, from : { x : 2, y : -1 }, through : { x : 4, y : 1 }, to : { x : 6, y : -1 } } );
 	} );
 } );

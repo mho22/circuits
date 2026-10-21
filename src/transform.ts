@@ -9,5 +9,7 @@ export function shift( shape : Shape, offset : Point ) : Shape
 
 	if( shape.figure === Figure.Circle ) return { ... shape, center : move( shape.center ) };
 
+	if( shape.figure === Figure.Curve ) return { ... shape, from : move( shape.from ), through : move( shape.through ), to : move( shape.to ) };
+
 	return { ... shape, from : move( shape.from ), to : move( shape.to ) };
 }

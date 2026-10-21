@@ -6,11 +6,11 @@ describe( 'figure', () =>
 {
 	it( 'uses the codes of the engine binding', () =>
 	{
-		expect( [ Figure.Circle, Figure.Line ] ).toEqual( [ 1, 2 ] );
+		expect( [ Figure.Circle, Figure.Line, Figure.Curve ] ).toEqual( [ 1, 2, 3 ] );
 	} );
 
 	it( 'names every figure', () =>
 	{
-		expect( Object.values( NAMES ) ).toEqual( [ 'Circle', 'Line' ] );
+		expect( Object.values( NAMES ) ).toEqual( [ 'Circle', 'Line', 'Curve' ] );
 	} );
 } );

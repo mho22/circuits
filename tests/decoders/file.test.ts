@@ -82,6 +82,7 @@ describe( 'file decoder', () =>
 			'{ "version" : 1, "parts" : [], "symbols" : [ { "layer" : 1, "drawing" : [ { "shape" : "rectangle", "from" : [ 0, 0 ] } ], "parts" : [] } ] }',
 			'{ "version" : 1, "parts" : [], "symbols" : [ { "layer" : 1, "drawing" : [ { "shape" : "circle", "center" : [ 0, 0 ], "radius" : 1.5 } ], "parts" : [] } ] }',
 			'{ "version" : 1, "parts" : [], "symbols" : [ { "layer" : 1, "drawing" : [ { "shape" : "line", "from" : [ 0, 0 ] } ], "parts" : [] } ] }',
+			'{ "version" : 1, "parts" : [], "symbols" : [ { "layer" : 1, "drawing" : [ { "shape" : "curve", "from" : [ 0, 0 ], "to" : [ 2, 0 ] } ], "parts" : [] } ] }',
 			'{ "version" : 1, "parts" : [], "symbols" : [ { "layer" : 1, "drawing" : [ { "shape" : "polyline", "points" : [ [ 0, 0 ], [ 1, 1 ] ] } ], "parts" : [] } ] }',
 			'{ "version" : 1, "parts" : [ { "kind" : "pin", "label" : 1, "from" : [ 0, 0 ], "to" : [ 0, 0 ] } ] }',
 			'{ "version" : 1, "parts" : [ { "kind" : "output", "label" : 1, "from" : [ 0, 0 ], "to" : [ 1, 0 ] } ] }',
@@ -103,6 +104,7 @@ describe( 'file decoder', () =>
 		const drawing = [
 			{ figure : Figure.Circle as const, center : { x : 0, y : 0 }, radius : 2 },
 			{ figure : Figure.Line as const, from : { x : -1, y : 0 }, to : { x : 1, y : 1 } },
+			{ figure : Figure.Curve as const, from : { x : 0, y : -4 }, through : { x : 4, y : 0 }, to : { x : 0, y : 4 } },
 		];
 		const contents = decode( encode( [ symbol ], [ { number : 1, definition : { name : 'foo', drawing, labels : [], layout : [ { x : 2, y : -1 } ], delay : 1e-9 }, parts : [ pin, element() ] }, { number : 2, definition : { name : 'baz', drawing : [], labels : [], layout : [], delay : 2e-9 }, parts : [] } ] ) );
 
@@ -110,7 +112,7 @@ describe( 'file decoder', () =>
 		expect( contents.labels ).toEqual( [ '', 'bar', '' ] );
 		expect( Array.from( contents.layers ) ).toEqual( [ 1, 2 ] );
 		expect( contents.names ).toEqual( [ 'foo', 'baz' ] );
-		expect( Array.from( contents.drawings ) ).toEqual( [ 9, 1, 0, 0, 2, 2, -1, 0, 1, 1, 0 ] );
+		expect( Array.from( contents.drawings ) ).toEqual( [ 16, 1, 0, 0, 2, 2, -1, 0, 1, 1, 3, 0, -4, 4, 0, 0, 4, 0 ] );
 		expect( Array.from( contents.layouts ) ).toEqual( [ 1, 2, -1, 0 ] );
 		expect( Array.from( contents.delays ) ).toEqual( [ 1e-9, 2e-9 ] );
 	} );

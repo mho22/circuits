@@ -567,7 +567,7 @@ fn it_encloses_a_named_symbol_with_its_drawing_and_its_layout()
 	assert!( circuit.enclose( 1, -2, 7, 2, String::new(), &[ 2, -1, 0, 0 ], &[], 1e-9 ).is_err() );
 	assert!( circuit.enclose( 1, -2, 7, 2, String::new(), &[ 1, 0, 0, 0 ], &[], 1e-9 ).is_err() );
 
-	let drawing = [ 1, 0, 0, 2, 2, -1, 0, 1, 1 ];
+	let drawing = [ 1, 0, 0, 2, 2, -1, 0, 1, 1, 3, -4, -4, 0, 0, -4, 4 ];
 	let symbol = circuit.enclose( 1, -2, 7, 2, "foo".to_string(), &drawing, &[ -3, 0, 3, 0 ], 1e-9 ).ok().unwrap();
 
 	assert_eq!( ( circuit.name( 1 ), circuit.drawing( 1 ), circuit.layout( 1 ) ), ( "foo".to_string(), drawing.to_vec(), vec![ -3, 0, 3, 0 ] ) );

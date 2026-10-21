@@ -65,6 +65,8 @@ function shape( value : Record<string, unknown> | null ) : Shape[]
 
 	if( figure === Figure.Circle ) return [ { figure, center : at( value.center ), radius : Number.isInteger( value.radius ) ? value.radius as number : unreadable() } ];
 
+	if( figure === Figure.Curve ) return [ { figure, from : at( value.from ), through : at( value.through ), to : at( value.to ) } ];
+
 	return [ { figure, from : at( value.from ), to : at( value.to ) } ];
 }
 

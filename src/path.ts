@@ -5,7 +5,7 @@ import type { Shape } from './types/shape.ts';
 
 export function path( shape : Shape ) : Point[]
 {
-	if( shape.figure === Figure.Circle ) return [];
+	if( shape.figure !== Figure.Line ) return [];
 
 	return [ shape.from, shape.to ];
 }
