@@ -37,7 +37,7 @@ describe( 'file decoder', () =>
 		const pin = element( { kind : Kind.Output, from : { x : 1, y : 0 }, to : { x : 0, y : 0 } } );
 		const wire = element( { from : { x : 0, y : 0 }, to : { x : 2, y : 0 } } );
 
-		expect( Array.from( decode( encode( [ symbol ], [ { number : 3, definition : { name : '', drawing : [], labels : [], layout : [] }, parts : [ pin, wire ] } ] ) ).parts ) ).toEqual( [ 0, Kind.Symbol, 3, 2, 5, 5, 5, 5, 3, Kind.Output, 0, 0, 1, 0, 0, 0, 3, Kind.Wire, 0, 0, 0, 0, 2, 0 ] );
+		expect( Array.from( decode( encode( [ symbol ], [ { number : 3, definition : { name : '', drawing : [], labels : [], layout : [], delay : 1e-9 }, parts : [ pin, wire ] } ] ) ).parts ) ).toEqual( [ 0, Kind.Symbol, 3, 2, 5, 5, 5, 5, 3, Kind.Output, 0, 0, 1, 0, 0, 0, 3, Kind.Wire, 0, 0, 0, 0, 2, 0 ] );
 	} );
 
 	it( 'reads a symbol without a rotation as not turned', () =>
@@ -105,7 +105,7 @@ describe( 'file decoder', () =>
 			{ figure : Figure.Circle as const, center : { x : 0, y : 0 }, radius : 2 },
 			{ figure : Figure.Line as const, from : { x : -1, y : 0 }, to : { x : 1, y : 1 } },
 		];
-		const contents = decode( encode( [ symbol ], [ { number : 1, definition : { name : 'foo', drawing, labels : [], layout : [ { x : 2, y : -1 } ] }, parts : [ pin, element() ] }, { number : 2, definition : { name : 'baz', drawing : [], labels : [], layout : [] }, parts : [] } ] ) );
+		const contents = decode( encode( [ symbol ], [ { number : 1, definition : { name : 'foo', drawing, labels : [], layout : [ { x : 2, y : -1 } ], delay : 1e-9 }, parts : [ pin, element() ] }, { number : 2, definition : { name : 'baz', drawing : [], labels : [], layout : [], delay : 2e-9 }, parts : [] } ] ) );
 
 		expect( Array.from( contents.parts ) ).toEqual( [ 0, Kind.Symbol, 1, 0, 5, 5, 5, 5, 1, Kind.Output, 0, 0, 1, 0, 0, 0, 1, Kind.Wire, 0, 0, 0, 0, 2, 0 ] );
 		expect( contents.labels ).toEqual( [ '', 'bar', '' ] );
@@ -113,6 +113,7 @@ describe( 'file decoder', () =>
 		expect( contents.names ).toEqual( [ 'foo', 'baz' ] );
 		expect( Array.from( contents.drawings ) ).toEqual( [ 14, 0, -4, -4, 4, 4, 1, 0, 0, 2, 2, -1, 0, 1, 1, 0 ] );
 		expect( Array.from( contents.layouts ) ).toEqual( [ 1, 2, -1, 0 ] );
+		expect( Array.from( contents.delays ) ).toEqual( [ 1e-9, 2e-9 ] );
 	} );
 
 	it( 'reads the level of an input as its value', () =>
@@ -120,6 +121,13 @@ describe( 'file decoder', () =>
 		const input = element( { kind : Kind.Input, value : 1, from : { x : 0, y : 0 }, to : { x : 1, y : 0 } } );
 
 		expect( Array.from( decode( encode( [ input ] ) ).parts ) ).toEqual( [ 0, Kind.Input, 1, 0, 0, 0, 1, 0 ] );
+	} );
+
+	it( 'reads the frequency of a clock as its value', () =>
+	{
+		const clock = element( { kind : Kind.Clock, value : 6e7, from : { x : 0, y : 0 }, to : { x : 2, y : 0 } } );
+
+		expect( Array.from( decode( encode( [ clock ] ) ).parts ) ).toEqual( [ 0, Kind.Clock, 6e7, 0, 0, 0, 2, 0 ] );
 	} );
 
 	it( 'reads the level of a toggle as its value and an led', () =>

@@ -8,4 +8,5 @@ export interface Definition
 	drawing : Shape[];
 	labels : string[];
 	layout : Point[];
+	delay : number;
 }

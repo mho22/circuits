@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { format } from '../src/si.ts';
+import { format, NANO } from '../src/si.ts';
 
 
 describe( 'si', () =>
@@ -12,6 +12,11 @@ describe( 'si', () =>
 		expect( format( 2200000, 'Ω' ) ).toBe( '2.2 MΩ' );
 		expect( format( 5, 'V' ) ).toBe( '5 V' );
 		expect( format( -9, 'V' ) ).toBe( '-9 V' );
+	} );
+
+	it( 'gives the size of a nanosecond', () =>
+	{
+		expect( format( NANO, 's' ) ).toBe( '1 ns' );
 	} );
 
 	it( 'keeps three significant digits', () =>

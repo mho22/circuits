@@ -1,6 +1,7 @@
 import { encode } from '../encoders/drawing.ts';
 import { Figure, NAMES as FIGURES } from '../enums/figure.ts';
 import { FIELDS, Kind, LEVELS, NAMES, PINS, TRANSISTORS } from '../enums/kind.ts';
+import { NANO } from '../si.ts';
 import type { Contents } from '../types/contents.ts';
 import type { Point } from '../types/point.ts';
 import type { Shape } from '../types/shape.ts';
@@ -99,7 +100,7 @@ function row( layer : number, part : Record<string, unknown> | null ) : [ number
 	return [ [ layer, kind, value, turn, ... point( part.from ), ... point( part.to ) ], PINS.includes( kind ) ? text( part.label ) : '' ];
 }
 
-function definition( symbol : Record<string, unknown> | null ) : [ [ number[], string ][], number, string, number[], number[] ]
+function definition( symbol : Record<string, unknown> | null ) : [ [ number[], string ][], number, string, number[], number[], number ]
 {
 	if( typeof symbol !== 'object' || symbol === null ) unreadable();
 
@@ -107,7 +108,7 @@ function definition( symbol : Record<string, unknown> | null ) : [ [ number[], s
 
 	if( ! Number.isInteger( layer ) || layer < 1 || ! Array.isArray( symbol.parts ) ) unreadable();
 
-	return [ symbol.parts.map( part => row( layer, part ) ), layer, text( symbol.name ), drawing( symbol.drawing ), layout( symbol.layout ) ];
+	return [ symbol.parts.map( part => row( layer, part ) ), layer, text( symbol.name ), drawing( symbol.drawing ), layout( symbol.layout ), number( symbol.delay ?? NANO ) ];
 }
 
 
@@ -124,5 +125,5 @@ export function decode( source : string ) : Contents
 	const definitions = symbols.map( definition );
 	const rows = [ ... file.parts.map( part => row( 0, part ) ), ... definitions.flatMap( ( [ parts ] ) => parts ) ];
 
-	return { parts : new Float64Array( rows.flatMap( ( [ numbers ] ) => numbers ) ), labels : rows.map( ( [ , label ] ) => label ), layers : new Uint32Array( definitions.map( ( [ , layer ] ) => layer ) ), names : definitions.map( ( [ , , name ] ) => name ), drawings : new Int32Array( definitions.flatMap( ( [ , , , rows ] ) => rows ) ), layouts : new Int32Array( definitions.flatMap( ( [ , , , , points ] ) => points ) ) };
+	return { parts : new Float64Array( rows.flatMap( ( [ numbers ] ) => numbers ) ), labels : rows.map( ( [ , label ] ) => label ), layers : new Uint32Array( definitions.map( ( [ , layer ] ) => layer ) ), names : definitions.map( ( [ , , name ] ) => name ), drawings : new Int32Array( definitions.flatMap( ( [ , , , rows ] ) => rows ) ), layouts : new Int32Array( definitions.flatMap( ( [ , , , , points ] ) => points ) ), delays : new Float64Array( definitions.map( ( [ , , , , , delay ] ) => delay ) ) };
 }

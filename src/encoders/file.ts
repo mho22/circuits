@@ -1,5 +1,6 @@
 import { Figure, NAMES as FIGURES } from '../enums/figure.ts';
 import { FIELDS, Kind, NAMES, PINS } from '../enums/kind.ts';
+import { NANO } from '../si.ts';
 import type { Element } from '../types/element.ts';
 import type { Layer } from '../types/layer.ts';
 import type { Point } from '../types/point.ts';
@@ -50,9 +51,9 @@ function figure( shape : Shape ) : string
 
 function heading( layer : Layer ) : string
 {
-	const { name, drawing, layout } = layer.definition;
+	const { name, drawing, layout, delay } = layer.definition;
 	const shapes = drawing.map( shape => `{ "shape" : "${ FIGURES[ shape.figure ].toLowerCase() }", ${ figure( shape ) } }` );
-	const lines = [ `"layer" : ${ layer.number }`, name ? `"name" : ${ JSON.stringify( name ) }` : '', shapes.length === 0 ? '' : `"drawing" : [ ${ shapes.join( ', ' ) } ]`, layout.length === 0 ? '' : `"layout" : [ ${ layout.map( coordinates ).join( ', ' ) } ]` ];
+	const lines = [ `"layer" : ${ layer.number }`, name ? `"name" : ${ JSON.stringify( name ) }` : '', shapes.length === 0 ? '' : `"drawing" : [ ${ shapes.join( ', ' ) } ]`, layout.length === 0 ? '' : `"layout" : [ ${ layout.map( coordinates ).join( ', ' ) } ]`, delay === NANO ? '' : `"delay" : ${ delay }` ];
 
 	return lines.filter( Boolean ).map( line => `\t\t\t${ line },\n` ).join( '' );
 }

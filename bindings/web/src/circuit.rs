@@ -3,6 +3,9 @@ use wasm_bindgen::prelude::*;
 
 
 const STEP : f64 = 1e-5;
+const SPEED : f64 = 1e-2;
+const PERIODS : f64 = 2.0;
+const REAL : f64 = 1.0;
 
 
 fn points( data : &[ i32 ] ) -> Vec<Point>
@@ -72,7 +75,7 @@ impl Circuit
 		self.simulation.place( self.current(), kind, Segment { from : Point { x : from_x, y : from_y }, to : Point { x : to_x, y : to_y } } ).map_err( | error | JsError::new( &error.to_string() ) )
 	}
 
-	pub fn open( &mut self, data : &[ f64 ], labels : Vec<String>, layers : &[ u32 ], names : Vec<String>, drawings : &[ i32 ], layouts : &[ i32 ] ) -> Result<u32, JsError>
+	pub fn open( &mut self, data : &[ f64 ], labels : Vec<String>, layers : &[ u32 ], names : Vec<String>, drawings : &[ i32 ], layouts : &[ i32 ], delays : &[ f64 ] ) -> Result<u32, JsError>
 	{
 		let mut counts : Vec<u32> = Vec::new();
 		let mut edits = Vec::new();
@@ -101,14 +104,16 @@ impl Circuit
 		let mut rest = drawings;
 		let mut places = layouts;
 
-		for ( &layer, name ) in layers.iter().zip( names )
+		if delays.len() != layers.len() { return Err( JsError::new( "Unknown delay." ) ); }
+
+		for ( ( &layer, name ), &delay ) in layers.iter().zip( names ).zip( delays )
 		{
 			let [ length, tail @ .. ] = rest else { return Err( JsError::new( "Unknown shape." ) ); };
 			let length = usize::try_from( *length ).ok().filter( | &length | length <= tail.len() ).ok_or_else( || JsError::new( "Unknown shape." ) )?;
 			let [ count, others @ .. ] = places else { return Err( JsError::new( "Unknown layout." ) ); };
 			let count = usize::try_from( *count ).ok().filter( | &count | 2 * count <= others.len() ).ok_or_else( || JsError::new( "Unknown layout." ) )?;
 
-			edits.push( ( layer as usize, Operation::Describe { name, drawing : shapes( &tail[ .. length ] )?, layout : points( &others[ .. 2 * count ] ) } ) );
+			edits.push( ( layer as usize, Operation::Describe { name, drawing : shapes( &tail[ .. length ] )?, layout : points( &others[ .. 2 * count ] ), delay } ) );
 
 			rest = &tail[ length .. ];
 			places = &others[ 2 * count .. ];
@@ -117,11 +122,11 @@ impl Circuit
 		self.simulation.open( edits ).map_err( | error | JsError::new( &error.to_string() ) )
 	}
 
-	pub fn enclose( &mut self, low_x : i32, low_y : i32, high_x : i32, high_y : i32, name : String, drawing : &[ i32 ], layout : &[ i32 ] ) -> Result<u32, JsError>
+	pub fn enclose( &mut self, low_x : i32, low_y : i32, high_x : i32, high_y : i32, name : String, drawing : &[ i32 ], layout : &[ i32 ], delay : f64 ) -> Result<u32, JsError>
 	{
 		let drawing = shapes( drawing )?;
 
-		self.simulation.enclose( self.current(), Point { x : low_x, y : low_y }, Point { x : high_x, y : high_y }, &name, &drawing, &points( layout ) ).map_err( | error | JsError::new( &error.to_string() ) )
+		self.simulation.enclose( self.current(), Point { x : low_x, y : low_y }, Point { x : high_x, y : high_y }, &name, &drawing, &points( layout ), delay ).map_err( | error | JsError::new( &error.to_string() ) )
 	}
 
 	pub fn shift( &mut self, low_x : i32, low_y : i32, high_x : i32, high_y : i32, dx : i32, dy : i32 ) -> Result<u32, JsError>
@@ -129,11 +134,11 @@ impl Circuit
 		self.simulation.shift( self.current(), Point { x : low_x, y : low_y }, Point { x : high_x, y : high_y }, dx, dy ).map_err( | error | JsError::new( &error.to_string() ) )
 	}
 
-	pub fn describe( &mut self, name : String, drawing : &[ i32 ], layout : &[ i32 ] ) -> Result<u32, JsError>
+	pub fn describe( &mut self, name : String, drawing : &[ i32 ], layout : &[ i32 ], delay : f64 ) -> Result<u32, JsError>
 	{
 		let drawing = shapes( drawing )?;
 
-		self.apply( Operation::Describe { name, drawing, layout : points( layout ) } )
+		self.apply( Operation::Describe { name, drawing, layout : points( layout ), delay } )
 	}
 
 	pub fn purge( &mut self ) -> Result<u32, JsError>
@@ -156,6 +161,11 @@ impl Circuit
 		self.simulation.document( layer as usize ).map_or( Vec::new(), | document | document.layout().iter().flat_map( | point | [ point.x, point.y ] ).collect() )
 	}
 
+	pub fn delay( &self, layer : u32 ) -> f64
+	{
+		self.simulation.document( layer as usize ).map_or( f64::NAN, Document::delay )
+	}
+
 	pub fn labels( &self, layer : u32 ) -> Vec<String>
 	{
 		let Some( document ) = self.simulation.document( layer as usize ) else { return Vec::new(); };
@@ -175,6 +185,18 @@ impl Circuit
 		let outer = self.simulation.path().split_last().map_or( Vec::new(), | ( _, outer ) | outer.to_vec() );
 
 		self.simulation.focus( &outer ).ok();
+	}
+
+	#[wasm_bindgen( getter )]
+	pub fn rate( &self ) -> f64
+	{
+		self.simulation.period().map_or( SPEED, | period | ( PERIODS * period ).min( REAL ) ) / self.simulation.step()
+	}
+
+	#[wasm_bindgen( getter )]
+	pub fn mode( &self ) -> String
+	{
+		self.simulation.mode().to_string()
 	}
 
 	#[wasm_bindgen( getter )]
@@ -328,6 +350,7 @@ impl Circuit
 				Kind::Output => ( 15.0, 0.0, 0 ),
 				Kind::Toggle { high } => ( 16.0, if high { 1.0 } else { 0.0 }, 0 ),
 				Kind::Led => ( 17.0, 0.0, 0 ),
+				Kind::Clock { hertz } => ( 18.0, hertz, 0 ),
 			};
 
 			let count = self.simulation.terminals( element ).len();
@@ -391,6 +414,7 @@ impl Circuit
 			15 => Kind::Output,
 			16 => Kind::Toggle { high : value != 0.0 },
 			17 => Kind::Led,
+			18 => Kind::Clock { hertz : value },
 			_ => return Err( JsError::new( "Unknown part kind." ) ),
 		};
 

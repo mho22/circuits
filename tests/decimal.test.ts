@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { clean, parse, write } from '../src/decimal.ts';
+import { clean, parse, SEPARATOR, write } from '../src/decimal.ts';
 
 
 describe( 'decimal', () =>
@@ -12,6 +12,11 @@ describe( 'decimal', () =>
 		expect( clean( '1.2,3.4' ) ).toBe( '1.234' );
 		expect( clean( '5-3' ) ).toBe( '53' );
 		expect( clean( 'foo' ) ).toBe( '' );
+	} );
+
+	it( 'takes the decimal separator of the locale', () =>
+	{
+		expect( SEPARATOR ).toBe( ( 0.5 ).toLocaleString().charAt( 1 ) );
 	} );
 
 	it( 'reads a comma or a dot as the decimal separator', () =>

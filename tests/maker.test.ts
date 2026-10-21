@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 
 import { beforeEach, describe, it, expect, vi } from 'vitest';
+import { SEPARATOR, write } from '../src/decimal.ts';
 import { Figure } from '../src/enums/figure.ts';
 import { Maker } from '../src/maker.ts';
 
@@ -59,7 +60,7 @@ describe( 'maker', () =>
 		maker.layout = LAYOUT;
 		button( 'Done' ).click();
 
-		expect( finish ).toHaveBeenCalledWith( AREA, 'qux', [ SHAPE ], LAYOUT );
+		expect( finish ).toHaveBeenCalledWith( AREA, 'qux', [ SHAPE ], LAYOUT, 1e-9 );
 		expect( [ bar().hidden, maker.area, maker.drawing, maker.layout ] ).toEqual( [ true, null, [], [] ] );
 	} );
 
@@ -117,17 +118,19 @@ describe( 'maker', () =>
 		const finish = vi.fn();
 		const maker = new Maker( parent, document.createElement( 'div' ), finish, () => {}, () => {}, () => {} );
 
-		maker.edit( 3, { name : 'foo', drawing : [ SHAPE ], labels : [], layout : LAYOUT } );
+		maker.edit( 3, { name : 'foo', drawing : [ SHAPE ], labels : [], layout : LAYOUT, delay : 2.5e-9 } );
 
 		expect( [ bar().hidden, maker.area, maker.layer, maker.drawing, maker.layout ] ).toEqual( [ false, null, 3, [ SHAPE ], LAYOUT ] );
 		expect( bar().querySelector( 'input' )!.value ).toBe( 'foo' );
+		expect( bar().querySelector<HTMLInputElement>( 'input.delay' )!.value ).toBe( write( 2.5, SEPARATOR ) );
 		expect( document.activeElement ).not.toBe( bar().querySelector( 'input' ) );
 		expect( shown() ).toEqual( [ 'Icon', 'Delete', 'Done', 'Cancel' ] );
 
 		bar().querySelector( 'input' )!.value = 'bar';
+		bar().querySelector<HTMLInputElement>( 'input.delay' )!.value = '2';
 		button( 'Done' ).click();
 
-		expect( finish ).toHaveBeenCalledWith( 3, 'bar', [ SHAPE ], LAYOUT );
+		expect( finish ).toHaveBeenCalledWith( 3, 'bar', [ SHAPE ], LAYOUT, 2e-9 );
 		expect( [ bar().hidden, maker.layer ] ).toEqual( [ true, null ] );
 	} );
 
@@ -137,7 +140,7 @@ describe( 'maker', () =>
 		const remove = vi.fn();
 		const maker = new Maker( parent, document.createElement( 'div' ), () => {}, () => {}, discard, remove );
 
-		maker.edit( 2, { name : '', drawing : [], labels : [], layout : [] } );
+		maker.edit( 2, { name : '', drawing : [], labels : [], layout : [], delay : 1e-9 } );
 		button( 'Delete' ).click();
 
 		expect( remove ).toHaveBeenCalledWith( 2 );

@@ -45,7 +45,7 @@ describe( 'symbol renderer', () =>
 	it( 'draws its drawing without a box and each label above its pin, without its name', () =>
 	{
 		const { context, calls } = record();
-		const definition = { name : 'foo', drawing : [ { figure : Figure.Circle as const, center : { x : 0, y : 0 }, radius : 4 } ], labels : [ 'bar', '' ], layout : [] };
+		const definition = { name : 'foo', drawing : [ { figure : Figure.Circle as const, center : { x : 0, y : 0 }, radius : 4 } ], labels : [ 'bar', '' ], layout : [], delay : 1e-9 };
 
 		draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline, definition } ), { voltage : 5, current : 0 } );
 
@@ -57,7 +57,7 @@ describe( 'symbol renderer', () =>
 	it( 'turns its drawing with the box', () =>
 	{
 		const { context, calls } = record();
-		const definition = { name : '', drawing : [ { figure : Figure.Line as const, from : { x : 4, y : 0 }, to : { x : 8, y : 0 } } ], labels : [], layout : [] };
+		const definition = { name : '', drawing : [ { figure : Figure.Line as const, from : { x : 4, y : 0 }, to : { x : 8, y : 0 } } ], labels : [], layout : [], delay : 1e-9 };
 
 		draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline, rotation : 1, definition } ), { voltage : 5, current : 0 } );
 

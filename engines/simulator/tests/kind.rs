@@ -21,6 +21,15 @@ fn it_accepts_valid_values()
 	assert_eq!( Kind::Input { high : false }.check(), Ok( () ) );
 	assert_eq!( Kind::Output.check(), Ok( () ) );
 	assert_eq!( Kind::Symbol { layer : 1, rotation : 3 }.check(), Ok( () ) );
+	assert_eq!( Kind::Clock { hertz : 1e7 }.check(), Ok( () ) );
+}
+
+#[test]
+fn it_rejects_a_frequency_that_is_not_positive_and_finite()
+{
+	assert_eq!( Kind::Clock { hertz : 0.0 }.check(), Err( Error::Frequency ) );
+	assert_eq!( Kind::Clock { hertz : f64::INFINITY }.check(), Err( Error::Frequency ) );
+	assert_eq!( Kind::Clock { hertz : f64::NAN }.check(), Err( Error::Frequency ) );
 }
 
 #[test]
@@ -70,6 +79,7 @@ fn it_reads_the_value_of_a_part()
 	assert_eq!( Kind::Supply { volts : 3.3 }.value(), Some( 3.3 ) );
 	assert_eq!( Kind::Capacitor { farads : 1e-6 }.value(), Some( 1e-6 ) );
 	assert_eq!( Kind::Inductor { henries : 1e-3 }.value(), Some( 1e-3 ) );
+	assert_eq!( Kind::Clock { hertz : 1e7 }.value(), Some( 1e7 ) );
 	assert_eq!( Kind::Wire.value(), None );
 	assert_eq!( Kind::Ground.value(), None );
 	assert_eq!( Kind::Switch { closed : true }.value(), None );
@@ -86,6 +96,7 @@ fn it_replaces_the_value_of_a_part()
 	assert_eq!( Kind::Supply { volts : 5.0 }.with_value( 3.3 ), Ok( Kind::Supply { volts : 3.3 } ) );
 	assert_eq!( Kind::Capacitor { farads : 1.0 }.with_value( 1e-6 ), Ok( Kind::Capacitor { farads : 1e-6 } ) );
 	assert_eq!( Kind::Inductor { henries : 1.0 }.with_value( 1e-3 ), Ok( Kind::Inductor { henries : 1e-3 } ) );
+	assert_eq!( Kind::Clock { hertz : 1.0 }.with_value( 6e7 ), Ok( Kind::Clock { hertz : 6e7 } ) );
 }
 
 #[test]
@@ -96,6 +107,7 @@ fn it_rejects_an_invalid_new_value()
 	assert_eq!( Kind::Supply { volts : 5.0 }.with_value( f64::NAN ), Err( Error::Voltage ) );
 	assert_eq!( Kind::Capacitor { farads : 1.0 }.with_value( 0.0 ), Err( Error::Capacitance ) );
 	assert_eq!( Kind::Inductor { henries : 1.0 }.with_value( -1.0 ), Err( Error::Inductance ) );
+	assert_eq!( Kind::Clock { hertz : 1.0 }.with_value( 0.0 ), Err( Error::Frequency ) );
 }
 
 #[test]

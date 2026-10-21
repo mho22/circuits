@@ -26,6 +26,7 @@
 			.files { display : flex; order : 1; gap : 6px; margin-left : auto; }
 			button.center { position : fixed; right : 12px; bottom : 12px; display : flex; width : 32px; height : 32px; padding : 0; align-items : center; justify-content : center; }
 			button.center:hover { color : #e6e6e6; }
+			.mode { position : fixed; right : 52px; bottom : 12px; display : flex; box-sizing : border-box; height : 32px; padding : 0 7px; align-items : center; border : 1px solid #2a2a2a; border-radius : 4px; }
 			output { position : fixed; bottom : 12px; left : 12px; }
 			output.error { color : #ff5c5c; }
 			.context { position : fixed; display : flex; flex-direction : column; min-width : 160px; padding : 4px; border : 1px solid #2a2a2a; border-radius : 4px; background : #0c0c0c; }
@@ -39,6 +40,7 @@
 			.maker span { padding-left : 6px; }
 			.maker input { width : 120px; padding : 5px 8px; border : 1px solid #2a2a2a; border-radius : 4px; background : #000000; color : #e6e6e6; font : inherit; }
 			.maker input:focus { border-color : #5c5c5c; }
+			.maker input.delay { width : 48px; }
 			.maker > div { display : flex; }
 			.maker .menu { top : auto; bottom : 100%; margin : 0 0 4px; }
 			.palette { display : flex; gap : 6px; }
@@ -58,6 +60,7 @@
 		<button class="center" aria-label="Center the view">
 			<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5"/><circle cx="8" cy="8" r="1.5"/><path d="M8 0v3M8 13v3M0 8h3M13 8h3"/></svg>
 		</button>
+		<span class="mode"></span>
 		<output></output>
 		<script type="module" src="/src/main.ts"></script>
 	</body>

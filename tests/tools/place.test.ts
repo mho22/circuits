@@ -106,13 +106,26 @@ describe( 'place tool', () =>
 		expect( decode( circuit.elements() ).map( element => [ element.kind, element.value, element.from, element.to ] ) ).toEqual( [ [ Kind.Supply, 5, { x : 2, y : 2 }, { x : 2, y : 2 } ] ] );
 	} );
 
+	it( 'places a clock of 1 MHz with a drag', () =>
+	{
+		const circuit = new Circuit();
+		const tool = new PlaceTool( circuit );
+
+		tool.kind = Kind.Clock;
+		tool.press( { x : 2, y : 2 } );
+		tool.move( { x : 4, y : 2 } );
+		tool.release();
+
+		expect( decode( circuit.elements() ).map( element => [ element.kind, element.value, element.from, element.to ] ) ).toEqual( [ [ Kind.Clock, 1e6, { x : 2, y : 2 }, { x : 4, y : 2 } ] ] );
+	} );
+
 	it( 'places a symbol of its layer with a click', () =>
 	{
 		const circuit = new Circuit();
 		const tool = new PlaceTool( circuit );
 
 		circuit.add( Kind.Wire, 0, 0, 0, 2, 0 );
-		circuit.enclose( -1, -1, 3, 1, '', new Int32Array(), new Int32Array() );
+		circuit.enclose( -1, -1, 3, 1, '', new Int32Array(), new Int32Array(), 1e-9 );
 
 		tool.kind = Kind.Symbol;
 		tool.layer = 1;
@@ -148,7 +161,7 @@ describe( 'place tool', () =>
 
 		circuit.add( Kind.Input, 0, 0, 0, -1, 0 );
 		circuit.add( Kind.Output, 0, 2, 0, 3, 0 );
-		circuit.enclose( -1, -1, 3, 1, '', new Int32Array(), new Int32Array() );
+		circuit.enclose( -1, -1, 3, 1, '', new Int32Array(), new Int32Array(), 1e-9 );
 
 		for( const [ kind, x ] of [ [ Kind.Ground, 1 ], [ Kind.Supply, 2 ], [ Kind.Symbol, 1 ], [ Kind.Ground, -1 ] ] )
 		{

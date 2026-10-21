@@ -37,6 +37,7 @@ describe( 'element renderer', () =>
 		expect( drawn( Kind.Output ).filter( call => call[ 0 ] === 'roundRect' ) ).toEqual( [ [ 'roundRect', -7, -7, 14, 14, 4 ] ] );
 		expect( drawn( Kind.Symbol ) ).toEqual( [] );
 		expect( drawn( Kind.Toggle ).filter( call => call[ 0 ] === 'roundRect' ) ).toEqual( [ [ 'roundRect', -11, -6, 22, 12, 6 ] ] );
+		expect( drawn( Kind.Clock ).filter( call => call[ 0 ] === 'lineTo' ) ).toHaveLength( 6 );
 		expect( drawn( Kind.Led ).filter( call => call[ 0 ] === 'stroke' ) ).toHaveLength( 5 );
 	} );
 } );

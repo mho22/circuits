@@ -7,7 +7,7 @@ export const PART_GROUPS : Group[] = [
 	{ name : 'Wiring', kinds : [ Kind.Wire, Kind.Switch ] },
 	{ name : 'Passive', kinds : [ Kind.Resistor, Kind.Capacitor, Kind.Inductor ] },
 	{ name : 'Semiconductors', kinds : [ Kind.Diode, Kind.Led, Kind.Npn, Kind.Pnp, Kind.Nmos, Kind.Pmos ] },
-	{ name : 'Sources', kinds : [ Kind.Battery, Kind.Supply, Kind.Toggle, Kind.Ground ] },
+	{ name : 'Sources', kinds : [ Kind.Battery, Kind.Supply, Kind.Toggle, Kind.Clock, Kind.Ground ] },
 ];
 
 export const PIN_GROUPS : Group[] = [

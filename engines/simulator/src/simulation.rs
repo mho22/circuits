@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 
 use crate::flatten::STRIDE;
-use crate::{ enclose, flatten, place, solve, stretch, Document, Element, Enclosure, Error, History, Kind, Operation, Outline, Point, Reading, Registry, Segment, Shape, Solution };
+use crate::{ advance, catalog, enclose, flatten, place, settle, stretch, Device, Document, Element, Enclosure, Error, History, Kind, Logic, Mode, Model, Operation, Outline, Plan, Point, Reading, Registry, Segment, Shape, Solution, DELAY };
+
+
+const DIVISIONS : f64 = 20.0;
 
 
 #[derive( Debug )]
@@ -10,9 +13,15 @@ pub struct Simulation
 	layers : Vec<Document>,
 	registry : Registry,
 	elements : Vec<Element>,
+	devices : Vec<Device>,
+	plan : Plan,
+	models : Vec<Option<Model>>,
+	sources : Vec<Vec<Element>>,
 	focus : Vec<u32>,
 	history : History,
+	logic : Logic,
 	solution : Result<Solution, Error>,
+	base : f64,
 	step : f64,
 	undos : Vec<Vec<( usize, Operation )>>,
 	redos : Vec<Vec<( usize, Operation )>>,
@@ -22,7 +31,7 @@ impl Simulation
 {
 	pub fn new( step : f64 ) -> Simulation
 	{
-		Simulation { layers : vec![ Document::default() ], registry : Registry::default(), elements : Vec::new(), focus : Vec::new(), history : History::default(), solution : Ok( Solution::default() ), step, undos : Vec::new(), redos : Vec::new() }
+		Simulation { layers : vec![ Document::default() ], registry : Registry::default(), elements : Vec::new(), devices : Vec::new(), plan : Plan::default(), models : Vec::new(), sources : Vec::new(), focus : Vec::new(), history : History::default(), logic : Logic::default(), solution : Ok( Solution::default() ), base : step, step, undos : Vec::new(), redos : Vec::new() }
 	}
 
 	pub fn create( &mut self ) -> usize
@@ -99,9 +108,9 @@ impl Simulation
 		self.commit( &edits )
 	}
 
-	pub fn enclose( &mut self, layer : usize, low : Point, high : Point, name : &str, drawing : &[ Shape ], layout : &[ Point ] ) -> Result<u32, Error>
+	pub fn enclose( &mut self, layer : usize, low : Point, high : Point, name : &str, drawing : &[ Shape ], layout : &[ Point ], delay : f64 ) -> Result<u32, Error>
 	{
-		let ( enclosure, inside, inner ) = self.gather( layer, low, high, name, drawing, layout )?;
+		let ( enclosure, inside, inner ) = self.gather( layer, low, high, name, drawing, layout, delay )?;
 		let center = Point { x : ( low.x + high.x ).div_euclid( 2 ), y : ( low.y + high.y ).div_euclid( 2 ) };
 		let mut draft = self.layers[ layer ].clone();
 
@@ -150,7 +159,7 @@ impl Simulation
 	{
 		let count = self.layers.len();
 		let needed = additions.iter().map( | addition | addition.0 + 1 ).max().unwrap_or( 0 );
-		let deletions = self.layers.iter().enumerate().flat_map( | ( layer, document ) | document.elements().iter().map( move | element | ( layer, Operation::Delete { id : element.id } ) ).chain( [ ( layer, Operation::Describe { name : String::new(), drawing : Vec::new(), layout : Vec::new() } ) ] ) );
+		let deletions = self.layers.iter().enumerate().flat_map( | ( layer, document ) | document.elements().iter().map( move | element | ( layer, Operation::Delete { id : element.id } ) ).chain( [ ( layer, Operation::Describe { name : String::new(), drawing : Vec::new(), layout : Vec::new(), delay : DELAY } ) ] ) );
 		let edits : Vec<( usize, Operation )> = deletions.chain( additions ).collect();
 
 		self.focus( &[] )?;
@@ -189,11 +198,11 @@ impl Simulation
 	{
 		for _ in 0 .. count
 		{
-			let solution = solve( &self.elements, &self.history, self.step );
+			let solution = advance( &self.elements, &self.devices, &self.plan, &self.models, &self.history, self.step, &mut self.logic );
 
 			if let Ok( solution ) = &solution { self.history = History::record( &self.elements, solution ); }
 
-			self.settle( solution );
+			self.show( solution );
 
 			if self.solution.is_err() { return; }
 		}
@@ -209,6 +218,21 @@ impl Simulation
 		self.solution.as_ref().map_err( | error | *error )
 	}
 
+	pub fn step( &self ) -> f64
+	{
+		self.step
+	}
+
+	pub fn period( &self ) -> Option<f64>
+	{
+		self.elements.iter().filter_map( | element | match element.kind { Kind::Clock { hertz } => Some( 1.0 / hertz ), _ => None } ).reduce( f64::min )
+	}
+
+	pub fn mode( &self ) -> Mode
+	{
+		Mode::of( &self.devices, &self.plan )
+	}
+
 	pub fn path( &self ) -> &[ u32 ]
 	{
 		&self.focus
@@ -218,10 +242,14 @@ impl Simulation
 	{
 		let layer = self.descend( path )?;
 
-		self.elements = flatten( &self.layers, &mut self.registry, layer, path )?;
+		let ( elements, devices ) = flatten( &self.layers, &mut self.registry, &self.models, layer, path )?;
+
+		self.plan = Plan::build( &elements, &devices );
+		self.elements = elements;
+		self.devices = devices;
 		self.focus = path.to_vec();
 
-		self.settle( solve( &self.elements, &self.history, self.step ) );
+		self.start();
 
 		Ok( () )
 	}
@@ -251,13 +279,13 @@ impl Simulation
 		self.layers.get( layer as usize ).map_or( Vec::new(), | document | Outline::of( document ).terminals( element.segment.from, rotation ) )
 	}
 
-	fn gather( &self, layer : usize, low : Point, high : Point, name : &str, drawing : &[ Shape ], layout : &[ Point ] ) -> Result<( Enclosure, Vec<Operation>, Document ), Error>
+	fn gather( &self, layer : usize, low : Point, high : Point, name : &str, drawing : &[ Shape ], layout : &[ Point ], delay : f64 ) -> Result<( Enclosure, Vec<Operation>, Document ), Error>
 	{
 		let document = self.document( layer ).ok_or( Error::Layerless )?;
 		let enclosure = enclose( document.elements(), low, high, | element | self.terminals( element ) )?;
 		let parts = enclosure.inner.iter().map( | element | Operation::Add { kind : element.kind, segment : element.segment, mirrored : element.mirrored } );
 		let labels = enclosure.inner.iter().zip( 0 .. ).filter( | ( element, _ ) | ! document.label( element.id ).is_empty() ).map( | ( element, id ) | Operation::Label { id, label : document.label( element.id ).to_string() } );
-		let description = Operation::Describe { name : name.to_string(), drawing : drawing.to_vec(), layout : layout.to_vec() };
+		let description = Operation::Describe { name : name.to_string(), drawing : drawing.to_vec(), layout : layout.to_vec(), delay };
 		let inside : Vec<Operation> = parts.chain( labels ).chain( [ description ] ).collect();
 		let mut inner = Document::default();
 
@@ -309,9 +337,10 @@ impl Simulation
 		while self.descend( &focus ).is_err() { focus.pop(); }
 
 		let layer = self.descend( &focus )?;
-		let result = result.and_then( | id | flatten( &self.layers, &mut self.registry, layer, &focus ).map( | elements | ( id, elements ) ) );
+		let ( models, sources ) = catalog( &self.layers, &self.models, &self.sources, self.base );
+		let result = result.and_then( | id | flatten( &self.layers, &mut self.registry, &models, layer, &focus ).map( | flat | ( id, flat ) ) );
 
-		let ( id, elements ) = match result
+		let ( id, ( elements, devices ) ) = match result
 		{
 			Ok( pair ) => pair,
 			Err( error ) =>
@@ -324,10 +353,14 @@ impl Simulation
 
 		inverses.reverse();
 
+		self.plan = Plan::build( &elements, &devices );
 		self.elements = elements;
+		self.devices = devices;
+		self.models = models;
+		self.sources = sources;
 		self.focus = focus;
 
-		self.settle( solve( &self.elements, &self.history, self.step ) );
+		self.start();
 
 		Ok( ( id, inverses ) )
 	}
@@ -340,7 +373,16 @@ impl Simulation
 		Ok( ( document.apply( operation )?, inverse ) )
 	}
 
-	fn settle( &mut self, raw : Result<Solution, Error> )
+	fn start( &mut self )
+	{
+		self.step = self.period().map_or( self.base, | period | period / DIVISIONS );
+
+		let solution = settle( &self.elements, &self.devices, &self.plan, &self.models, &self.history, self.step, &mut self.logic );
+
+		self.show( solution );
+	}
+
+	fn show( &mut self, raw : Result<Solution, Error> )
 	{
 		self.solution = raw.map( | solution | self.view( &solution ) );
 	}

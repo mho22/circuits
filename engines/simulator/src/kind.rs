@@ -22,6 +22,7 @@ pub enum Kind
 	Symbol { layer : u32, rotation : u8 },
 	Toggle { high : bool },
 	Led,
+	Clock { hertz : f64 },
 }
 
 impl Kind
@@ -37,6 +38,7 @@ impl Kind
 			Kind::Capacitor { farads } if ! positive( farads ) => Err( Error::Capacitance ),
 			Kind::Inductor { henries } if ! positive( henries ) => Err( Error::Inductance ),
 			Kind::Symbol { rotation, .. } if rotation > 3 => Err( Error::Rotation ),
+			Kind::Clock { hertz } if ! positive( hertz ) => Err( Error::Frequency ),
 			_ => Ok( () ),
 		}
 	}
@@ -69,6 +71,7 @@ impl Kind
 			Kind::Battery { volts } | Kind::Supply { volts } => Some( volts ),
 			Kind::Capacitor { farads } => Some( farads ),
 			Kind::Inductor { henries } => Some( henries ),
+			Kind::Clock { hertz } => Some( hertz ),
 			_ => None,
 		}
 	}
@@ -82,6 +85,7 @@ impl Kind
 			Kind::Supply { .. } => Kind::Supply { volts : value },
 			Kind::Capacitor { .. } => Kind::Capacitor { farads : value },
 			Kind::Inductor { .. } => Kind::Inductor { henries : value },
+			Kind::Clock { .. } => Kind::Clock { hertz : value },
 			_ => return Err( Error::Valueless ),
 		};
 

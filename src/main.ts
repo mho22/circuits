@@ -1,7 +1,7 @@
 import init, { Circuit } from '../bindings/web/pkg/web.js';
 import { fit, locate } from './board.ts';
 import { Clock } from './clock.ts';
-import { parse, write } from './decimal.ts';
+import { parse, SEPARATOR, write } from './decimal.ts';
 import { decode as decodeBranches } from './decoders/branch.ts';
 import { decode as decodeDrawing } from './decoders/drawing.ts';
 import { decode as decodeElements } from './decoders/element.ts';
@@ -61,14 +61,13 @@ import { View } from './view.ts';
 await init();
 
 
-const STEPS_PER_SECOND = 1000;
 const STEPS_PER_FRAME = 100;
-const SEPARATOR = ( 1.5 ).toLocaleString().charAt( 1 );
 const KINDS = Object.keys( NAMES ).map( Number ) as Kind[];
 
 const canvas = document.querySelector( 'canvas' )!;
 const context = canvas.getContext( '2d' )!;
 const status = document.querySelector( 'output' )!;
+const mode = document.querySelector( '.mode' )!;
 const picker = document.querySelector( 'input[type=file]' ) as HTMLInputElement;
 const circuit = new Circuit();
 const tool = new PlaceTool( circuit );
@@ -82,7 +81,7 @@ const pinbar = new Toolbar( slot, PIN_GROUPS, pick );
 const library = new Library( document.querySelector( 'nav' )!, place );
 const maker = new Maker( document.body, slot, make, sketch, discard, purge );
 const palette = new Palette( document.querySelector( 'nav' )!, document.body, figure, unsketch );
-const clock = new Clock( STEPS_PER_SECOND, STEPS_PER_FRAME );
+const clock = new Clock( STEPS_PER_FRAME );
 const drift = new Drift();
 const view = new View();
 
@@ -131,7 +130,7 @@ function place( layer : number ) : void
 
 function define( layer : number ) : Definition
 {
-	return { name : circuit.name( layer ), drawing : decodeDrawing( circuit.drawing( layer ) ), labels : circuit.labels( layer ), layout : decodeLayout( circuit.layout( layer ) ) };
+	return { name : circuit.name( layer ), drawing : decodeDrawing( circuit.drawing( layer ) ), labels : circuit.labels( layer ), layout : decodeLayout( circuit.layout( layer ) ), delay : circuit.delay( layer ) };
 }
 
 function outlined( item : Element ) : Element
@@ -176,7 +175,7 @@ async function load() : Promise<void>
 	{
 		const contents = decodeFile( await file.text() );
 
-		circuit.open( contents.parts, contents.labels, contents.layers, contents.names, contents.drawings, contents.layouts );
+		circuit.open( contents.parts, contents.labels, contents.layers, contents.names, contents.drawings, contents.layouts, contents.delays );
 
 		name = file.name;
 	}
@@ -222,21 +221,21 @@ function settle( area : Area, anchor : Point, choice : Choice ) : void
 	} );
 }
 
-function make( target : Area | number, name : string, shapes : Shape[], layout : Point[] ) : void
+function make( target : Area | number, name : string, shapes : Shape[], layout : Point[], delay : number ) : void
 {
-	if( typeof target === 'number' ) { rename( target, name, shapes, layout ); return; }
+	if( typeof target === 'number' ) { rename( target, name, shapes, layout, delay ); return; }
 
 	const area = target;
 
-	attempt( () => circuit.enclose( area.low.x, area.low.y, area.high.x, area.high.y, name, encodeDrawing( shapes ), new Int32Array( layout.flatMap( point => [ point.x, point.y ] ) ) ) );
+	attempt( () => circuit.enclose( area.low.x, area.low.y, area.high.x, area.high.y, name, encodeDrawing( shapes ), new Int32Array( layout.flatMap( point => [ point.x, point.y ] ) ), delay ) );
 }
 
-function rename( layer : number, name : string, shapes : Shape[], layout : Point[] ) : void
+function rename( layer : number, name : string, shapes : Shape[], layout : Point[], delay : number ) : void
 {
 	const before = define( layer );
-	const same = before.name === name && JSON.stringify( before.drawing ) === JSON.stringify( shapes ) && JSON.stringify( before.layout ) === JSON.stringify( layout );
+	const same = before.name === name && before.delay === delay && JSON.stringify( before.drawing ) === JSON.stringify( shapes ) && JSON.stringify( before.layout ) === JSON.stringify( layout );
 
-	if( ! same ) attempt( () => circuit.describe( name, encodeDrawing( shapes ), new Int32Array( layout.flatMap( point => [ point.x, point.y ] ) ) ) );
+	if( ! same ) attempt( () => circuit.describe( name, encodeDrawing( shapes ), new Int32Array( layout.flatMap( point => [ point.x, point.y ] ) ), delay ) );
 
 	circuit.leave();
 }
@@ -437,7 +436,7 @@ function frame( time : number ) : void
 
 	previous = time;
 
-	circuit.advance( clock.tick( seconds ) );
+	circuit.advance( clock.tick( seconds, circuit.rate ) );
 
 	const elements = parts();
 	const branches = decodeBranches( circuit.branches() );
@@ -455,6 +454,10 @@ function frame( time : number ) : void
 	follow();
 
 	canvas.classList.toggle( 'idle', tool.kind === null && ! sketching );
+
+	const engine = circuit.mode;
+
+	if( mode.textContent !== engine ) mode.textContent = engine;
 
 	const error = circuit.error();
 	const [ id ] = hover ? circuit.elementsAt( hover.x, hover.y ) : [];

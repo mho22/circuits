@@ -1,3 +1,5 @@
+export const SEPARATOR = ( 1.5 ).toLocaleString().charAt( 1 );
+
 const SEPARATORS = /[.,]/;
 
 const NUMBER = /^-?(?:\d+(?:[.,]\d*)?|[.,]\d+)$/;

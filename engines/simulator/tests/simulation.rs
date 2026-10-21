@@ -1,4 +1,4 @@
-use simulator::{ Error, Kind, Operation, Outline, Point, Segment, Shape, Simulation };
+use simulator::{ Error, Kind, Mode, Operation, Outline, Point, Segment, Shape, Simulation, DELAY };
 
 
 const STEP : f64 = 1e-6;
@@ -550,7 +550,7 @@ fn it_reads_each_pin_of_a_symbol_in_the_order_of_its_layer()
 		( Kind::Output, ( 4, -1 ), ( 4, 0 ) ),
 	] );
 
-	simulation.apply( layer as usize, Operation::Describe { name : String::new(), drawing : Vec::new(), layout : vec![ Point { x : -2, y : 0 }, Point { x : 2, y : 0 }, Point { x : 0, y : -2 } ] } ).unwrap();
+	simulation.apply( layer as usize, Operation::Describe { name : String::new(), drawing : Vec::new(), layout : vec![ Point { x : -2, y : 0 }, Point { x : 2, y : 0 }, Point { x : 0, y : -2 } ], delay : DELAY } ).unwrap();
 
 	add( &mut simulation, Kind::Battery { volts : 5.0 }, ( 8, 14 ), ( 8, 10 ) );
 	add( &mut simulation, Kind::Symbol { layer, rotation : 0 }, ( 10, 10 ), ( 10, 10 ) );
@@ -582,6 +582,53 @@ fn inverter( simulation : &mut Simulation ) -> u32
 	add( simulation, Kind::Symbol { layer, rotation : 0 }, ( 10, 10 ), ( 10, 10 ) );
 
 	layer
+}
+
+#[test]
+fn it_runs_a_long_chain_of_inverters_as_gates()
+{
+	let mut simulation = Simulation::new( STEP );
+	let layer = inverter( &mut simulation );
+
+	for index in 1 .. 200 { add( &mut simulation, Kind::Symbol { layer, rotation : 0 }, ( 10 + 4 * index, 10 ), ( 10 + 4 * index, 10 ) ); }
+
+	let output = | simulation : &Simulation, index : usize | simulation.solution().unwrap().readings[ index ].potentials[ 1 ];
+
+	assert!( near( output( &simulation, 0 ), 5.0, 1e-3 ) && near( output( &simulation, 199 ), 0.0, 1e-3 ) );
+
+	simulation.apply( layer as usize, Operation::SetHigh { id : 0, high : true } ).unwrap();
+
+	assert!( near( output( &simulation, 0 ), 0.0, 1e-3 ) && near( output( &simulation, 199 ), 5.0, 1e-3 ) );
+}
+
+#[test]
+fn it_steps_by_a_twentieth_of_the_period_of_the_fastest_clock()
+{
+	let mut simulation = Simulation::new( STEP );
+
+	assert_eq!( ( simulation.period(), simulation.step() ), ( None, STEP ) );
+
+	add( &mut simulation, Kind::Clock { hertz : 1e6 }, ( 0, 0 ), ( 2, 0 ) );
+	add( &mut simulation, Kind::Clock { hertz : 1e7 }, ( 0, 4 ), ( 2, 4 ) );
+
+	assert!( near( simulation.period().unwrap(), 1e-7, 1e-21 ) );
+	assert!( near( simulation.step(), 5e-9, 1e-21 ) );
+}
+
+#[test]
+fn it_names_the_engine_that_runs_the_view()
+{
+	let mut simulation = Simulation::new( STEP );
+
+	assert_eq!( simulation.mode(), Mode::Analog );
+
+	inverter( &mut simulation );
+
+	assert_eq!( simulation.mode(), Mode::Mixed );
+
+	add( &mut simulation, Kind::Clock { hertz : 1e6 }, ( 4, 10 ), ( 8, 10 ) );
+
+	assert_eq!( simulation.mode(), Mode::Digital );
 }
 
 #[test]
@@ -766,7 +813,7 @@ fn it_encloses_a_selection_into_a_symbol_that_solves_the_same()
 	ladder( &mut simulation );
 
 	let before = simulation.document( 0 ).unwrap().elements().to_vec();
-	let symbol = simulation.enclose( 0, Point { x : 1, y : -2 }, Point { x : 7, y : 2 }, "", &[], &[] ).unwrap();
+	let symbol = simulation.enclose( 0, Point { x : 1, y : -2 }, Point { x : 7, y : 2 }, "", &[], &[], DELAY ).unwrap();
 	let drawing = simulation.document( 0 ).unwrap().elements();
 	let wires : Vec<Segment> = drawing.iter().filter( | element | element.kind == Kind::Wire ).map( | element | element.segment ).collect();
 	let index = drawing.iter().position( | element | element.id == symbol ).unwrap();
@@ -795,7 +842,7 @@ fn it_keeps_a_vcc_inside_an_enclosed_selection()
 	add( &mut simulation, Kind::Resistor { ohms : 1000.0 }, ( 10, 0 ), ( 10, 4 ) );
 	add( &mut simulation, Kind::Ground, ( 10, 4 ), ( 10, 4 ) );
 
-	let symbol = simulation.enclose( 0, Point { x : 1, y : -2 }, Point { x : 7, y : 2 }, "", &[], &[] ).unwrap();
+	let symbol = simulation.enclose( 0, Point { x : 1, y : -2 }, Point { x : 7, y : 2 }, "", &[], &[], DELAY ).unwrap();
 	let drawing = simulation.document( 0 ).unwrap().elements();
 	let index = drawing.iter().position( | element | element.id == symbol ).unwrap();
 
@@ -811,8 +858,8 @@ fn it_rejects_a_selection_across_a_part_without_a_new_layer()
 
 	ladder( &mut simulation );
 
-	assert_eq!( simulation.enclose( 0, Point { x : 3, y : -2 }, Point { x : 7, y : 2 }, "", &[], &[] ), Err( Error::Straddled ) );
-	assert_eq!( simulation.enclose( 1, Point { x : 1, y : -2 }, Point { x : 7, y : 2 }, "", &[], &[] ), Err( Error::Layerless ) );
+	assert_eq!( simulation.enclose( 0, Point { x : 3, y : -2 }, Point { x : 7, y : 2 }, "", &[], &[], DELAY ), Err( Error::Straddled ) );
+	assert_eq!( simulation.enclose( 1, Point { x : 1, y : -2 }, Point { x : 7, y : 2 }, "", &[], &[], DELAY ), Err( Error::Layerless ) );
 	assert!( simulation.document( 1 ).is_none() );
 	assert_eq!( simulation.document( 0 ).unwrap().elements().len(), 9 );
 }
@@ -852,7 +899,7 @@ fn it_finds_a_symbol_anywhere_on_its_turned_box()
 	let mut simulation = Simulation::new( STEP );
 	let layer = define( &mut simulation, &[ ( Kind::Input { high : false }, ( -1, 0 ), ( 0, 0 ) ), ( Kind::Input { high : false }, ( -1, 2 ), ( 0, 2 ) ), ( Kind::Input { high : false }, ( -1, 4 ), ( 0, 4 ) ), ( Kind::Output, ( 5, 2 ), ( 4, 2 ) ) ] );
 
-	simulation.apply( layer as usize, Operation::Describe { name : String::new(), drawing : Vec::new(), layout : vec![ Point { x : -2, y : -4 }, Point { x : -2, y : 0 }, Point { x : -2, y : 4 }, Point { x : 2, y : 0 } ] } ).unwrap();
+	simulation.apply( layer as usize, Operation::Describe { name : String::new(), drawing : Vec::new(), layout : vec![ Point { x : -2, y : -4 }, Point { x : -2, y : 0 }, Point { x : -2, y : 4 }, Point { x : 2, y : 0 } ], delay : DELAY } ).unwrap();
 
 	add( &mut simulation, Kind::Symbol { layer, rotation : 1 }, ( 10, 10 ), ( 10, 10 ) );
 
@@ -892,7 +939,7 @@ fn it_turns_an_enclosed_symbol_and_routes_its_wires_around_its_box()
 	add( &mut simulation, Kind::Wire, ( 18, 16 ), ( 10, 16 ) );
 	add( &mut simulation, Kind::Ground, ( 10, 16 ), ( 10, 16 ) );
 
-	let symbol = simulation.enclose( 0, Point { x : 11, y : 8 }, Point { x : 17, y : 12 }, "", &[], &[] ).unwrap();
+	let symbol = simulation.enclose( 0, Point { x : 11, y : 8 }, Point { x : 17, y : 12 }, "", &[], &[], DELAY ).unwrap();
 	let layer = 1;
 
 	simulation.transform( 0, symbol, Kind::Symbol { layer, rotation : 1 }, segment( ( 14, 10 ), ( 14, 10 ) ), false ).unwrap();
@@ -931,13 +978,13 @@ fn it_encloses_a_named_and_drawn_symbol_with_the_labels_and_the_layout_of_its_pi
 
 	let drawing = [ Shape::Circle { center : Point { x : 0, y : 0 }, radius : 2 } ];
 	let layout = [ Point { x : -3, y : 0 }, Point { x : 3, y : 0 } ];
-	let symbol = simulation.enclose( 0, low, high, "qux", &drawing, &layout ).unwrap();
+	let symbol = simulation.enclose( 0, low, high, "qux", &drawing, &layout, 2e-9 ).unwrap();
 	let layer = simulation.document( 1 ).unwrap();
 	let labels : Vec<&str> = layer.elements().iter().filter( | element | element.kind.pin() ).map( | element | layer.label( element.id ) ).collect();
 	let wires : Vec<Segment> = simulation.document( 0 ).unwrap().elements().iter().filter( | element | element.kind == Kind::Wire ).map( | element | element.segment ).collect();
 	let index = simulation.document( 0 ).unwrap().elements().iter().position( | element | element.id == symbol ).unwrap();
 
-	assert_eq!( ( layer.name(), layer.drawing(), layer.layout() ), ( "qux", drawing.as_slice(), layout.as_slice() ) );
+	assert_eq!( ( layer.name(), layer.drawing(), layer.layout(), layer.delay() ), ( "qux", drawing.as_slice(), layout.as_slice(), 2e-9 ) );
 	assert_eq!( labels, vec![ "foo", "bar" ] );
 	assert_eq!( Outline::of( layer ).pins, layout.to_vec() );
 	assert!( wires.contains( &segment( ( 0, 0 ), ( 2, 0 ) ) ) && wires.contains( &segment( ( 8, 0 ), ( 10, 0 ) ) ) );
@@ -955,7 +1002,7 @@ fn it_clears_the_names_the_drawings_and_the_layouts_of_the_layers_on_an_open()
 	let mut simulation = Simulation::new( STEP );
 	let layer = resistor( &mut simulation, 1000.0 );
 
-	simulation.apply( layer as usize, Operation::Describe { name : "foo".to_string(), drawing : vec![ Shape::Circle { center : Point { x : 0, y : 0 }, radius : 1 } ], layout : vec![ Point { x : 0, y : 0 } ] } ).unwrap();
+	simulation.apply( layer as usize, Operation::Describe { name : "foo".to_string(), drawing : vec![ Shape::Circle { center : Point { x : 0, y : 0 }, radius : 1 } ], layout : vec![ Point { x : 0, y : 0 } ], delay : DELAY } ).unwrap();
 	simulation.open( Vec::new() ).unwrap();
 
 	assert_eq!( ( simulation.document( 1 ).unwrap().name(), simulation.document( 1 ).unwrap().drawing(), simulation.document( 1 ).unwrap().layout() ), ( "", [].as_slice(), [].as_slice() ) );
@@ -991,4 +1038,114 @@ fn it_rejects_a_purge_of_the_drawing_or_a_missing_layer()
 
 	assert_eq!( simulation.purge( 0 ), Err( Error::Layerless ) );
 	assert_eq!( simulation.purge( 3 ), Err( Error::Layerless ) );
+}
+
+fn nand() -> Vec<( Kind, ( i32, i32 ), ( i32, i32 ) )>
+{
+	vec![
+		( Kind::Input { high : false }, ( -1, 0 ), ( 0, 0 ) ),
+		( Kind::Input { high : false }, ( -3, 4 ), ( -2, 4 ) ),
+		( Kind::Output, ( 12, 0 ), ( 11, 0 ) ),
+		( Kind::Supply { volts : 5.0 }, ( 3, -1 ), ( 3, -1 ) ),
+		( Kind::Supply { volts : 5.0 }, ( 9, -1 ), ( 9, -1 ) ),
+		( Kind::Pmos, ( 0, -2 ), ( 2, -2 ) ),
+		( Kind::Pmos, ( 6, -2 ), ( 8, -2 ) ),
+		( Kind::Nmos, ( 0, 2 ), ( 2, 2 ) ),
+		( Kind::Nmos, ( 0, 6 ), ( 2, 6 ) ),
+		( Kind::Ground, ( 3, 7 ), ( 3, 7 ) ),
+		( Kind::Wire, ( 0, -2 ), ( 0, 2 ) ),
+		( Kind::Wire, ( 6, -2 ), ( 6, 4 ) ),
+		( Kind::Wire, ( 6, 4 ), ( -2, 4 ) ),
+		( Kind::Wire, ( -2, 4 ), ( -2, 6 ) ),
+		( Kind::Wire, ( -2, 6 ), ( 0, 6 ) ),
+		( Kind::Wire, ( 3, -3 ), ( 11, -3 ) ),
+		( Kind::Wire, ( 11, -3 ), ( 11, 1 ) ),
+		( Kind::Wire, ( 11, 1 ), ( 3, 1 ) ),
+		( Kind::Wire, ( 3, 3 ), ( 3, 5 ) ),
+	]
+}
+
+fn flip_flop() -> Vec<( Kind, ( i32, i32 ), ( i32, i32 ) )>
+{
+	let input = | gate : i32, side : i32 | ( 10 * gate - 2, side );
+	let output = | gate : i32 | ( 10 * gate + 2, 0 );
+	let nets = [
+		vec![ ( -20, 0 ), input( 1, -1 ) ],
+		vec![ ( -16, 0 ), input( 0, -1 ), input( 0, 1 ), input( 5, 1 ), input( 6, 1 ) ],
+		vec![ output( 0 ), input( 1, 1 ), input( 2, 1 ) ],
+		vec![ output( 1 ), input( 2, -1 ), input( 3, -1 ) ],
+		vec![ output( 2 ), input( 4, -1 ) ],
+		vec![ output( 3 ), input( 4, 1 ), input( 5, -1 ) ],
+		vec![ output( 4 ), input( 3, 1 ) ],
+		vec![ output( 5 ), input( 6, -1 ), input( 7, -1 ) ],
+		vec![ output( 6 ), input( 8, -1 ) ],
+		vec![ output( 7 ), input( 8, 1 ), ( 100, 0 ) ],
+		vec![ output( 8 ), input( 7, 1 ), ( 104, 0 ) ],
+	];
+	let pins = [
+		( Kind::Input { high : false }, ( -21, 0 ), ( -20, 0 ) ),
+		( Kind::Input { high : false }, ( -17, 0 ), ( -16, 0 ) ),
+		( Kind::Output, ( 101, 0 ), ( 100, 0 ) ),
+		( Kind::Output, ( 105, 0 ), ( 104, 0 ) ),
+	];
+	let gates = ( 0 .. 9 ).map( | gate | ( Kind::Symbol { layer : 1, rotation : 0 }, ( 10 * gate, 0 ), ( 10 * gate, 0 ) ) );
+	let wires = nets.iter().zip( 3 .. ).flat_map( | ( net, lane ) |
+	{
+		let stubs = net.iter().map( move | &( x, side ) | ( Kind::Wire, ( x, if side == 0 { - lane } else { side } ), ( x, if side < 0 { - lane } else { lane } ) ) );
+		let span = | y : i32, sign : i32 |
+		{
+			let columns : Vec<i32> = net.iter().filter( | &&( _, side ) | side * sign >= 0 ).map( | &( x, _ ) | x ).collect();
+
+			( columns.len() > 1 ).then( || ( Kind::Wire, ( *columns.iter().min().unwrap(), y ), ( *columns.iter().max().unwrap(), y ) ) )
+		};
+
+		stubs.chain( span( - lane, -1 ) ).chain( span( lane, 1 ) ).collect::<Vec<_>>()
+	} );
+
+	pins.into_iter().chain( gates ).chain( wires ).collect()
+}
+
+fn counter() -> Simulation
+{
+	let mut simulation = Simulation::new( STEP );
+	let mut parts : Vec<( Kind, ( i32, i32 ), ( i32, i32 ) )> = ( 0 .. 4 ).map( | bit | ( Kind::Symbol { layer : 2, rotation : 0 }, ( 20 * bit, 0 ), ( 20 * bit, 0 ) ) ).collect();
+
+	parts.push( ( Kind::Clock { hertz : 1e6 }, ( -8, 1 ), ( -2, 1 ) ) );
+	parts.extend( ( 0 .. 4 ).map( | bit | 20 * bit ).flat_map( | x | [ ( Kind::Wire, ( x + 2, 1 ), ( x + 2, 4 ) ), ( Kind::Wire, ( x + 2, 4 ), ( x - 4, 4 ) ), ( Kind::Wire, ( x - 4, 4 ), ( x - 4, -1 ) ), ( Kind::Wire, ( x - 4, -1 ), ( x - 2, -1 ) ) ] ) );
+	parts.extend( ( 0 .. 3 ).map( | bit | ( Kind::Wire, ( 20 * bit + 2, 1 ), ( 20 * bit + 18, 1 ) ) ) );
+
+	let layers = [ parts, nand(), flip_flop() ];
+	let additions = layers.iter().enumerate().flat_map( | ( layer, parts ) | parts.iter().map( move | &( kind, from, to ) | ( layer, Operation::Add { kind, segment : segment( from, to ), mirrored : false } ) ) ).collect();
+
+	simulation.open( additions ).unwrap();
+
+	simulation
+}
+
+fn count( simulation : &Simulation ) -> usize
+{
+	let readings = &simulation.solution().unwrap().readings;
+
+	( 0 .. 4 ).map( | bit | ( ( readings[ bit ].potentials[ 2 ] > 2.5 ) as usize ) << bit ).sum()
+}
+
+#[test]
+fn it_counts_the_rising_edges_of_a_clock_with_flip_flops_and_keeps_the_count_after_an_edit()
+{
+	let mut simulation = counter();
+	let start = count( &simulation );
+
+	assert_eq!( simulation.mode(), Mode::Digital );
+
+	simulation.advance( 100 );
+
+	assert_eq!( count( &simulation ), ( start + 5 ) % 16 );
+
+	add( &mut simulation, Kind::Wire, ( 0, 20 ), ( 4, 20 ) );
+
+	assert_eq!( count( &simulation ), ( start + 5 ) % 16 );
+
+	simulation.advance( 60 );
+
+	assert_eq!( count( &simulation ), ( start + 8 ) % 16 );
 }

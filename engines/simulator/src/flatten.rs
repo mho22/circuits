@@ -1,8 +1,8 @@
-use crate::{ driven, Document, Element, Error, Kind, Outline, Point, Registry, Segment };
+use crate::{ driven, Device, Document, Element, Error, Kind, Model, Outline, Point, Registry, Segment, FLOOR };
 
 
 pub const STRIDE : i32 = 1 << 16;
-const HIGH : f64 = 5.0;
+pub const HIGH : f64 = 5.0;
 
 
 fn shift( point : Point, offset : i32 ) -> Point
@@ -38,7 +38,9 @@ struct Walk<'a>
 {
 	layers : &'a [ Document ],
 	registry : &'a mut Registry,
+	models : &'a [ Option<Model> ],
 	elements : Vec<Element>,
+	devices : Vec<Device>,
 	depth : usize,
 	scopes : i32,
 }
@@ -60,6 +62,7 @@ impl Walk<'_>
 				let ( kind, from ) = match element.kind
 				{
 					Kind::Toggle { high } => ( Kind::Supply { volts : if high { HIGH } else { 0.0 } }, element.segment.to ),
+					Kind::Clock { .. } => ( element.kind, element.segment.to ),
 					kind => ( kind, element.segment.from ),
 				};
 
@@ -76,6 +79,8 @@ impl Walk<'_>
 			self.scopes += 1;
 
 			let scope = self.scopes * STRIDE;
+
+			if matches!( self.models.get( inner as usize ), Some( Some( _ ) ) ) { self.device( layer, element, &key, offset, scope ); continue; }
 
 			for ( pin, end ) in definition.iter().filter( | part | part.kind.pin() ).zip( ends )
 			{
@@ -95,6 +100,42 @@ impl Walk<'_>
 		}
 	}
 
+	fn device( &mut self, layer : usize, symbol : &Element, key : &[ u32 ], offset : i32, scope : i32 )
+	{
+		let layers = self.layers;
+		let Kind::Symbol { layer : inner, rotation } = symbol.kind else { return; };
+		let inner = inner as usize;
+		let ends = Outline::of( &layers[ inner ] ).terminals( symbol.segment.from, rotation );
+		let mut device = Device { layer : inner, inputs : Vec::new(), outputs : Vec::new() };
+
+		for ( ( pin, end ), index ) in layers[ inner ].elements().iter().filter( | part | part.kind.pin() ).zip( ends ).zip( 0 .. )
+		{
+			let join = [ key, &[ pin.id ] ].concat();
+			let hidden = Point { x : scope + index, y : 0 };
+			let segment = Segment { from : hidden, to : shift( end, offset ) };
+			let free = matches!( pin.kind, Kind::Input { .. } ) && ! driven( layers, layer, symbol.id, end );
+
+			if pin.kind != Kind::Output && ! free
+			{
+				self.elements.push( Element { id : self.registry.id( &join ), kind : Kind::Switch { closed : false }, segment, mirrored : false } );
+				device.inputs.push( self.elements.len() - 1 );
+
+				continue;
+			}
+
+			self.drive( &join, hidden, pin.kind == Kind::Input { high : true } );
+			self.elements.push( Element { id : self.registry.id( &join ), kind : Kind::Resistor { ohms : FLOOR }, segment, mirrored : false } );
+
+			let at = self.elements.len() - 1;
+
+			if pin.kind == Kind::Output { device.outputs.push( ( at - 1, at ) ); continue; }
+
+			device.inputs.push( at );
+		}
+
+		self.devices.push( device );
+	}
+
 	fn drive( &mut self, key : &[ u32 ], point : Point, high : bool )
 	{
 		let id = self.registry.id( &[ key, &[ 0 ] ].concat() );
@@ -104,15 +145,15 @@ impl Walk<'_>
 }
 
 
-pub fn flatten( layers : &[ Document ], registry : &mut Registry, layer : usize, path : &[ u32 ] ) -> Result<Vec<Element>, Error>
+pub fn flatten( layers : &[ Document ], registry : &mut Registry, models : &[ Option<Model> ], layer : usize, path : &[ u32 ] ) -> Result<( Vec<Element>, Vec<Device> ), Error>
 {
 	let mut done = Vec::new();
 
 	for layer in 0 .. layers.len() { visit( layers, layer, &mut Vec::new(), &mut done )?; }
 
-	let mut walk = Walk { layers, registry, elements : Vec::new(), depth : path.len(), scopes : 0 };
+	let mut walk = Walk { layers, registry, models, elements : Vec::new(), devices : Vec::new(), depth : path.len(), scopes : 0 };
 
 	walk.expand( layer, path, 0 );
 
-	Ok( walk.elements )
+	Ok( ( walk.elements, walk.devices ) )
 }

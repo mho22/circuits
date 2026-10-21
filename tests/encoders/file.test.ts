@@ -7,7 +7,7 @@ import { element } from '../stubs/element.ts';
 
 describe( 'file encoder', () =>
 {
-	const BLANK = { name : '', drawing : [], labels : [], layout : [] };
+	const BLANK = { name : '', drawing : [], labels : [], layout : [], delay : 1e-9 };
 
 	it( 'writes one part per line with its kind, its value and its ends', () =>
 	{
@@ -84,12 +84,23 @@ describe( 'file encoder', () =>
 		expect( encode( [ low, high ] ) ).toContain( '{ "kind" : "input", "from" : [ 0, 0 ], "to" : [ 1, 0 ] },\n\t\t{ "kind" : "input", "level" : 1, "from" : [ 0, 2 ], "to" : [ 1, 2 ] }' );
 	} );
 
+	it( 'writes the frequency of a clock', () =>
+	{
+		expect( encode( [ element( { kind : Kind.Clock, value : 1e7, from : { x : 0, y : 0 }, to : { x : 2, y : 0 } } ) ] ) ).toContain( '{ "kind" : "clock", "hertz" : 10000000, "from" : [ 0, 0 ], "to" : [ 2, 0 ] }' );
+	} );
+
 	it( 'writes the level of a toggle only when it is 1', () =>
 	{
 		const low = element( { kind : Kind.Toggle, from : { x : 0, y : 0 }, to : { x : 1, y : 0 } } );
 		const high = element( { kind : Kind.Toggle, value : 1, from : { x : 2, y : 0 }, to : { x : 3, y : 0 } } );
 
 		expect( encode( [ low, high ] ) ).toContain( '{ "kind" : "toggle", "from" : [ 0, 0 ], "to" : [ 1, 0 ] },\n\t\t{ "kind" : "toggle", "level" : 1, "from" : [ 2, 0 ], "to" : [ 3, 0 ] }' );
+	} );
+
+	it( 'writes the delay of a layer only when it is not one nanosecond', () =>
+	{
+		expect( encode( [], [ { number : 1, definition : { ... BLANK, delay : 3e-9 }, parts : [] } ] ) ).toContain( '\t\t\t"layer" : 1,\n\t\t\t"delay" : 3e-9,\n' );
+		expect( encode( [], [ { number : 1, definition : BLANK, parts : [] } ] ) ).not.toContain( 'delay' );
 	} );
 
 	it( 'writes the name, the drawing and the layout of a layer and the label of an input or an output', () =>
@@ -100,7 +111,7 @@ describe( 'file encoder', () =>
 			{ figure : Figure.Circle as const, center : { x : 0, y : 1 }, radius : 2 },
 			{ figure : Figure.Line as const, from : { x : -1, y : 0 }, to : { x : 1, y : 1 } },
 		];
-		const text = encode( [], [ { number : 1, definition : { name : 'foo', drawing, labels : [], layout : [ { x : -3, y : 0 }, { x : 2, y : 1 } ] }, parts : [ pin ] } ] );
+		const text = encode( [], [ { number : 1, definition : { name : 'foo', drawing, labels : [], layout : [ { x : -3, y : 0 }, { x : 2, y : 1 } ], delay : 1e-9 }, parts : [ pin ] } ] );
 		const shapes = '{ "shape" : "rectangle", "from" : [ -4, -4 ], "to" : [ 4, 4 ] }, { "shape" : "circle", "center" : [ 0, 1 ], "radius" : 2 }, { "shape" : "line", "from" : [ -1, 0 ], "to" : [ 1, 1 ] }';
 
 		expect( text ).toContain( `\t\t\t"layer" : 1,\n\t\t\t"name" : "foo",\n\t\t\t"drawing" : [ ${ shapes } ],\n\t\t\t"layout" : [ [ -3, 0 ], [ 2, 1 ] ],\n\t\t\t"parts" : [` );

@@ -3,6 +3,7 @@ import type { Element } from '../types/element.ts';
 import type { Scale } from '../types/scale.ts';
 import * as battery from './battery.ts';
 import * as capacitor from './capacitor.ts';
+import * as clock from './clock.ts';
 import * as diode from './diode.ts';
 import * as ground from './ground.ts';
 import * as inductor from './inductor.ts';
@@ -37,6 +38,7 @@ const RENDERERS : Record<Kind, ( context : CanvasRenderingContext2D, element : E
 	[ Kind.Output ] : pin.draw,
 	[ Kind.Toggle ] : slider.draw,
 	[ Kind.Led ] : led.draw,
+	[ Kind.Clock ] : clock.draw,
 };
 
 

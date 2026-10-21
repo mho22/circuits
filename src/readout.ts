@@ -36,6 +36,8 @@ export function describe( element : Element, branch : Branch | undefined ) : str
 
 	if( element.kind === Kind.Toggle ) return [ title, String( element.value ), format( element.potentials[ 1 ], 'V' ), format( Math.abs( element.currents[ 0 ] ), 'A' ) ].join( ' · ' );
 
+	if( element.kind === Kind.Clock ) return [ title, String( bit( element.potentials[ 1 ] ) ), format( element.potentials[ 1 ], 'V' ), format( Math.abs( element.currents[ 0 ] ), 'A' ) ].join( ' · ' );
+
 	if( element.kind === Kind.Supply ) return [ title, format( Math.abs( element.currents[ 0 ] ), 'A' ) ].join( ' · ' );
 
 	if( element.kind === Kind.Ground ) return [ title, format( element.potentials[ 0 ], 'V' ), format( Math.abs( element.currents[ 0 ] ), 'A' ) ].join( ' · ' );

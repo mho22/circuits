@@ -1,3 +1,5 @@
+export const NANO = 1e-9;
+
 const PREFIXES : [ number, string ][] = [ [ 9, 'G' ], [ 6, 'M' ], [ 3, 'k' ], [ 0, '' ], [ -3, 'm' ], [ -6, 'µ' ], [ -9, 'n' ], [ -12, 'p' ] ];
 
 

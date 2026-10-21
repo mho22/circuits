@@ -36,6 +36,7 @@ describe( 'readout', () =>
 	it( 'describes a toggle with its level, its voltage and its current', () =>
 	{
 		expect( read( element( { kind : Kind.Toggle, value : 1, potentials : [ 0, 5 ], currents : [ 0.005, -0.005 ] } ), undefined ) ).toBe( 'Toggle · 1 · 5 V · 5 mA' );
+		expect( read( element( { kind : Kind.Clock, value : 1e7, potentials : [ 0, 5 ], currents : [ 0, 0 ] } ), undefined ) ).toBe( 'Clock 10 MHz · 1 · 5 V · 0 A' );
 	} );
 
 	it( 'describes an led with its forward drop and its current', () =>
@@ -45,7 +46,7 @@ describe( 'readout', () =>
 
 	it( 'describes a named symbol with its name', () =>
 	{
-		expect( read( element( { kind : Kind.Symbol, value : 2, potentials : [ 5 ], currents : [ 0 ], definition : { name : 'foo', drawing : [], labels : [], layout : [] } } ), undefined ) ).toBe( 'foo · 5 V' );
+		expect( read( element( { kind : Kind.Symbol, value : 2, potentials : [ 5 ], currents : [ 0 ], definition : { name : 'foo', drawing : [], labels : [], layout : [], delay : 1e-9 } } ), undefined ) ).toBe( 'foo · 5 V' );
 	} );
 
 	it( 'describes an output with its label', () =>
