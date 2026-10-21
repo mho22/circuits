@@ -106,4 +106,37 @@ describe( 'draw tool', () =>
 
 		expect( tool.shapes ).toEqual( [ { figure : Figure.Circle, center : { x : 0, y : 0 }, radius : 2 } ] );
 	} );
+
+	it( 'redoes the undone shapes in order, and forgets them after a new shape or a load', () =>
+	{
+		const tool = new DrawTool();
+		const foo = { figure : Figure.Line as const, from : { x : 0, y : 0 }, to : { x : 4, y : 0 } };
+		const bar = { figure : Figure.Line as const, from : { x : 0, y : 4 }, to : { x : 4, y : 4 } };
+
+		tool.load( [ foo, bar ] );
+		tool.undo();
+		tool.undo();
+		tool.undo();
+		tool.redo();
+
+		expect( tool.shapes ).toEqual( [ foo ] );
+
+		tool.redo();
+		tool.redo();
+
+		expect( tool.shapes ).toEqual( [ foo, bar ] );
+
+		tool.undo();
+		tool.press( { x : 0, y : 8 } );
+		tool.release( { x : 4, y : 8 } );
+		tool.redo();
+
+		expect( tool.shapes ).toEqual( [ foo, { figure : Figure.Line, from : { x : 0, y : 8 }, to : { x : 4, y : 8 } } ] );
+
+		tool.undo();
+		tool.load( [ bar ] );
+		tool.redo();
+
+		expect( tool.shapes ).toEqual( [ bar ] );
+	} );
 } );

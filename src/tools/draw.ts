@@ -14,12 +14,20 @@ export class DrawTool
 
 	shapes : Shape[] = [];
 
+	private undone : Shape[] = [];
+
 	private start : Point | null = null;
 
 	private cursor : Point | null = null;
 
 	private bend : { from : Point, to : Point } | null = null;
 
+
+	load( shapes : Shape[] ) : void
+	{
+		this.shapes = shapes;
+		this.undone = [];
+	}
 
 	press( point : Point ) : void
 	{
@@ -45,6 +53,7 @@ export class DrawTool
 		if( this.figure === Figure.Curve && shape.figure === Figure.Line ) { this.bend = { from : shape.from, to : shape.to }; return; }
 
 		this.bend = null;
+		this.undone = [];
 		this.shapes.push( shape );
 	}
 
@@ -60,7 +69,16 @@ export class DrawTool
 
 	undo() : void
 	{
-		this.shapes.pop();
+		const shape = this.shapes.pop();
+
+		if( shape ) this.undone.push( shape );
+	}
+
+	redo() : void
+	{
+		const shape = this.undone.pop();
+
+		if( shape ) this.shapes.push( shape );
 	}
 
 	preview() : Shape | null

@@ -18,6 +18,8 @@ export class Maker
 
 	steps = 0;
 
+	private undone = 0;
+
 	private bar = document.createElement( 'div' );
 
 	private name = document.createElement( 'input' );
@@ -103,6 +105,32 @@ export class Maker
 		this.discard( steps, layer );
 	}
 
+	record() : void
+	{
+		this.steps++;
+		this.undone = 0;
+	}
+
+	undo() : boolean
+	{
+		if( this.steps === 0 ) return false;
+
+		this.steps--;
+		this.undone++;
+
+		return true;
+	}
+
+	redo() : boolean
+	{
+		if( this.undone === 0 ) return false;
+
+		this.undone--;
+		this.steps++;
+
+		return true;
+	}
+
 	close() : void
 	{
 		this.area = null;
@@ -110,6 +138,7 @@ export class Maker
 		this.drawing = [];
 		this.layout = [];
 		this.steps = 0;
+		this.undone = 0;
 		this.bar.hidden = true;
 	}
 
@@ -120,6 +149,7 @@ export class Maker
 		this.drawing = drawing;
 		this.layout = layout;
 		this.steps = 0;
+		this.undone = 0;
 		this.name.value = name;
 		this.delay.value = write( delay / NANO, SEPARATOR );
 		this.bar.hidden = false;

@@ -299,7 +299,7 @@ function sketch() : void
 	origin = { x : Math.floor( ( area.low.x + area.high.x ) / 2 ), y : Math.floor( ( area.low.y + area.high.y ) / 2 ) };
 	sketching = true;
 	pins = ends.map( ( item, index ) => ( { point : maker.layout[ index ] ?? fixed[ index ] ?? { x : item.from.x - origin.x, y : item.from.y - origin.y }, output : item.kind === Kind.Output, label : item.label ?? '' } ) );
-	drawer.shapes = [ ... maker.drawing ];
+	drawer.load( [ ... maker.drawing ] );
 
 	figure( drawer.figure );
 	palette.open();
@@ -542,11 +542,11 @@ canvas.addEventListener( 'pointerup', ( event : PointerEvent ) =>
 	const added = tool.release();
 	const clicked = same && ! added;
 
-	if( added && draft && maker.area ) { maker.steps++; maker.area = cover( maker.area, [ draft.from, draft.to ] ); }
+	if( added && draft && maker.area ) { maker.record(); maker.area = cover( maker.area, [ draft.from, draft.to ] ); }
 
 	if( sketching ) { if( event.button === 0 ) drawer.release( fine( event ) ); if( event.button === 2 ) modify( event ); return; }
 
-	if( maker.area ) { if( clicked && toggle( circuit, point ) ) maker.steps++; return; }
+	if( maker.area ) { if( clicked && toggle( circuit, point ) ) maker.record(); return; }
 
 	if( selection ) marked = { area : selection, menu : offer( document.body, { x : event.clientX, y : event.clientY }, choice => settle( selection, point, choice ) ) };
 
@@ -629,6 +629,8 @@ addEventListener( 'keydown', ( event : KeyboardEvent ) =>
 
 		if( read( event ) === 'undo' ) { event.preventDefault(); drawer.undo(); }
 
+		if( read( event ) === 'redo' ) { event.preventDefault(); drawer.redo(); }
+
 		return;
 	}
 
@@ -646,7 +648,9 @@ addEventListener( 'keydown', ( event : KeyboardEvent ) =>
 
 	event.preventDefault();
 
-	if( command === 'undo' && maker.steps > 0 ) { maker.steps--; circuit.undo(); return; }
+	if( command === 'undo' && maker.undo() ) { circuit.undo(); return; }
+
+	if( command === 'redo' && maker.redo() ) { circuit.redo(); return; }
 
 	if( maker.area && ( command === 'undo' || command === 'redo' ) ) return;
 

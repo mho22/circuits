@@ -113,6 +113,28 @@ describe( 'maker', () =>
 		expect( maker.steps ).toBe( 0 );
 	} );
 
+	it( 'counts its steps back on an undo and forth on a redo, and forgets the undone steps after a new step or a close', () =>
+	{
+		const maker = new Maker( parent, document.createElement( 'div' ), () => {}, () => {}, () => {}, () => {} );
+
+		maker.open( AREA );
+		maker.record();
+		maker.record();
+
+		expect( [ maker.undo(), maker.undo(), maker.undo(), maker.steps ] ).toEqual( [ true, true, false, 0 ] );
+		expect( [ maker.redo(), maker.steps ] ).toEqual( [ true, 1 ] );
+
+		maker.record();
+
+		expect( [ maker.redo(), maker.steps ] ).toEqual( [ false, 2 ] );
+
+		maker.undo();
+		maker.close();
+		maker.open( AREA );
+
+		expect( [ maker.redo(), maker.steps ] ).toEqual( [ false, 0 ] );
+	} );
+
 	it( 'edits a layer with its name, its drawing and its layout and shows delete', () =>
 	{
 		const finish = vi.fn();
