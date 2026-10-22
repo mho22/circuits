@@ -490,7 +490,8 @@ function paint( elements : Element[], branches : Branch[], seconds : number ) : 
 	if( zoned )
 	{
 		mask.draw( context, zoned, view.x, view.y, innerWidth, innerHeight );
-		area.draw( context, zoned );
+
+		if( maker.area ) area.draw( context, zoned );
 	}
 
 	cursor.draw( context, tool.kind === null ? null : hover );
@@ -504,6 +505,8 @@ function frame( time : number ) : void
 
 	circuit.advance( clock.tick( seconds, circuit.rate ) );
 
+	follow();
+
 	const elements = parts();
 	const branches = decodeBranches( circuit.branches() );
 
@@ -516,8 +519,6 @@ function frame( time : number ) : void
 	toolbar.limit( maker.area ? [] : kinds );
 
 	if( tool.kind !== null && ! kinds.includes( tool.kind ) ) select( kinds[ 0 ] );
-
-	follow();
 
 	canvas.classList.toggle( 'idle', tool.kind === null && ! sketching );
 
