@@ -1,6 +1,7 @@
 import { arc } from './arc.ts';
 import { Figure } from './enums/figure.ts';
 import { path } from './path.ts';
+import { side } from './side.ts';
 import type { Point } from './types/point.ts';
 import type { Shape } from './types/shape.ts';
 
@@ -21,11 +22,6 @@ function near( point : Point, from : Point, to : Point ) : boolean
 function ring( point : Point, center : Point, radius : number ) : boolean
 {
 	return Math.abs( Math.hypot( point.x - center.x, point.y - center.y ) - radius ) <= REACH;
-}
-
-function side( point : Point, from : Point, to : Point ) : number
-{
-	return Math.sign( ( to.x - from.x ) * ( point.y - from.y ) - ( to.y - from.y ) * ( point.x - from.x ) );
 }
 
 

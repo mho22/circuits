@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { Figure } from '../src/enums/figure.ts';
 import { Kind } from '../src/enums/kind.ts';
 import { cover, inside, span } from '../src/selection.ts';
 import { element } from './stubs/element.ts';
@@ -63,5 +64,22 @@ describe( 'selection', () =>
 
 		expect( span( [ ground ] ) ).toEqual( { low : { x : -1, y : -1 }, high : { x : 1, y : 2 } } );
 		expect( span( [ supply ] ) ).toEqual( { low : { x : -1, y : -2 }, high : { x : 1, y : 1 } } );
+	} );
+
+	it( 'spans the drawing of a symbol, turned with the symbol, with one step around it', () =>
+	{
+		const outline = { low : { x : -2, y : -2 }, high : { x : 2, y : 2 }, pins : [ { x : -2, y : 0 } ] };
+		const definition = { name : 'foo', drawing : [ { figure : Figure.Line as const, from : { x : -8, y : -10 }, to : { x : 4, y : 6 } } ], labels : [], layout : [], delay : NaN };
+
+		expect( span( [ element( { kind : Kind.Symbol, from : { x : 0, y : 0 }, to : { x : 0, y : 0 }, outline, definition } ) ] ) ).toEqual( { low : { x : -3, y : -4 }, high : { x : 2, y : 3 } } );
+		expect( span( [ element( { kind : Kind.Symbol, from : { x : 0, y : 0 }, to : { x : 0, y : 0 }, rotation : 1, outline, definition } ) ] ) ).toEqual( { low : { x : -3, y : -3 }, high : { x : 4, y : 2 } } );
+	} );
+
+	it( 'spans the box of a symbol without a drawing with one step around it', () =>
+	{
+		const outline = { low : { x : -3, y : -1 }, high : { x : 2, y : 1 }, pins : [ { x : -3, y : 0 } ] };
+
+		expect( span( [ element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline } ) ] ) ).toEqual( { low : { x : 1, y : 3 }, high : { x : 8, y : 7 } } );
+		expect( span( [ element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, rotation : 1, outline } ) ] ) ).toEqual( { low : { x : 3, y : 1 }, high : { x : 7, y : 8 } } );
 	} );
 } );

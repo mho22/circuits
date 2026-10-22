@@ -1,6 +1,9 @@
+import { bounds } from './bounds.ts';
 import { Kind } from './enums/kind.ts';
+import { FINE } from './grid.ts';
 import { pins } from './pins.ts';
 import { terminals } from './terminals.ts';
+import { turn } from './turn.ts';
 import type { Area } from './types/area.ts';
 import type { Element } from './types/element.ts';
 import type { Point } from './types/point.ts';
@@ -16,6 +19,15 @@ function points( element : Element ) : Point[]
 	return [ element.from, element.to, ... terminals( element.kind, element.from, element.to, element.mirrored ) ];
 }
 
+function corners( element : Element ) : Point[]
+{
+	const shapes = element.definition?.drawing ?? [];
+
+	if( shapes.length === 0 ) return element.outline ? [ element.outline.low, element.outline.high ].map( corner => turn( corner, element.rotation ) ) : [];
+
+	return shapes.flatMap( bounds ).map( point => turn( point, element.rotation ) ).flatMap( point => [ { x : Math.floor( point.x / FINE ), y : Math.floor( point.y / FINE ) }, { x : Math.ceil( point.x / FINE ), y : Math.ceil( point.y / FINE ) } ] );
+}
+
 function reach( element : Element ) : Point[]
 {
 	const { x, y } = element.from;
@@ -23,6 +35,8 @@ function reach( element : Element ) : Point[]
 	if( element.kind === Kind.Ground ) return [ element.from, { x, y : y + 1 } ];
 
 	if( element.kind === Kind.Supply ) return [ element.from, { x, y : y - 1 } ];
+
+	if( element.kind === Kind.Symbol ) return [ ... points( element ), ... corners( element ).map( corner => ( { x : x + corner.x, y : y + corner.y } ) ) ];
 
 	return points( element );
 }
