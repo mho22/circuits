@@ -7,7 +7,7 @@ const HINTS : Record<Figure, string> = {
 	[ Figure.Line ] : 'Drag from one end to the other.',
 	[ Figure.Curve ] : 'Drag between the ends, then click a dot on the curve.',
 };
-const MENU = 'Right-click a shape to delete it, or a pin to move it.';
+const MENU = 'Right-click a shape to delete it, or a pin to move it. Right-drag to select.';
 const FIGURES = [ Figure.Line, Figure.Circle, Figure.Curve ];
 
 

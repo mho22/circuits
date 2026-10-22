@@ -1,8 +1,10 @@
 import { arc } from '../arc.ts';
 import { Figure } from '../enums/figure.ts';
 import { HALF, snap } from '../grid.ts';
+import type { Pin } from '../types/pin.ts';
 import type { Point } from '../types/point.ts';
 import type { Shape } from '../types/shape.ts';
+import type { Sketch } from '../types/sketch.ts';
 
 
 const DOT = 1;
@@ -14,7 +16,11 @@ export class DrawTool
 
 	shapes : Shape[] = [];
 
-	private undone : Shape[] = [];
+	pins : Pin[] = [];
+
+	private past : Sketch[] = [];
+
+	private undone : Sketch[] = [];
 
 	private start : Point | null = null;
 
@@ -23,10 +29,20 @@ export class DrawTool
 	private bend : { from : Point, to : Point } | null = null;
 
 
-	load( shapes : Shape[] ) : void
+	load( shapes : Shape[], pins : Pin[] ) : void
 	{
 		this.shapes = shapes;
+		this.pins = pins;
+		this.past = shapes.map( ( _, index ) => ( { shapes : shapes.slice( 0, index ), pins } ) );
 		this.undone = [];
+	}
+
+	change( shapes : Shape[], pins : Pin[] ) : void
+	{
+		this.past.push( { shapes : this.shapes, pins : this.pins } );
+		this.undone = [];
+		this.shapes = shapes;
+		this.pins = pins;
 	}
 
 	press( point : Point ) : void
@@ -53,8 +69,7 @@ export class DrawTool
 		if( this.figure === Figure.Curve && shape.figure === Figure.Line ) { this.bend = { from : shape.from, to : shape.to }; return; }
 
 		this.bend = null;
-		this.undone = [];
-		this.shapes.push( shape );
+		this.change( [ ... this.shapes, shape ], this.pins );
 	}
 
 	cancel() : boolean
@@ -69,16 +84,24 @@ export class DrawTool
 
 	undo() : void
 	{
-		const shape = this.shapes.pop();
+		const sketch = this.past.pop();
 
-		if( shape ) this.undone.push( shape );
+		if( ! sketch ) return;
+
+		this.undone.push( { shapes : this.shapes, pins : this.pins } );
+		this.shapes = sketch.shapes;
+		this.pins = sketch.pins;
 	}
 
 	redo() : void
 	{
-		const shape = this.undone.pop();
+		const sketch = this.undone.pop();
 
-		if( shape ) this.shapes.push( shape );
+		if( ! sketch ) return;
+
+		this.past.push( { shapes : this.shapes, pins : this.pins } );
+		this.shapes = sketch.shapes;
+		this.pins = sketch.pins;
 	}
 
 	preview() : Shape | null

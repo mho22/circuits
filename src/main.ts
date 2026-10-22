@@ -17,13 +17,15 @@ import { encode } from './encoders/file.ts';
 import { Color, NEXT } from './enums/color.ts';
 import { Figure } from './enums/figure.ts';
 import { INPUTS, Kind, NAMES, PINS, POINTS } from './enums/kind.ts';
-import { snap } from './grid.ts';
+import { FINE, snap } from './grid.ts';
+import { grab } from './grab.ts';
 import { read, shape } from './keyboard.ts';
 import { junctions } from './junctions.ts';
 import { leads } from './leads.ts';
 import { Library } from './library.ts';
 import { Maker } from './maker.ts';
 import { open as fill } from './menus/blank.ts';
+import { open as revise } from './menus/drawing.ts';
 import { open } from './menus/part.ts';
 import { open as offer } from './menus/selection.ts';
 import { open as amend } from './menus/sketch.ts';
@@ -48,14 +50,15 @@ import { DrawTool } from './tools/draw.ts';
 import { MoveTool } from './tools/move.ts';
 import { PlaceTool } from './tools/place.ts';
 import { SelectTool } from './tools/select.ts';
+import { ShiftTool } from './tools/shift.ts';
 import { toggle } from './tools/toggle.ts';
 import type { Action } from './types/action.ts';
 import type { Area } from './types/area.ts';
 import type { Branch } from './types/branch.ts';
 import type { Choice } from './types/choice.ts';
 import type { Definition } from './types/definition.ts';
+import type { Edit } from './types/edit.ts';
 import type { Element } from './types/element.ts';
-import type { Pin } from './types/pin.ts';
 import type { Point } from './types/point.ts';
 import type { Shape } from './types/shape.ts';
 import { View } from './view.ts';
@@ -78,6 +81,7 @@ const mover = new MoveTool( circuit );
 const selector = new SelectTool();
 const drawer = new DrawTool();
 const carrier = new CarryTool();
+const shifter = new ShiftTool();
 const slot = document.createElement( 'div' );
 const toolbar = new Toolbar( document.querySelector( 'nav' )!, [ ... PART_GROUPS, ... PIN_GROUPS ], pick );
 const pinbar = new Toolbar( slot, PIN_GROUPS, pick );
@@ -98,8 +102,8 @@ let marked : { area : Area, menu : HTMLElement } | null = null;
 let copied = 0;
 let sketching = false;
 let origin : Point = { x : 0, y : 0 };
-let pins : Pin[] = [];
 let aim : Point | null = null;
+let picked : { area : Area, menu : HTMLElement } | null = null;
 
 
 function select( kind : Kind | null ) : void
@@ -321,8 +325,7 @@ function sketch() : void
 
 	origin = { x : Math.floor( ( area.low.x + area.high.x ) / 2 ), y : Math.floor( ( area.low.y + area.high.y ) / 2 ) };
 	sketching = true;
-	pins = ends.map( ( item, index ) => ( { point : maker.layout[ index ] ?? fixed[ index ] ?? { x : item.from.x - origin.x, y : item.from.y - origin.y }, output : item.kind === Kind.Output, label : item.label ?? '' } ) );
-	drawer.load( [ ... maker.drawing ] );
+	drawer.load( [ ... maker.drawing ], ends.map( ( item, index ) => ( { point : maker.layout[ index ] ?? fixed[ index ] ?? { x : item.from.x - origin.x, y : item.from.y - origin.y }, output : item.kind === Kind.Output, label : item.label ?? '' } ) ) );
 
 	figure( drawer.figure );
 	palette.open();
@@ -332,9 +335,10 @@ function unsketch() : void
 {
 	drawer.cancel();
 	carrier.cancel();
+	shifter.cancel();
 
 	maker.drawing = drawer.shapes;
-	maker.layout = pins.map( pin => pin.point );
+	maker.layout = drawer.pins.map( pin => pin.point );
 	sketching = false;
 	aim = null;
 
@@ -356,19 +360,37 @@ function fine( event : MouseEvent ) : Point
 
 function drop() : void
 {
-	pins = carrier.pins( pins );
+	drawer.change( drawer.shapes, carrier.pins( drawer.pins ) );
 
 	carrier.cancel();
+}
+
+function land() : void
+{
+	drawer.change( shifter.shapes( drawer.shapes ), shifter.pins( drawer.pins ) );
+
+	shifter.cancel();
+}
+
+function rework( area : Area, anchor : Point, edit : Edit ) : void
+{
+	const grabbed = grab( drawer.shapes, drawer.pins, area );
+
+	if( edit === 'move' ) { shifter.start( grabbed, area, anchor ); return; }
+
+	if( grabbed.shapes.length === 0 ) return;
+
+	drawer.change( drawer.shapes.filter( ( _, index ) => ! grabbed.shapes.includes( index ) ), drawer.pins );
 }
 
 function modify( event : MouseEvent ) : void
 {
 	const point = fine( event );
-	const found = target( drawer.shapes, pins, point );
+	const found = target( drawer.shapes, drawer.pins, point );
 
 	if( ! found ) return;
 
-	if( ! found.pin ) { drawer.shapes.splice( found.index, 1 ); return; }
+	if( ! found.pin ) { drawer.change( drawer.shapes.filter( ( _, index ) => index !== found.index ), drawer.pins ); return; }
 
 	amend( document.body, { x : event.clientX, y : event.clientY }, () => carrier.start( found.index, point ) );
 }
@@ -414,15 +436,18 @@ function present() : void
 {
 	const place = fit( origin, view.x, view.y );
 	const draft = drawer.preview();
+	const selection = selector.preview() ?? shifter.zone() ?? ( picked?.menu.isConnected ? picked.area : null );
 
 	context.setTransform( devicePixelRatio, 0, 0, devicePixelRatio, - view.x * devicePixelRatio, - view.y * devicePixelRatio );
 
 	grid.draw( context, view.x, view.y, innerWidth, innerHeight, true );
 
+	if( selection ) area.draw( context, { low : { x : origin.x + selection.low.x / FINE, y : origin.y + selection.low.y / FINE }, high : { x : origin.x + selection.high.x / FINE, y : origin.y + selection.high.y / FINE } } );
+
 	context.setTransform( devicePixelRatio, 0, 0, devicePixelRatio, 0, 0 );
 
-	board.draw( context, place, carrier.pins( pins ), aim );
-	drawing.draw( context, drawer.shapes, place, 0, place.unit );
+	board.draw( context, place, shifter.pins( carrier.pins( drawer.pins ) ), aim );
+	drawing.draw( context, shifter.shapes( drawer.shapes ), place, 0, place.unit );
 
 	context.globalAlpha = 0.5;
 
@@ -526,6 +551,10 @@ canvas.addEventListener( 'pointerdown', ( event : PointerEvent ) =>
 
 	if( sketching && event.button === 0 && carrier.index !== null ) { drop(); return; }
 
+	if( sketching && event.button === 0 && shifter.grab ) { land(); return; }
+
+	if( sketching && event.button === 2 && aim ) { canvas.setPointerCapture( event.pointerId ); selector.press( aim ); return; }
+
 	if( sketching && event.button === 0 ) { canvas.setPointerCapture( event.pointerId ); drawer.press( fine( event ) ); }
 
 	if( sketching ) return;
@@ -559,7 +588,7 @@ canvas.addEventListener( 'pointerdown', ( event : PointerEvent ) =>
 
 canvas.addEventListener( 'pointermove', ( event : PointerEvent ) =>
 {
-	if( sketching ) { aim = snap( fine( event ) ); carrier.move( aim ); drawer.move( aim ); return; }
+	if( sketching ) { aim = snap( fine( event ) ); carrier.move( aim ); shifter.move( aim ); selector.move( aim ); drawer.move( aim ); return; }
 
 	hover = view.toGrid( event.clientX, event.clientY );
 
@@ -585,6 +614,8 @@ canvas.addEventListener( 'pointerup', ( event : PointerEvent ) =>
 	const clicked = same && ! added;
 
 	if( added && draft && maker.area ) { maker.record(); maker.area = cover( maker.area, [ draft.from, draft.to ] ); }
+
+	if( sketching && selection && aim ) { const anchor = aim; picked = { area : selection, menu : revise( document.body, { x : event.clientX, y : event.clientY }, edit => rework( selection, anchor, edit ) ) }; return; }
 
 	if( sketching ) { if( event.button === 0 ) drawer.release( fine( event ) ); if( event.button === 2 ) modify( event ); return; }
 
@@ -662,6 +693,8 @@ addEventListener( 'keydown', ( event : KeyboardEvent ) =>
 	if( sketching )
 	{
 		if( event.key === 'Escape' && carrier.index !== null ) { carrier.cancel(); return; }
+
+		if( event.key === 'Escape' && shifter.grab ) { shifter.cancel(); return; }
 
 		if( event.key === 'Escape' && ! drawer.cancel() ) unsketch();
 

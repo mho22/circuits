@@ -97,14 +97,34 @@ describe( 'draw tool', () =>
 	{
 		const tool = new DrawTool();
 
-		tool.shapes = [
+		tool.load( [
 			{ figure : Figure.Circle, center : { x : 0, y : 0 }, radius : 2 },
 			{ figure : Figure.Line, from : { x : 2, y : -2 }, to : { x : 4, y : 2 } },
-		];
+		], [] );
 
 		tool.undo();
 
 		expect( tool.shapes ).toEqual( [ { figure : Figure.Circle, center : { x : 0, y : 0 }, radius : 2 } ] );
+	} );
+
+	it( 'undoes and redoes a change of the shapes and the pins in one step', () =>
+	{
+		const tool = new DrawTool();
+		const foo = { figure : Figure.Line as const, from : { x : 0, y : 0 }, to : { x : 4, y : 0 } };
+		const bar = { figure : Figure.Line as const, from : { x : 0, y : 4 }, to : { x : 4, y : 4 } };
+
+		const baz = [ { point : { x : -2, y : 0 }, output : false, label : 'baz' } ];
+		const qux = [ { point : { x : -2, y : 2 }, output : false, label : 'baz' } ];
+
+		tool.load( [ foo, bar ], baz );
+		tool.change( [ bar ], qux );
+		tool.undo();
+
+		expect( [ tool.shapes, tool.pins ] ).toEqual( [ [ foo, bar ], baz ] );
+
+		tool.redo();
+
+		expect( [ tool.shapes, tool.pins ] ).toEqual( [ [ bar ], qux ] );
 	} );
 
 	it( 'redoes the undone shapes in order, and forgets them after a new shape or a load', () =>
@@ -113,7 +133,7 @@ describe( 'draw tool', () =>
 		const foo = { figure : Figure.Line as const, from : { x : 0, y : 0 }, to : { x : 4, y : 0 } };
 		const bar = { figure : Figure.Line as const, from : { x : 0, y : 4 }, to : { x : 4, y : 4 } };
 
-		tool.load( [ foo, bar ] );
+		tool.load( [ foo, bar ], [] );
 		tool.undo();
 		tool.undo();
 		tool.undo();
@@ -134,7 +154,7 @@ describe( 'draw tool', () =>
 		expect( tool.shapes ).toEqual( [ foo, { figure : Figure.Line, from : { x : 0, y : 8 }, to : { x : 4, y : 8 } } ] );
 
 		tool.undo();
-		tool.load( [ bar ] );
+		tool.load( [ bar ], [] );
 		tool.redo();
 
 		expect( tool.shapes ).toEqual( [ bar ] );
