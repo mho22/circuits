@@ -1,10 +1,33 @@
 use std::collections::HashMap;
 
 use crate::flatten::STRIDE;
+use crate::shape::FINE;
 use crate::{ advance, catalog, enclose, flatten, place, settle, stretch, Device, Document, Element, Enclosure, Error, History, Kind, Logic, Mode, Model, Netlist, Operation, Outline, Plan, Point, Reading, Registry, Segment, Shape, Solution };
 
 
 const DIVISIONS : f64 = 20.0;
+
+
+fn centered( document : &Document, name : &str, drawing : &[ Shape ], layout : &[ Point ] ) -> Result<Operation, Error>
+{
+	let description = Operation::Describe { name : name.to_string(), drawing : drawing.to_vec(), layout : layout.to_vec() };
+
+	if drawing.is_empty() { return Ok( description ); }
+
+	let mut draft = document.clone();
+
+	draft.apply( description )?;
+
+	let outline = Outline::of( &draft );
+	let middle = outline.middle();
+
+	Ok( Operation::Describe { name : name.to_string(), drawing : drawing.iter().map( | shape | shape.shifted( - middle.x * FINE, - middle.y * FINE ) ).collect(), layout : outline.pins.iter().map( | pin | Point { x : pin.x - middle.x, y : pin.y - middle.y } ).collect() } )
+}
+
+fn middle( segment : Segment ) -> Point
+{
+	Point { x : ( segment.from.x + segment.to.x ).div_euclid( 2 ), y : ( segment.from.y + segment.to.y ).div_euclid( 2 ) }
+}
 
 
 #[derive( Debug )]
@@ -170,6 +193,30 @@ impl Simulation
 		if result.is_err() { self.layers.pop(); }
 
 		result
+	}
+
+	pub fn describe( &mut self, layer : usize, name : &str, drawing : &[ Shape ], layout : &[ Point ] ) -> Result<u32, Error>
+	{
+		let document = self.document( layer ).ok_or( Error::Layerless )?;
+		let description = centered( document, name, drawing, layout )?;
+		let mut draft = document.clone();
+
+		draft.apply( description.clone() )?;
+
+		let ( before, after ) = ( &Outline::of( document ), &Outline::of( &draft ) );
+		let copy = | element : &Element | match element.kind { Kind::Symbol { layer : inner, rotation } if inner as usize == layer => Some( rotation ), _ => None };
+		let moves = self.layers.iter().enumerate().flat_map( | ( index, other ) | other.elements().iter().filter_map( move | element |
+		{
+			let rotation = copy( element )?;
+			let ( old, new ) = ( middle( before.zone( element.segment.from, rotation ) ), middle( after.zone( element.segment.from, rotation ) ) );
+
+			if old == new { return None; }
+
+			Some( ( index, Operation::Move { id : element.id, kind : element.kind, segment : element.segment.shifted( old.x - new.x, old.y - new.y ), mirrored : element.mirrored } ) )
+		} ) );
+		let edits : Vec<( usize, Operation )> = [ ( layer, description ) ].into_iter().chain( moves ).collect();
+
+		self.commit( &edits )
 	}
 
 	pub fn erase( &mut self, layer : usize, ids : &[ u32 ] ) -> Result<u32, Error>
@@ -370,11 +417,15 @@ impl Simulation
 		let enclosure = enclose( document.elements(), low, high, | element | self.points( element ) )?;
 		let parts = enclosure.inner.iter().map( | element | Operation::Add { kind : element.kind, segment : element.segment, mirrored : element.mirrored } );
 		let labels = enclosure.inner.iter().zip( 0 .. ).filter( | ( element, _ ) | ! document.label( element.id ).is_empty() ).map( | ( element, id ) | Operation::Label { id, label : document.label( element.id ).to_string() } );
-		let description = Operation::Describe { name : name.to_string(), drawing : drawing.to_vec(), layout : layout.to_vec() };
-		let inside : Vec<Operation> = parts.chain( labels ).chain( [ description ] ).collect();
+		let mut inside : Vec<Operation> = parts.chain( labels ).collect();
 		let mut inner = Document::default();
 
 		for operation in &inside { inner.apply( operation.clone() )?; }
+
+		let description = centered( &inner, name, drawing, layout )?;
+
+		inner.apply( description.clone() )?;
+		inside.push( description );
 
 		Ok( ( enclosure, inside, inner ) )
 	}

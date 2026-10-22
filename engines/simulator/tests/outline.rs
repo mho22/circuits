@@ -70,3 +70,11 @@ fn it_gives_the_inside_of_its_bounds_without_its_center_when_the_bounds_are_away
 
 	assert_eq!( outline.zone( point( 10, 10 ), 0 ), Segment { from : point( 3, 4 ), to : point( 6, 7 ) } );
 }
+
+#[test]
+fn it_gives_the_middle_of_its_bounds_rounded_down()
+{
+	let outline = Outline { low : point( -8, -7 ), high : point( -3, -2 ), pins : vec![] };
+
+	assert_eq!( outline.middle(), point( -6, -5 ) );
+}

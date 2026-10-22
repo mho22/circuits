@@ -44,6 +44,18 @@ impl Shape
 		if sized { Ok( () ) } else { Err( Error::Flat ) }
 	}
 
+	pub fn shifted( &self, dx : i32, dy : i32 ) -> Shape
+	{
+		let shift = | point : Point | Point { x : point.x + dx, y : point.y + dy };
+
+		match *self
+		{
+			Shape::Circle { center, radius } => Shape::Circle { center : shift( center ), radius },
+			Shape::Line { from, to } => Shape::Line { from : shift( from ), to : shift( to ) },
+			Shape::Curve { from, through, to } => Shape::Curve { from : shift( from ), through : shift( through ), to : shift( to ) },
+		}
+	}
+
 	pub fn bounds( &self ) -> ( Point, Point )
 	{
 		let points = match self

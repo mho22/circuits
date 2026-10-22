@@ -24,6 +24,16 @@ fn it_rejects_shapes_without_a_size()
 }
 
 #[test]
+fn it_shifts_every_point_of_each_shape()
+{
+	let point = | x, y | Point { x, y };
+
+	assert_eq!( Shape::Circle { center : FOO, radius : 2 }.shifted( 4, -8 ), Shape::Circle { center : point( 4, -8 ), radius : 2 } );
+	assert_eq!( Shape::Line { from : FOO, to : BAR }.shifted( 4, -8 ), Shape::Line { from : point( 4, -8 ), to : point( 6, -5 ) } );
+	assert_eq!( Shape::Curve { from : FOO, through : BAR, to : point( 4, 0 ) }.shifted( 4, -8 ), Shape::Curve { from : point( 4, -8 ), through : point( 6, -5 ), to : point( 8, -8 ) } );
+}
+
+#[test]
 fn it_bounds_each_shape_by_its_lowest_and_highest_corner()
 {
 	let point = | x, y | Point { x, y };

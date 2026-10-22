@@ -55,6 +55,11 @@ impl Outline
 		Outline { low, high, pins }
 	}
 
+	pub fn middle( &self ) -> Point
+	{
+		Point { x : ( self.low.x + self.high.x ).div_euclid( 2 ), y : ( self.low.y + self.high.y ).div_euclid( 2 ) }
+	}
+
 	pub fn zone( &self, center : Point, rotation : u8 ) -> Segment
 	{
 		let first = rotate( Point { x : self.low.x + 1, y : self.low.y + 1 }, rotation );

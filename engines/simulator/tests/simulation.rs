@@ -1185,6 +1185,48 @@ fn it_encloses_a_named_and_drawn_symbol_with_the_labels_and_the_layout_of_its_pi
 }
 
 #[test]
+fn it_centers_a_described_icon_on_its_box_and_keeps_each_copy_in_place_in_one_undo_step()
+{
+	let mut simulation = Simulation::new( STEP );
+	let layer = define( &mut simulation, &[ ( Kind::Input { high : false }, ( -1, 0 ), ( 0, 0 ) ), ( Kind::Output, ( 5, 0 ), ( 4, 0 ) ) ] );
+	let drawing = Shape::Line { from : Point { x : -32, y : -28 }, to : Point { x : -12, y : -8 } };
+
+	simulation.apply( layer as usize, Operation::Describe { name : String::new(), drawing : vec![ drawing.clone() ], layout : vec![ point( -8, -6 ), point( -3, -5 ) ] } ).unwrap();
+
+	let symbol = add( &mut simulation, Kind::Symbol { layer, rotation : 1 }, ( 24, 23 ), ( 24, 23 ) );
+	let terminals = Outline::of( simulation.document( layer as usize ).unwrap() ).terminals( point( 24, 23 ), 1 );
+
+	simulation.describe( layer as usize, "foo", &[ drawing.shifted( 20, 12 ) ], &[ point( -3, -3 ), point( 2, -2 ) ] ).unwrap();
+
+	let outline = Outline::of( simulation.document( layer as usize ).unwrap() );
+	let center = simulation.document( 0 ).unwrap().elements().iter().find( | element | element.id == symbol ).unwrap().segment.from;
+
+	assert_eq!( simulation.document( layer as usize ).unwrap().drawing(), [ Shape::Line { from : Point { x : -8, y : -8 }, to : Point { x : 12, y : 12 } } ].as_slice() );
+	assert_eq!( ( outline.middle(), outline.terminals( center, 1 ) ), ( point( 0, 0 ), terminals ) );
+
+	simulation.undo().unwrap();
+
+	assert_eq!( simulation.document( 0 ).unwrap().elements()[ 0 ].segment, segment( ( 24, 23 ), ( 24, 23 ) ) );
+	assert_eq!( simulation.document( layer as usize ).unwrap().drawing(), [ drawing ].as_slice() );
+}
+
+#[test]
+fn it_encloses_a_symbol_with_its_icon_centered_on_its_box()
+{
+	let mut simulation = Simulation::new( STEP );
+
+	add( &mut simulation, Kind::Input { high : false }, ( 4, 1 ), ( 4, 0 ) );
+	add( &mut simulation, Kind::Resistor { ohms : 1000.0 }, ( 4, 0 ), ( 6, 0 ) );
+	add( &mut simulation, Kind::Output, ( 6, 1 ), ( 6, 0 ) );
+
+	let symbol = simulation.enclose( 0, point( 2, -2 ), point( 8, 2 ), "", &[ Shape::Circle { center : Point { x : 20, y : 8 }, radius : 2 } ], &[ point( 3, 2 ), point( 7, 2 ) ] ).unwrap();
+	let layer = simulation.document( 1 ).unwrap();
+
+	assert_eq!( ( layer.drawing(), layer.layout() ), ( [ Shape::Circle { center : Point { x : 0, y : 0 }, radius : 2 } ].as_slice(), [ point( -2, 0 ), point( 2, 0 ) ].as_slice() ) );
+	assert_eq!( simulation.document( 0 ).unwrap().elements().iter().find( | element | element.id == symbol ).unwrap().segment, segment( ( 5, 0 ), ( 5, 0 ) ) );
+}
+
+#[test]
 fn it_clears_the_names_the_drawings_and_the_layouts_of_the_layers_on_an_open()
 {
 	let mut simulation = Simulation::new( STEP );

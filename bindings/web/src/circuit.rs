@@ -138,7 +138,7 @@ impl Circuit
 	{
 		let drawing = shapes( drawing )?;
 
-		self.apply( Operation::Describe { name, drawing, layout : points( layout ) } )
+		self.simulation.describe( self.current(), &name, &drawing, &points( layout ) ).map_err( | error | JsError::new( &error.to_string() ) )
 	}
 
 	pub fn purge( &mut self ) -> Result<u32, JsError>
