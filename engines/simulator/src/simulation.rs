@@ -247,6 +247,15 @@ impl Simulation
 		self.layers.get( layer )
 	}
 
+	pub fn listening( &self ) -> Vec<u32>
+	{
+		let path = self.focus.as_slice();
+		let layer = self.descend( path ).unwrap_or( 0 );
+		let probe = | element : &&Element | self.registry.find( &[ path, &[ element.id ] ].concat() ).is_some_and( | id | self.elements.iter().any( | flat | flat.id == id && flat.kind == Kind::Output ) );
+
+		self.layers[ layer ].elements().iter().filter( | element | matches!( element.kind, Kind::Toggle { .. } ) ).filter( probe ).map( | element | element.id ).collect()
+	}
+
 	pub fn delay( &self, layer : usize ) -> Option<f64>
 	{
 		self.models.get( layer )?.as_ref().map( | model | model.delay )

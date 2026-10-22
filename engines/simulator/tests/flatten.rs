@@ -150,6 +150,19 @@ fn it_turns_a_toggle_into_a_vcc_at_its_level_with_its_id_at_the_end_of_its_lead(
 }
 
 #[test]
+fn it_turns_a_toggle_into_a_probe_on_a_net_that_a_source_a_channel_or_a_gate_drives()
+{
+	let kinds = | parts : &[ ( Kind, ( i32, i32 ), ( i32, i32 ) ) ], models : &[ Option<Model> ] | flatten( &[ layer( parts ), input( true ) ], &mut Registry::default(), models, 0, &[] ).unwrap().0.iter().map( | element | element.kind ).collect::<Vec<Kind>>();
+	let model = Model { rows : vec![ vec![ Drive { volts : 5.0, ohms : 10.0 } ]; 2 ], next : vec![ 0; 2 ], delay : DELAY };
+	let high = Kind::Supply { volts : 5.0 };
+
+	assert_eq!( kinds( &[ ( Kind::Toggle { high : true }, ( 1, 0 ), ( 2, 0 ) ), ( Kind::Wire, ( 2, 0 ), ( 6, 0 ) ), ( Kind::Supply { volts : 5.0 }, ( 6, 0 ), ( 6, 0 ) ) ], &[] )[ 0 ], Kind::Output );
+	assert_eq!( kinds( &[ ( Kind::Toggle { high : true }, ( 1, 0 ), ( 2, 0 ) ), ( Kind::Led { color : 0 }, ( 2, 0 ), ( 2, 4 ) ), ( Kind::Ground, ( 2, 4 ), ( 2, 4 ) ) ], &[] )[ 0 ], high );
+	assert_eq!( kinds( &[ ( Kind::Toggle { high : true }, ( 4, 1 ), ( 3, 1 ) ), ( Kind::Toggle { high : true }, ( -1, 2 ), ( 0, 2 ) ), ( Kind::Nmos, ( 0, 2 ), ( 2, 2 ) ) ], &[] )[ .. 2 ], [ Kind::Output, high ] );
+	assert_eq!( kinds( &[ ( Kind::Symbol { layer : 1, rotation : 0 }, ( 10, 10 ), ( 10, 10 ) ), ( Kind::Toggle { high : true }, ( 13, 10 ), ( 12, 10 ) ) ], &[ None, Some( model ) ] ).last(), Some( &Kind::Output ) );
+}
+
+#[test]
 fn it_keeps_a_clock_at_the_end_of_its_lead()
 {
 	let drawing = layer( &[ ( Kind::Clock { hertz : 1e6 }, ( 1, 0 ), ( 3, 0 ) ) ] );

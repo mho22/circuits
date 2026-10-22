@@ -39,6 +39,8 @@ export function describe( element : Element, branch : Branch | undefined ) : str
 
 	if( PINS.includes( element.kind ) ) return [ title, String( bit( element.potentials[ 0 ] ) ), format( element.potentials[ 0 ], 'V' ) ].join( ' · ' );
 
+	if( element.kind === Kind.Toggle && element.listening ) return [ title, String( bit( element.potentials[ 1 ] ) ), format( element.potentials[ 1 ], 'V' ) ].join( ' · ' );
+
 	if( element.kind === Kind.Toggle ) return [ title, String( element.value ), format( element.potentials[ 1 ], 'V' ), format( Math.abs( element.currents[ 0 ] ), 'A' ) ].join( ' · ' );
 
 	if( element.kind === Kind.Clock ) return [ title, String( bit( element.potentials[ 1 ] ) ), format( element.potentials[ 1 ], 'V' ), format( Math.abs( element.currents[ 0 ] ), 'A' ) ].join( ' · ' );

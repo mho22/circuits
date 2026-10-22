@@ -13,7 +13,7 @@ export function toggle( circuit : Circuit, point : Point ) : boolean
 
 	if( target ) { circuit.setClosed( target.id, target.value !== 1 ); return true; }
 
-	if( ! source ) return false;
+	if( ! source || circuit.listening().includes( source.id ) ) return false;
 
 	circuit.setHigh( source.id, source.value !== 1 );
 

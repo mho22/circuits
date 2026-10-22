@@ -250,6 +250,28 @@ fn it_pastes_parts_shifted_with_their_mirror_and_their_label_and_cuts_the_wire_u
 }
 
 #[test]
+fn it_lists_a_toggle_that_reads_its_wire_and_shows_the_level_of_the_wire()
+{
+	let mut simulation = Simulation::new( STEP );
+	let toggle = add( &mut simulation, Kind::Toggle { high : false }, ( 1, 0 ), ( 2, 0 ) );
+
+	add( &mut simulation, Kind::Wire, ( 2, 0 ), ( 6, 0 ) );
+	add( &mut simulation, Kind::Resistor { ohms : 1000.0 }, ( 6, 0 ), ( 6, 4 ) );
+	add( &mut simulation, Kind::Ground, ( 6, 4 ), ( 6, 4 ) );
+
+	assert!( simulation.listening().is_empty() );
+
+	let supply = add( &mut simulation, Kind::Supply { volts : 5.0 }, ( 6, 0 ), ( 6, 0 ) );
+
+	assert_eq!( simulation.listening(), vec![ toggle ] );
+	assert!( near( simulation.solution().unwrap().readings[ toggle as usize ].potentials[ 1 ], 5.0, 1e-6 ) );
+
+	simulation.apply( 0, Operation::Delete { id : supply } ).unwrap();
+
+	assert!( simulation.listening().is_empty() );
+}
+
+#[test]
 fn it_leaves_the_wire_whole_when_the_part_is_invalid()
 {
 	let mut simulation = series( Kind::Wire );

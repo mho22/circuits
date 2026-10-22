@@ -148,7 +148,9 @@ function labelled( elements : Element[], layer : number ) : Element[]
 
 function parts() : Element[]
 {
-	return labelled( decodeElements( circuit.elements() ), circuit.layer ).map( outlined );
+	const listening = Array.from( circuit.listening() );
+
+	return labelled( decodeElements( circuit.elements() ), circuit.layer ).map( outlined ).map( item => listening.includes( item.id ) ? { ... item, listening : true } : item );
 }
 
 function layered( layer : number ) : Element[]

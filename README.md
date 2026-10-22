@@ -21,6 +21,7 @@ Requires Rust through `rustup`. `rust-toolchain.toml` pins the version and the `
 - Drag to draw a part. A part runs at 0° or 90°. Click to place a VCC or a ground.
 - Double-click a resistor, a battery, a VCC, a capacitor or an inductor to change its value. Write a number in the unit at the end of the input: `Ω`, `V`, `µF` or `mH`. A comma or a dot separates the decimals: `4700` Ω, `4,7` µF.
 - Click a switch to open or close it.
+- Click a toggle to switch it between 0 and 1. A toggle on a wire that another part drives, such as a gate output, drives nothing: it shows the level of that wire, and a click leaves it.
 - Right-click a wire to delete it.
 - Right-click any other part to open its menu: `Move`, `Rotate`, `Mirror horizontally`, `Mirror vertically`, `Copy` and `Delete`. A ground and a VCC have only `Move`, `Copy` and `Delete`. An LED also has `Change in green`, `Change in blue` or `Change in red`, to light it in the next color. A red LED drops about 1.9 V, a green one about 2 V and a blue one about 3 V. After `Move`, the part follows the cursor: click to drop it, or press `Escape` to cancel. `Rotate` turns the part a quarter clockwise. The wires on the part follow it, and bend at a right angle where they must. A part that touched another part, or the middle of a wire, stays joined to it by a new wire. A mirrored transistor swaps the sides of its collector and its emitter, or of its drain and its source.
 - Press `Ctrl Z` (`⌘ Z` on a Mac) to undo, and `Ctrl Shift Z` or `Ctrl Y` (`⌘ Shift Z`) to redo.

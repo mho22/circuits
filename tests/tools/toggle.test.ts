@@ -65,6 +65,18 @@ describe( 'toggle', () =>
 		expect( decode( circuit.elements() )[ 0 ] ).toMatchObject( { value : 1, potentials : [ 0, 5 ] } );
 	} );
 
+	it( 'leaves a toggle on a wire that another part drives', () =>
+	{
+		const circuit = new Circuit();
+
+		circuit.add( Kind.Toggle, 0, 2, 2, 4, 2 );
+		circuit.add( Kind.Supply, 5, 4, 2, 4, 2 );
+
+		expect( Array.from( circuit.listening() ) ).toEqual( [ 0 ] );
+		expect( toggle( circuit, { x : 2, y : 2 } ) ).toBe( false );
+		expect( decode( circuit.elements() )[ 0 ] ).toMatchObject( { value : 0, potentials : [ 5, 5 ] } );
+	} );
+
 	it( 'leaves an output', () =>
 	{
 		const circuit = new Circuit();

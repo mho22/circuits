@@ -18,4 +18,5 @@ export interface Element
 	outline? : Outline;
 	definition? : Definition;
 	label? : string;
+	listening? : boolean;
 }

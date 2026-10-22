@@ -1,3 +1,4 @@
+import { bit } from '../bit.ts';
 import { color } from '../colors/voltage.ts';
 import { toScreen } from '../grid.ts';
 import type { Element } from '../types/element.ts';
@@ -11,7 +12,8 @@ const KNOB = 3;
 export function draw( context : CanvasRenderingContext2D, element : Element, scale : Scale ) : void
 {
 	const tint = color( element.potentials[ 1 ], scale.voltage );
-	const side = element.value ? 1 : -1;
+	const high = element.listening ? bit( element.potentials[ 1 ] ) : element.value;
+	const side = high ? 1 : -1;
 
 	capsule.draw( context, element, tint );
 

@@ -12,11 +12,11 @@ describe( 'toggle renderer', () =>
 	const x = SPACING;
 	const y = SPACING;
 
-	function drawn( value : number, potential : number, to = { x : 3, y : 1 } ) : unknown[][]
+	function drawn( value : number, potential : number, to = { x : 3, y : 1 }, listening = false ) : unknown[][]
 	{
 		const { context, calls } = record();
 
-		draw( context, element( { kind : Kind.Toggle, value, from : { x : 1, y : 1 }, to, potentials : [ 0, potential ] } ), { voltage : 5, current : 0 } );
+		draw( context, element( { kind : Kind.Toggle, value, from : { x : 1, y : 1 }, to, potentials : [ 0, potential ], listening } ), { voltage : 5, current : 0 } );
 
 		return calls;
 	}
@@ -40,5 +40,11 @@ describe( 'toggle renderer', () =>
 	{
 		expect( drawn( 1, 5 ).filter( call => call[ 0 ] === 'arc' ) ).toEqual( [ [ 'arc', x + 5, y, 3, 0, 2 * Math.PI ] ] );
 		expect( drawn( 0, 0 ).filter( call => call[ 0 ] === 'arc' ) ).toEqual( [ [ 'arc', x - 5, y, 3, 0, 2 * Math.PI ] ] );
+	} );
+
+	it( 'puts the knob of a toggle that reads its wire by the level of the wire', () =>
+	{
+		expect( drawn( 0, 5, undefined, true ).filter( call => call[ 0 ] === 'arc' ) ).toEqual( [ [ 'arc', x + 5, y, 3, 0, 2 * Math.PI ] ] );
+		expect( drawn( 1, 0, undefined, true ).filter( call => call[ 0 ] === 'arc' ) ).toEqual( [ [ 'arc', x - 5, y, 3, 0, 2 * Math.PI ] ] );
 	} );
 } );

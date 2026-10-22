@@ -36,6 +36,7 @@ describe( 'readout', () =>
 	it( 'describes a toggle with its level, its voltage and its current', () =>
 	{
 		expect( read( element( { kind : Kind.Toggle, value : 1, potentials : [ 0, 5 ], currents : [ 0.005, -0.005 ] } ), undefined ) ).toBe( 'Toggle · 1 · 5 V · 5 mA' );
+		expect( read( element( { kind : Kind.Toggle, value : 1, potentials : [ 0, 0 ], currents : [ NaN, NaN ], listening : true } ), undefined ) ).toBe( 'Toggle · 0 · 0 V' );
 		expect( read( element( { kind : Kind.Clock, value : 1e7, potentials : [ 0, 5 ], currents : [ 0, 0 ] } ), undefined ) ).toBe( 'Clock 10 MHz · 1 · 5 V · 0 A' );
 	} );
 

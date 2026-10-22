@@ -335,6 +335,11 @@ impl Circuit
 		} ).collect()
 	}
 
+	pub fn listening( &self ) -> Vec<u32>
+	{
+		self.simulation.listening()
+	}
+
 	pub fn error( &self ) -> Option<String>
 	{
 		self.simulation.solution().err().map( | error | error.to_string() )

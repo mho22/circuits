@@ -1,4 +1,4 @@
-use crate::{ driven, Device, Document, Element, Error, Kind, Model, Outline, Point, Registry, Segment, FLOOR };
+use crate::{ driven, Device, Document, Element, Error, Kind, Model, Netlist, Outline, Point, Registry, Segment, FLOOR };
 
 
 pub const STRIDE : i32 = 1 << 16;
@@ -33,6 +33,31 @@ fn visit( layers : &[ Document ], layer : usize, open : &mut Vec<usize>, done : 
 	Ok( () )
 }
 
+fn listen( elements : &mut [ Element ], devices : &[ Device ], toggles : &[ usize ] )
+{
+	let netlist = Netlist::build( elements );
+	let outputs : Vec<usize> = devices.iter().flat_map( | device | device.outputs.iter().map( | &( _, resistor ) | resistor ) ).collect();
+	let mut driven = vec![ false; netlist.count ];
+
+	for ( index, element ) in elements.iter().enumerate().filter( | ( index, _ ) | ! toggles.contains( index ) )
+	{
+		let points = match element.kind
+		{
+			Kind::Supply { .. } | Kind::Battery { .. } | Kind::Ground | Kind::Clock { .. } => element.terminals(),
+			Kind::Npn | Kind::Pnp | Kind::Nmos | Kind::Pmos => element.terminals()[ 1 .. ].to_vec(),
+			_ if outputs.contains( &index ) => vec![ element.segment.to ],
+			_ => continue,
+		};
+
+		for point in points { driven[ netlist.net( point ) ] = true; }
+	}
+
+	for &toggle in toggles
+	{
+		if driven[ netlist.net( elements[ toggle ].segment.to ) ] { elements[ toggle ].kind = Kind::Output; }
+	}
+}
+
 
 struct Walk<'a>
 {
@@ -43,6 +68,7 @@ struct Walk<'a>
 	devices : Vec<Device>,
 	depth : usize,
 	scopes : i32,
+	toggles : Vec<usize>,
 }
 
 impl Walk<'_>
@@ -65,6 +91,8 @@ impl Walk<'_>
 					Kind::Clock { .. } => ( element.kind, element.segment.to ),
 					kind => ( kind, element.segment.from ),
 				};
+
+				if let Kind::Toggle { .. } = element.kind { self.toggles.push( self.elements.len() ); }
 
 				self.elements.push( Element { id : self.registry.id( &key ), kind, segment : Segment { from : shift( from, offset ), to : shift( element.segment.to, offset ) }, mirrored : element.mirrored } );
 
@@ -151,9 +179,11 @@ pub fn flatten( layers : &[ Document ], registry : &mut Registry, models : &[ Op
 
 	for layer in 0 .. layers.len() { visit( layers, layer, &mut Vec::new(), &mut done )?; }
 
-	let mut walk = Walk { layers, registry, models, elements : Vec::new(), devices : Vec::new(), depth : path.len(), scopes : 0 };
+	let mut walk = Walk { layers, registry, models, elements : Vec::new(), devices : Vec::new(), depth : path.len(), scopes : 0, toggles : Vec::new() };
 
 	walk.expand( layer, path, 0 );
+
+	listen( &mut walk.elements, &walk.devices, &walk.toggles );
 
 	Ok( ( walk.elements, walk.devices ) )
 }
