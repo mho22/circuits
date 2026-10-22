@@ -38,6 +38,7 @@ import * as grid from './renderers/grid.ts';
 import * as mask from './renderers/mask.ts';
 import { measure } from './scale.ts';
 import { cover, inside, span } from './selection.ts';
+import { socket } from './socket.ts';
 import { target } from './target.ts';
 import { PART_GROUPS, PIN_GROUPS, Toolbar } from './toolbar.ts';
 import { CarryTool } from './tools/carry.ts';
@@ -488,11 +489,12 @@ function frame( time : number ) : void
 	if( mode.textContent !== engine ) mode.textContent = engine;
 
 	const error = circuit.error();
-	const [ id ] = hover ? circuit.elementsAt( hover.x, hover.y ) : [];
-	const hovered = elements.find( item => item.id === id );
+	const ids = hover ? Array.from( circuit.elementsAt( hover.x, hover.y ) ) : [];
+	const plugged = elements.find( item => ids.includes( item.id ) && hover && socket( item, hover ) >= 0 );
+	const hovered = plugged ?? elements.find( item => item.id === ids[ 0 ] );
 	const branch = hover ? circuit.branchAt( hover.x, hover.y ) : undefined;
 
-	report( error ?? notice ?? ( hovered ? describe( hovered, branch === undefined ? undefined : branches[ branch ] ) : '' ), error !== undefined || notice !== null );
+	report( error ?? notice ?? ( hovered ? describe( hovered, branch === undefined ? undefined : branches[ branch ], hover ) : '' ), error !== undefined || notice !== null );
 
 	requestAnimationFrame( frame );
 }

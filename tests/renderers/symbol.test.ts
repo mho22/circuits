@@ -42,7 +42,7 @@ describe( 'symbol renderer', () =>
 		expect( calls ).toEqual( [] );
 	} );
 
-	it( 'draws its drawing without a box and each label above its pin, without its name', () =>
+	it( 'draws its drawing without a box, without its name and without the labels of its pins', () =>
 	{
 		const { context, calls } = record();
 		const definition = { name : 'foo', drawing : [ { figure : Figure.Circle as const, center : { x : 0, y : 0 }, radius : 4 } ], labels : [ 'bar', '' ], layout : [], delay : 1e-9 };
@@ -51,7 +51,7 @@ describe( 'symbol renderer', () =>
 
 		expect( calls ).toContainEqual( [ 'arc', 5 * SPACING, 5 * SPACING, 4 * SPACING / FINE, 0, 2 * Math.PI ] );
 		expect( calls.some( call => call[ 0 ] === 'roundRect' ) ).toBe( false );
-		expect( calls.filter( call => call[ 0 ] === 'fillText' ) ).toEqual( [ [ 'fillText', 'bar', 3 * SPACING, 6 * SPACING - 6 ] ] );
+		expect( calls.some( call => call[ 0 ] === 'fillText' ) ).toBe( false );
 	} );
 
 	it( 'turns its drawing with the box', () =>

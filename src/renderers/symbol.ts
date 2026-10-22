@@ -10,8 +10,6 @@ import * as drawing from './drawing.ts';
 const COLOR = '#9e9e9e';
 const RADIUS = 4;
 const DOT = 3;
-const TEXT = '#8a8a8a';
-const GAP = 6;
 
 
 export function draw( context : CanvasRenderingContext2D, element : Element, scale : Scale ) : void
@@ -46,13 +44,4 @@ export function draw( context : CanvasRenderingContext2D, element : Element, sca
 		context.arc( toScreen( pin.x ), toScreen( pin.y ), DOT, 0, 2 * Math.PI );
 		context.fill();
 	} );
-
-	if( ! definition ) return;
-
-	context.fillStyle = TEXT;
-	context.font = '10px ui-monospace, monospace';
-	context.textAlign = 'center';
-	context.textBaseline = 'bottom';
-
-	ends.forEach( ( pin, index ) => { if( definition.labels[ index ] ) context.fillText( definition.labels[ index ], toScreen( pin.x ), toScreen( pin.y ) - GAP ); } );
 }

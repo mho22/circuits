@@ -1,8 +1,10 @@
 import { bit } from './bit.ts';
 import { Kind, NAMES, PINS, UNITS } from './enums/kind.ts';
 import { format } from './si.ts';
+import { socket } from './socket.ts';
 import type { Branch } from './types/branch.ts';
 import type { Element } from './types/element.ts';
+import type { Point } from './types/point.ts';
 
 
 const MOSFETS = [ Kind.Nmos, Kind.Pmos ];
@@ -24,11 +26,15 @@ function detail( element : Element ) : string | undefined
 }
 
 
-export function describe( element : Element, branch : Branch | undefined ) : string
+export function describe( element : Element, branch : Branch | undefined, point : Point | null = null ) : string
 {
 	const title = element.definition?.name || [ NAMES[ element.kind ], detail( element ) ].filter( Boolean ).join( ' ' );
 
 	if( element.kind === Kind.Wire ) return [ title, format( element.potentials[ 0 ], 'V' ), format( Math.abs( branch?.current ?? NaN ), 'A' ) ].join( ' · ' );
+
+	const index = point ? socket( element, point ) : -1;
+
+	if( index >= 0 ) return [ title, element.definition?.labels[ index ], String( bit( element.potentials[ index ] ) ), format( element.potentials[ index ], 'V' ) ].filter( Boolean ).join( ' · ' );
 
 	if( element.kind === Kind.Symbol )
 	{
