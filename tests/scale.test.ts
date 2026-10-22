@@ -19,6 +19,12 @@ describe( 'scale', () =>
 		expect( measure( [ element( { kind : Kind.Npn, potentials : [ 0.7, 3, 0 ], currents : [ 2e-5, 2e-3, -2.02e-3 ] } ) ], [] ) ).toEqual( { voltage : 3, current : 2.02e-3 } );
 	} );
 
+	it( 'ignores a voltage below one microvolt that leaks through a gate that is off', () =>
+	{
+		expect( measure( [ element( { potentials : [ 3.57e-9, 3.57e-9 ] } ) ], [] ) ).toEqual( { voltage : 0, current : 0 } );
+		expect( measure( [ element( { potentials : [ 0, -1e-6 ] } ) ], [] ) ).toEqual( { voltage : 1e-6, current : 0 } );
+	} );
+
 	it( 'ignores the undefined current of a whole wire', () =>
 	{
 		expect( measure( [ element( { currents : [ NaN, NaN ] } ) ], [] ) ).toEqual( { voltage : 0, current : 0 } );
