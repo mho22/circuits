@@ -105,10 +105,9 @@ describe( 'file encoder', () =>
 		expect( encode( [ red, blue ] ) ).toContain( '{ "kind" : "led", "from" : [ 0, 0 ], "to" : [ 2, 0 ] },\n\t\t{ "kind" : "led", "color" : "blue", "from" : [ 0, 2 ], "to" : [ 2, 2 ] }' );
 	} );
 
-	it( 'writes the delay of a layer only when it is not one nanosecond', () =>
+	it( 'never writes the delay of a layer, which the engine measures', () =>
 	{
-		expect( encode( [], [ { number : 1, definition : { ... BLANK, delay : 3e-9 }, parts : [] } ] ) ).toContain( '\t\t\t"layer" : 1,\n\t\t\t"delay" : 3e-9,\n' );
-		expect( encode( [], [ { number : 1, definition : BLANK, parts : [] } ] ) ).not.toContain( 'delay' );
+		expect( encode( [], [ { number : 1, definition : { ... BLANK, delay : 3e-9 }, parts : [] } ] ) ).not.toContain( 'delay' );
 	} );
 
 	it( 'writes the name, the drawing and the layout of a layer and the label of an input or an output', () =>

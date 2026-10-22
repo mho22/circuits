@@ -11,6 +11,6 @@ pub enum Operation
 	SetClosed { id : u32, closed : bool },
 	SetHigh { id : u32, high : bool },
 	Move { id : u32, kind : Kind, segment : Segment, mirrored : bool },
-	Describe { name : String, drawing : Vec<Shape>, layout : Vec<Point>, delay : f64 },
+	Describe { name : String, drawing : Vec<Shape>, layout : Vec<Point> },
 	Label { id : u32, label : String },
 }

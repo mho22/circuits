@@ -22,7 +22,7 @@ fn resistor() -> Document
 {
 	let mut document = layer( &[ ( Kind::Output, ( -1, 0 ), ( 0, 0 ) ), ( Kind::Resistor { ohms : 1000.0 }, ( 0, 0 ), ( 4, 0 ) ), ( Kind::Output, ( 5, 0 ), ( 4, 0 ) ) ] );
 
-	document.apply( Operation::Describe { name : String::new(), drawing : Vec::new(), layout : vec![ Point { x : -2, y : 0 }, Point { x : 2, y : 0 } ], delay : DELAY } ).unwrap();
+	document.apply( Operation::Describe { name : String::new(), drawing : Vec::new(), layout : vec![ Point { x : -2, y : 0 }, Point { x : 2, y : 0 } ] } ).unwrap();
 
 	document
 }
@@ -75,7 +75,7 @@ fn it_opens_a_symbol_inside_a_symbol()
 	let drawing = layer( &[ ( Kind::Symbol { layer : 1, rotation : 0 }, ( 10, 10 ), ( 10, 10 ) ) ] );
 	let mut outer = layer( &[ ( Kind::Output, ( -1, 0 ), ( 0, 0 ) ), ( Kind::Symbol { layer : 2, rotation : 0 }, ( 2, 0 ), ( 2, 0 ) ), ( Kind::Output, ( 5, 0 ), ( 4, 0 ) ) ] );
 
-	outer.apply( Operation::Describe { name : String::new(), drawing : Vec::new(), layout : vec![ Point { x : -2, y : 0 }, Point { x : 2, y : 0 } ], delay : DELAY } ).unwrap();
+	outer.apply( Operation::Describe { name : String::new(), drawing : Vec::new(), layout : vec![ Point { x : -2, y : 0 }, Point { x : 2, y : 0 } ] } ).unwrap();
 
 	let elements = flatten( &[ drawing, outer, resistor() ], &mut Registry::default(), &[], 0, &[] ).unwrap().0;
 

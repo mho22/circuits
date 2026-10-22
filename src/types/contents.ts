@@ -6,5 +6,4 @@ export interface Contents
 	names : string[];
 	drawings : Int32Array;
 	layouts : Int32Array;
-	delays : Float64Array;
 }

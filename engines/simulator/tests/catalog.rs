@@ -74,18 +74,11 @@ fn it_keeps_the_model_of_an_unchanged_layer()
 }
 
 #[test]
-fn it_measures_a_layer_again_when_its_delay_changes()
+fn it_adds_the_delays_of_the_layers_inside_a_layer()
 {
-	let mut slow = inverter();
+	let ( models, _ ) = catalog( &[ Document::default(), inverter(), buffer() ], &[], &[], STEP );
 
-	slow.apply( Operation::Describe { name : String::new(), drawing : Vec::new(), layout : Vec::new(), delay : 5e-9 } ).unwrap();
-
-	let ( fast, sources ) = catalog( &[ Document::default(), inverter() ], &[], &[], STEP );
-	let ( models, _ ) = catalog( &[ Document::default(), slow ], &fast, &sources, STEP );
-
-	assert_eq!( fast[ 1 ].as_ref().unwrap().delay, DELAY );
-
-	assert_eq!( models[ 1 ].as_ref().unwrap().delay, 5e-9 );
+	assert_eq!( [ 1, 2 ].map( | layer | models[ layer ].as_ref().unwrap().delay ), [ DELAY, 2.0 * DELAY ] );
 }
 
 #[test]

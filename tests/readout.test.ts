@@ -46,7 +46,8 @@ describe( 'readout', () =>
 
 	it( 'describes a named symbol with its name', () =>
 	{
-		expect( read( element( { kind : Kind.Symbol, value : 2, potentials : [ 5 ], currents : [ 0 ], definition : { name : 'foo', drawing : [], labels : [], layout : [], delay : 1e-9 } } ), undefined ) ).toBe( 'foo · 5 V' );
+		expect( read( element( { kind : Kind.Symbol, value : 2, potentials : [ 5 ], currents : [ 0 ], definition : { name : 'foo', drawing : [], labels : [], layout : [], delay : 3e-9 } } ), undefined ) ).toBe( 'foo · 3 ns · 5 V' );
+		expect( read( element( { kind : Kind.Symbol, value : 2, potentials : [ 5 ], currents : [ 0 ], definition : { name : 'foo', drawing : [], labels : [], layout : [], delay : NaN } } ), undefined ) ).toBe( 'foo · 5 V' );
 	} );
 
 	it( 'describes an output with its label', () =>

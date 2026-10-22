@@ -1,4 +1,4 @@
-use simulator::{ Document, Element, Error, Kind, Operation, Point, Segment, Shape, DELAY };
+use simulator::{ Document, Element, Error, Kind, Operation, Point, Segment, Shape };
 
 
 const FOO : Point = Point { x : 0, y : 0 };
@@ -319,13 +319,13 @@ fn it_names_draws_and_lays_out_the_document_and_gives_the_old_description_back_a
 {
 	let mut document = Document::default();
 	let drawing = vec![ Shape::Circle { center : FOO, radius : 2 }, Shape::Line { from : FOO, to : BAR } ];
-	let describe = Operation::Describe { name : "foo".to_string(), drawing : drawing.clone(), layout : vec![ BAR, BAZ ], delay : DELAY };
+	let describe = Operation::Describe { name : "foo".to_string(), drawing : drawing.clone(), layout : vec![ BAR, BAZ ] };
 	let inverse = document.inverse( &describe ).unwrap();
 
 	document.apply( describe ).unwrap();
 
 	assert_eq!( ( document.name(), document.drawing(), document.layout() ), ( "foo", drawing.as_slice(), [ BAR, BAZ ].as_slice() ) );
-	assert_eq!( inverse, Operation::Describe { name : String::new(), drawing : Vec::new(), layout : Vec::new(), delay : DELAY } );
+	assert_eq!( inverse, Operation::Describe { name : String::new(), drawing : Vec::new(), layout : Vec::new() } );
 }
 
 #[test]
@@ -333,22 +333,8 @@ fn it_keeps_the_old_name_and_drawing_when_a_shape_has_no_size()
 {
 	let mut document = Document::default();
 
-	assert_eq!( document.apply( Operation::Describe { name : "foo".to_string(), drawing : vec![ Shape::Circle { center : FOO, radius : 0 } ], layout : Vec::new(), delay : DELAY } ), Err( Error::Flat ) );
+	assert_eq!( document.apply( Operation::Describe { name : "foo".to_string(), drawing : vec![ Shape::Circle { center : FOO, radius : 0 } ], layout : Vec::new() } ), Err( Error::Flat ) );
 	assert_eq!( ( document.name(), document.drawing() ), ( "", [].as_slice() ) );
-}
-
-#[test]
-fn it_gives_each_gate_a_delay_of_one_nanosecond_until_a_description_changes_it()
-{
-	let mut document = Document::default();
-	let describe = | delay | Operation::Describe { name : String::new(), drawing : Vec::new(), layout : Vec::new(), delay };
-
-	assert_eq!( document.delay(), 1e-9 );
-	assert_eq!( document.apply( describe( 0.0 ) ), Err( Error::Delay ) );
-	assert_eq!( document.apply( describe( f64::NAN ) ), Err( Error::Delay ) );
-	assert_eq!( document.apply( describe( 4e-9 ) ), Ok( 0 ) );
-	assert_eq!( document.inverse( &describe( 1e-9 ) ), Ok( describe( 4e-9 ) ) );
-	assert_eq!( document.delay(), 4e-9 );
 }
 
 #[test]

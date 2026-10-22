@@ -141,6 +141,7 @@ fn it_measures_a_flip_flop_built_from_gates_as_a_gate_that_changes_its_state_on_
 	assert_eq!( model.next.len(), model.rows.len() );
 	assert!( model.rows.iter().all( | row | row[ 0 ].high() != row[ 1 ].high() && row.iter().all( | drive | drive.ohms < 1e6 ) ) );
 	assert_eq!( walk( &model, &[ 0, 1, 3, 2, 0, 1, 0, 2 ] ), vec![ false, false, true, true, true, true, true, false ] );
+	assert!( ( model.delay - 3.0 * DELAY ).abs() < 1e-15 );
 }
 
 #[test]

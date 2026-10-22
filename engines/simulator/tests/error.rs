@@ -7,7 +7,6 @@ fn it_describes_each_error()
 	assert_eq!( Error::Capacitance.to_string(), "A capacitance must be greater than 0 F." );
 	assert_eq!( Error::Color.to_string(), "An LED is red, green or blue." );
 	assert_eq!( Error::Crooked.to_string(), "A part must run at 0° or 90°." );
-	assert_eq!( Error::Delay.to_string(), "A delay must be greater than 0 s." );
 	assert_eq!( Error::Empty.to_string(), "A part must have a length." );
 	assert_eq!( Error::Flat.to_string(), "A shape must have a size." );
 	assert_eq!( Error::Frequency.to_string(), "A frequency must be greater than 0 Hz." );

@@ -1,4 +1,4 @@
-use simulator::{ Document, Kind, Operation, Outline, Point, Segment, Shape, DELAY };
+use simulator::{ Document, Kind, Operation, Outline, Point, Segment, Shape };
 
 
 fn point( x : i32, y : i32 ) -> Point
@@ -12,7 +12,7 @@ fn layer( kinds : &[ Kind ], drawing : Vec<Shape>, layout : Vec<Point> ) -> Docu
 
 	for ( index, &kind ) in kinds.iter().enumerate() { document.apply( Operation::Add { kind, segment : Segment { from : point( 0, 2 * index as i32 ), to : point( 1, 2 * index as i32 ) }, mirrored : false } ).unwrap(); }
 
-	document.apply( Operation::Describe { name : String::new(), drawing, layout, delay : DELAY } ).unwrap();
+	document.apply( Operation::Describe { name : String::new(), drawing, layout } ).unwrap();
 
 	document
 }

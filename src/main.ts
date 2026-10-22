@@ -173,7 +173,7 @@ async function load() : Promise<void>
 	{
 		const contents = decodeFile( await file.text() );
 
-		circuit.open( contents.parts, contents.labels, contents.layers, contents.names, contents.drawings, contents.layouts, contents.delays );
+		circuit.open( contents.parts, contents.labels, contents.layers, contents.names, contents.drawings, contents.layouts );
 
 		name = file.name;
 	}
@@ -221,21 +221,21 @@ function settle( area : Area, anchor : Point, choice : Choice ) : void
 	} );
 }
 
-function make( target : Area | number, name : string, shapes : Shape[], layout : Point[], delay : number ) : void
+function make( target : Area | number, name : string, shapes : Shape[], layout : Point[] ) : void
 {
-	if( typeof target === 'number' ) { rename( target, name, shapes, layout, delay ); return; }
+	if( typeof target === 'number' ) { rename( target, name, shapes, layout ); return; }
 
 	const area = target;
 
-	attempt( () => circuit.enclose( area.low.x, area.low.y, area.high.x, area.high.y, name, encodeDrawing( shapes ), new Int32Array( layout.flatMap( point => [ point.x, point.y ] ) ), delay ) );
+	attempt( () => circuit.enclose( area.low.x, area.low.y, area.high.x, area.high.y, name, encodeDrawing( shapes ), new Int32Array( layout.flatMap( point => [ point.x, point.y ] ) ) ) );
 }
 
-function rename( layer : number, name : string, shapes : Shape[], layout : Point[], delay : number ) : void
+function rename( layer : number, name : string, shapes : Shape[], layout : Point[] ) : void
 {
 	const before = define( layer );
-	const same = before.name === name && before.delay === delay && JSON.stringify( before.drawing ) === JSON.stringify( shapes ) && JSON.stringify( before.layout ) === JSON.stringify( layout );
+	const same = before.name === name && JSON.stringify( before.drawing ) === JSON.stringify( shapes ) && JSON.stringify( before.layout ) === JSON.stringify( layout );
 
-	if( ! same ) attempt( () => circuit.describe( name, encodeDrawing( shapes ), new Int32Array( layout.flatMap( point => [ point.x, point.y ] ) ), delay ) );
+	if( ! same ) attempt( () => circuit.describe( name, encodeDrawing( shapes ), new Int32Array( layout.flatMap( point => [ point.x, point.y ] ) ) ) );
 
 	circuit.leave();
 }

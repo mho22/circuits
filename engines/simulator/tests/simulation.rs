@@ -550,7 +550,7 @@ fn it_reads_each_pin_of_a_symbol_in_the_order_of_its_layer()
 		( Kind::Output, ( 4, -1 ), ( 4, 0 ) ),
 	] );
 
-	simulation.apply( layer as usize, Operation::Describe { name : String::new(), drawing : Vec::new(), layout : vec![ Point { x : -2, y : 0 }, Point { x : 2, y : 0 }, Point { x : 0, y : -2 } ], delay : DELAY } ).unwrap();
+	simulation.apply( layer as usize, Operation::Describe { name : String::new(), drawing : Vec::new(), layout : vec![ Point { x : -2, y : 0 }, Point { x : 2, y : 0 }, Point { x : 0, y : -2 } ] } ).unwrap();
 
 	add( &mut simulation, Kind::Battery { volts : 5.0 }, ( 8, 14 ), ( 8, 10 ) );
 	add( &mut simulation, Kind::Symbol { layer, rotation : 0 }, ( 10, 10 ), ( 10, 10 ) );
@@ -582,6 +582,18 @@ fn inverter( simulation : &mut Simulation ) -> u32
 	add( simulation, Kind::Symbol { layer, rotation : 0 }, ( 10, 10 ), ( 10, 10 ) );
 
 	layer
+}
+
+#[test]
+fn it_gives_the_delay_of_a_layer_that_runs_as_a_gate_and_none_for_an_analog_layer()
+{
+	let mut simulation = Simulation::new( STEP );
+	let layer = inverter( &mut simulation );
+	let analog = define( &mut simulation, &[ ( Kind::Input { high : false }, ( -1, 0 ), ( 0, 0 ) ), ( Kind::Resistor { ohms : 1000.0 }, ( 0, 0 ), ( 4, 0 ) ), ( Kind::Output, ( 5, 0 ), ( 4, 0 ) ) ] );
+
+	add( &mut simulation, Kind::Symbol { layer : analog, rotation : 0 }, ( 30, 10 ), ( 30, 10 ) );
+
+	assert_eq!( [ layer, analog, 9 ].map( | layer | simulation.delay( layer as usize ) ), [ Some( DELAY ), None, None ] );
 }
 
 #[test]
@@ -813,7 +825,7 @@ fn it_encloses_a_selection_into_a_symbol_that_solves_the_same()
 	ladder( &mut simulation );
 
 	let before = simulation.document( 0 ).unwrap().elements().to_vec();
-	let symbol = simulation.enclose( 0, Point { x : 1, y : -2 }, Point { x : 7, y : 2 }, "", &[], &[], DELAY ).unwrap();
+	let symbol = simulation.enclose( 0, Point { x : 1, y : -2 }, Point { x : 7, y : 2 }, "", &[], &[] ).unwrap();
 	let drawing = simulation.document( 0 ).unwrap().elements();
 	let wires : Vec<Segment> = drawing.iter().filter( | element | element.kind == Kind::Wire ).map( | element | element.segment ).collect();
 	let index = drawing.iter().position( | element | element.id == symbol ).unwrap();
@@ -842,7 +854,7 @@ fn it_keeps_a_vcc_inside_an_enclosed_selection()
 	add( &mut simulation, Kind::Resistor { ohms : 1000.0 }, ( 10, 0 ), ( 10, 4 ) );
 	add( &mut simulation, Kind::Ground, ( 10, 4 ), ( 10, 4 ) );
 
-	let symbol = simulation.enclose( 0, Point { x : 1, y : -2 }, Point { x : 7, y : 2 }, "", &[], &[], DELAY ).unwrap();
+	let symbol = simulation.enclose( 0, Point { x : 1, y : -2 }, Point { x : 7, y : 2 }, "", &[], &[] ).unwrap();
 	let drawing = simulation.document( 0 ).unwrap().elements();
 	let index = drawing.iter().position( | element | element.id == symbol ).unwrap();
 
@@ -858,8 +870,8 @@ fn it_rejects_a_selection_across_a_part_without_a_new_layer()
 
 	ladder( &mut simulation );
 
-	assert_eq!( simulation.enclose( 0, Point { x : 3, y : -2 }, Point { x : 7, y : 2 }, "", &[], &[], DELAY ), Err( Error::Straddled ) );
-	assert_eq!( simulation.enclose( 1, Point { x : 1, y : -2 }, Point { x : 7, y : 2 }, "", &[], &[], DELAY ), Err( Error::Layerless ) );
+	assert_eq!( simulation.enclose( 0, Point { x : 3, y : -2 }, Point { x : 7, y : 2 }, "", &[], &[] ), Err( Error::Straddled ) );
+	assert_eq!( simulation.enclose( 1, Point { x : 1, y : -2 }, Point { x : 7, y : 2 }, "", &[], &[] ), Err( Error::Layerless ) );
 	assert!( simulation.document( 1 ).is_none() );
 	assert_eq!( simulation.document( 0 ).unwrap().elements().len(), 9 );
 }
@@ -899,7 +911,7 @@ fn it_finds_a_symbol_anywhere_on_its_turned_box()
 	let mut simulation = Simulation::new( STEP );
 	let layer = define( &mut simulation, &[ ( Kind::Input { high : false }, ( -1, 0 ), ( 0, 0 ) ), ( Kind::Input { high : false }, ( -1, 2 ), ( 0, 2 ) ), ( Kind::Input { high : false }, ( -1, 4 ), ( 0, 4 ) ), ( Kind::Output, ( 5, 2 ), ( 4, 2 ) ) ] );
 
-	simulation.apply( layer as usize, Operation::Describe { name : String::new(), drawing : Vec::new(), layout : vec![ Point { x : -2, y : -4 }, Point { x : -2, y : 0 }, Point { x : -2, y : 4 }, Point { x : 2, y : 0 } ], delay : DELAY } ).unwrap();
+	simulation.apply( layer as usize, Operation::Describe { name : String::new(), drawing : Vec::new(), layout : vec![ Point { x : -2, y : -4 }, Point { x : -2, y : 0 }, Point { x : -2, y : 4 }, Point { x : 2, y : 0 } ] } ).unwrap();
 
 	add( &mut simulation, Kind::Symbol { layer, rotation : 1 }, ( 10, 10 ), ( 10, 10 ) );
 
@@ -939,7 +951,7 @@ fn it_turns_an_enclosed_symbol_and_routes_its_wires_around_its_box()
 	add( &mut simulation, Kind::Wire, ( 18, 16 ), ( 10, 16 ) );
 	add( &mut simulation, Kind::Ground, ( 10, 16 ), ( 10, 16 ) );
 
-	let symbol = simulation.enclose( 0, Point { x : 11, y : 8 }, Point { x : 17, y : 12 }, "", &[], &[], DELAY ).unwrap();
+	let symbol = simulation.enclose( 0, Point { x : 11, y : 8 }, Point { x : 17, y : 12 }, "", &[], &[] ).unwrap();
 	let layer = 1;
 
 	simulation.transform( 0, symbol, Kind::Symbol { layer, rotation : 1 }, segment( ( 14, 10 ), ( 14, 10 ) ), false ).unwrap();
@@ -978,13 +990,13 @@ fn it_encloses_a_named_and_drawn_symbol_with_the_labels_and_the_layout_of_its_pi
 
 	let drawing = [ Shape::Circle { center : Point { x : 0, y : 0 }, radius : 2 } ];
 	let layout = [ Point { x : -3, y : 0 }, Point { x : 3, y : 0 } ];
-	let symbol = simulation.enclose( 0, low, high, "qux", &drawing, &layout, 2e-9 ).unwrap();
+	let symbol = simulation.enclose( 0, low, high, "qux", &drawing, &layout ).unwrap();
 	let layer = simulation.document( 1 ).unwrap();
 	let labels : Vec<&str> = layer.elements().iter().filter( | element | element.kind.pin() ).map( | element | layer.label( element.id ) ).collect();
 	let wires : Vec<Segment> = simulation.document( 0 ).unwrap().elements().iter().filter( | element | element.kind == Kind::Wire ).map( | element | element.segment ).collect();
 	let index = simulation.document( 0 ).unwrap().elements().iter().position( | element | element.id == symbol ).unwrap();
 
-	assert_eq!( ( layer.name(), layer.drawing(), layer.layout(), layer.delay() ), ( "qux", drawing.as_slice(), layout.as_slice(), 2e-9 ) );
+	assert_eq!( ( layer.name(), layer.drawing(), layer.layout() ), ( "qux", drawing.as_slice(), layout.as_slice() ) );
 	assert_eq!( labels, vec![ "foo", "bar" ] );
 	assert_eq!( Outline::of( layer ).pins, layout.to_vec() );
 	assert!( wires.contains( &segment( ( 0, 0 ), ( 2, 0 ) ) ) && wires.contains( &segment( ( 8, 0 ), ( 10, 0 ) ) ) );
@@ -1002,7 +1014,7 @@ fn it_clears_the_names_the_drawings_and_the_layouts_of_the_layers_on_an_open()
 	let mut simulation = Simulation::new( STEP );
 	let layer = resistor( &mut simulation, 1000.0 );
 
-	simulation.apply( layer as usize, Operation::Describe { name : "foo".to_string(), drawing : vec![ Shape::Circle { center : Point { x : 0, y : 0 }, radius : 1 } ], layout : vec![ Point { x : 0, y : 0 } ], delay : DELAY } ).unwrap();
+	simulation.apply( layer as usize, Operation::Describe { name : "foo".to_string(), drawing : vec![ Shape::Circle { center : Point { x : 0, y : 0 }, radius : 1 } ], layout : vec![ Point { x : 0, y : 0 } ] } ).unwrap();
 	simulation.open( Vec::new() ).unwrap();
 
 	assert_eq!( ( simulation.document( 1 ).unwrap().name(), simulation.document( 1 ).unwrap().drawing(), simulation.document( 1 ).unwrap().layout() ), ( "", [].as_slice(), [].as_slice() ) );

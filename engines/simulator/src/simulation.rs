@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::flatten::STRIDE;
-use crate::{ advance, catalog, enclose, flatten, place, settle, stretch, Device, Document, Element, Enclosure, Error, History, Kind, Logic, Mode, Model, Operation, Outline, Plan, Point, Reading, Registry, Segment, Shape, Solution, DELAY };
+use crate::{ advance, catalog, enclose, flatten, place, settle, stretch, Device, Document, Element, Enclosure, Error, History, Kind, Logic, Mode, Model, Operation, Outline, Plan, Point, Reading, Registry, Segment, Shape, Solution };
 
 
 const DIVISIONS : f64 = 20.0;
@@ -108,9 +108,9 @@ impl Simulation
 		self.commit( &edits )
 	}
 
-	pub fn enclose( &mut self, layer : usize, low : Point, high : Point, name : &str, drawing : &[ Shape ], layout : &[ Point ], delay : f64 ) -> Result<u32, Error>
+	pub fn enclose( &mut self, layer : usize, low : Point, high : Point, name : &str, drawing : &[ Shape ], layout : &[ Point ] ) -> Result<u32, Error>
 	{
-		let ( enclosure, inside, inner ) = self.gather( layer, low, high, name, drawing, layout, delay )?;
+		let ( enclosure, inside, inner ) = self.gather( layer, low, high, name, drawing, layout )?;
 		let center = Point { x : ( low.x + high.x ).div_euclid( 2 ), y : ( low.y + high.y ).div_euclid( 2 ) };
 		let mut draft = self.layers[ layer ].clone();
 
@@ -159,7 +159,7 @@ impl Simulation
 	{
 		let count = self.layers.len();
 		let needed = additions.iter().map( | addition | addition.0 + 1 ).max().unwrap_or( 0 );
-		let deletions = self.layers.iter().enumerate().flat_map( | ( layer, document ) | document.elements().iter().map( move | element | ( layer, Operation::Delete { id : element.id } ) ).chain( [ ( layer, Operation::Describe { name : String::new(), drawing : Vec::new(), layout : Vec::new(), delay : DELAY } ) ] ) );
+		let deletions = self.layers.iter().enumerate().flat_map( | ( layer, document ) | document.elements().iter().map( move | element | ( layer, Operation::Delete { id : element.id } ) ).chain( [ ( layer, Operation::Describe { name : String::new(), drawing : Vec::new(), layout : Vec::new() } ) ] ) );
 		let edits : Vec<( usize, Operation )> = deletions.chain( additions ).collect();
 
 		self.focus( &[] )?;
@@ -211,6 +211,11 @@ impl Simulation
 	pub fn document( &self, layer : usize ) -> Option<&Document>
 	{
 		self.layers.get( layer )
+	}
+
+	pub fn delay( &self, layer : usize ) -> Option<f64>
+	{
+		self.models.get( layer )?.as_ref().map( | model | model.delay )
 	}
 
 	pub fn solution( &self ) -> Result<&Solution, Error>
@@ -279,13 +284,13 @@ impl Simulation
 		self.layers.get( layer as usize ).map_or( Vec::new(), | document | Outline::of( document ).terminals( element.segment.from, rotation ) )
 	}
 
-	fn gather( &self, layer : usize, low : Point, high : Point, name : &str, drawing : &[ Shape ], layout : &[ Point ], delay : f64 ) -> Result<( Enclosure, Vec<Operation>, Document ), Error>
+	fn gather( &self, layer : usize, low : Point, high : Point, name : &str, drawing : &[ Shape ], layout : &[ Point ] ) -> Result<( Enclosure, Vec<Operation>, Document ), Error>
 	{
 		let document = self.document( layer ).ok_or( Error::Layerless )?;
 		let enclosure = enclose( document.elements(), low, high, | element | self.terminals( element ) )?;
 		let parts = enclosure.inner.iter().map( | element | Operation::Add { kind : element.kind, segment : element.segment, mirrored : element.mirrored } );
 		let labels = enclosure.inner.iter().zip( 0 .. ).filter( | ( element, _ ) | ! document.label( element.id ).is_empty() ).map( | ( element, id ) | Operation::Label { id, label : document.label( element.id ).to_string() } );
-		let description = Operation::Describe { name : name.to_string(), drawing : drawing.to_vec(), layout : layout.to_vec(), delay };
+		let description = Operation::Describe { name : name.to_string(), drawing : drawing.to_vec(), layout : layout.to_vec() };
 		let inside : Vec<Operation> = parts.chain( labels ).chain( [ description ] ).collect();
 		let mut inner = Document::default();
 

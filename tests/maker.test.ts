@@ -1,7 +1,6 @@
 // @vitest-environment happy-dom
 
 import { beforeEach, describe, it, expect, vi } from 'vitest';
-import { SEPARATOR, write } from '../src/decimal.ts';
 import { Figure } from '../src/enums/figure.ts';
 import { Maker } from '../src/maker.ts';
 
@@ -60,7 +59,7 @@ describe( 'maker', () =>
 		maker.layout = LAYOUT;
 		button( 'Done' ).click();
 
-		expect( finish ).toHaveBeenCalledWith( AREA, 'qux', [ SHAPE ], LAYOUT, 1e-9 );
+		expect( finish ).toHaveBeenCalledWith( AREA, 'qux', [ SHAPE ], LAYOUT );
 		expect( [ bar().hidden, maker.area, maker.drawing, maker.layout ] ).toEqual( [ true, null, [], [] ] );
 	} );
 
@@ -144,15 +143,13 @@ describe( 'maker', () =>
 
 		expect( [ bar().hidden, maker.area, maker.layer, maker.drawing, maker.layout ] ).toEqual( [ false, null, 3, [ SHAPE ], LAYOUT ] );
 		expect( bar().querySelector( 'input' )!.value ).toBe( 'foo' );
-		expect( bar().querySelector<HTMLInputElement>( 'input.delay' )!.value ).toBe( write( 2.5, SEPARATOR ) );
 		expect( document.activeElement ).not.toBe( bar().querySelector( 'input' ) );
 		expect( shown() ).toEqual( [ 'Icon', 'Delete', 'Done', 'Cancel' ] );
 
 		bar().querySelector( 'input' )!.value = 'bar';
-		bar().querySelector<HTMLInputElement>( 'input.delay' )!.value = '2';
 		button( 'Done' ).click();
 
-		expect( finish ).toHaveBeenCalledWith( 3, 'bar', [ SHAPE ], LAYOUT, 2e-9 );
+		expect( finish ).toHaveBeenCalledWith( 3, 'bar', [ SHAPE ], LAYOUT );
 		expect( [ bar().hidden, maker.layer ] ).toEqual( [ true, null ] );
 	} );
 

@@ -115,7 +115,6 @@ describe( 'file decoder', () =>
 		expect( contents.names ).toEqual( [ 'foo', 'baz' ] );
 		expect( Array.from( contents.drawings ) ).toEqual( [ 16, 1, 0, 0, 2, 2, -1, 0, 1, 1, 3, 0, -4, 4, 0, 0, 4, 0 ] );
 		expect( Array.from( contents.layouts ) ).toEqual( [ 1, 2, -1, 0 ] );
-		expect( Array.from( contents.delays ) ).toEqual( [ 1e-9, 2e-9 ] );
 	} );
 
 	it( 'reads a rectangle of an older file as its four sides', () =>
@@ -123,6 +122,13 @@ describe( 'file decoder', () =>
 		const contents = decode( '{ "version" : 1, "parts" : [], "symbols" : [ { "layer" : 1, "drawing" : [ { "shape" : "rectangle", "from" : [ -4, -2 ], "to" : [ 4, 2 ] } ], "parts" : [] } ] }' );
 
 		expect( Array.from( contents.drawings ) ).toEqual( [ 20, 2, -4, -2, 4, -2, 2, 4, -2, 4, 2, 2, 4, 2, -4, 2, 2, -4, 2, -4, -2 ] );
+	} );
+
+	it( 'skips the delay of an older file', () =>
+	{
+		const contents = decode( '{ "version" : 1, "parts" : [], "symbols" : [ { "layer" : 1, "name" : "foo", "delay" : 3e-9, "parts" : [] } ] }' );
+
+		expect( [ Array.from( contents.layers ), contents.names ] ).toEqual( [ [ 1 ], [ 'foo' ] ] );
 	} );
 
 	it( 'reads the level of an input as its value', () =>

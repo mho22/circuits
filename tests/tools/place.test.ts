@@ -125,7 +125,7 @@ describe( 'place tool', () =>
 		const tool = new PlaceTool( circuit );
 
 		circuit.add( Kind.Wire, 0, 0, 0, 2, 0 );
-		circuit.enclose( -1, -1, 3, 1, '', new Int32Array(), new Int32Array(), 1e-9 );
+		circuit.enclose( -1, -1, 3, 1, '', new Int32Array(), new Int32Array() );
 
 		tool.kind = Kind.Symbol;
 		tool.layer = 1;
@@ -161,7 +161,7 @@ describe( 'place tool', () =>
 
 		circuit.add( Kind.Input, 0, 0, 0, -1, 0 );
 		circuit.add( Kind.Output, 0, 2, 0, 3, 0 );
-		circuit.enclose( -1, -1, 3, 1, '', new Int32Array(), new Int32Array(), 1e-9 );
+		circuit.enclose( -1, -1, 3, 1, '', new Int32Array(), new Int32Array() );
 
 		for( const [ kind, x ] of [ [ Kind.Ground, 1 ], [ Kind.Supply, 2 ], [ Kind.Symbol, 1 ], [ Kind.Ground, -1 ] ] )
 		{

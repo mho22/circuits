@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{ Element, Error, Kind, Operation, Point, Segment, Shape, DELAY };
+use crate::{ Element, Error, Kind, Operation, Point, Segment, Shape };
 
 
 #[derive( Clone, Debug )]
@@ -11,7 +11,6 @@ pub struct Document
 	name : String,
 	drawing : Vec<Shape>,
 	layout : Vec<Point>,
-	delay : f64,
 	labels : HashMap<u32, String>,
 }
 
@@ -19,7 +18,7 @@ impl Default for Document
 {
 	fn default() -> Document
 	{
-		Document { elements : Vec::new(), next : 0, name : String::new(), drawing : Vec::new(), layout : Vec::new(), delay : DELAY, labels : HashMap::new() }
+		Document { elements : Vec::new(), next : 0, name : String::new(), drawing : Vec::new(), layout : Vec::new(), labels : HashMap::new() }
 	}
 }
 
@@ -36,7 +35,7 @@ impl Document
 			Operation::SetClosed { id, closed } => self.set_closed( id, closed ),
 			Operation::SetHigh { id, high } => self.set_high( id, high ),
 			Operation::Move { id, kind, segment, mirrored } => self.move_to( id, kind, segment, mirrored ),
-			Operation::Describe { name, drawing, layout, delay } => self.describe( name, drawing, layout, delay ),
+			Operation::Describe { name, drawing, layout } => self.describe( name, drawing, layout ),
 			Operation::Label { id, label } => self.set_label( id, label ),
 		}
 	}
@@ -77,7 +76,7 @@ impl Document
 
 				Ok( Operation::Move { id, kind : element.kind, segment : element.segment, mirrored : element.mirrored } )
 			},
-			Operation::Describe { .. } => Ok( Operation::Describe { name : self.name.clone(), drawing : self.drawing.clone(), layout : self.layout.clone(), delay : self.delay } ),
+			Operation::Describe { .. } => Ok( Operation::Describe { name : self.name.clone(), drawing : self.drawing.clone(), layout : self.layout.clone() } ),
 			Operation::Label { id, .. } =>
 			{
 				if ! self.elements[ self.index( id )? ].kind.pin() { return Err( Error::Pinless ); }
@@ -100,11 +99,6 @@ impl Document
 	pub fn layout( &self ) -> &[ Point ]
 	{
 		&self.layout
-	}
-
-	pub fn delay( &self ) -> f64
-	{
-		self.delay
 	}
 
 	pub fn label( &self, id : u32 ) -> &str
@@ -205,16 +199,13 @@ impl Document
 		Ok( id )
 	}
 
-	fn describe( &mut self, name : String, drawing : Vec<Shape>, layout : Vec<Point>, delay : f64 ) -> Result<u32, Error>
+	fn describe( &mut self, name : String, drawing : Vec<Shape>, layout : Vec<Point> ) -> Result<u32, Error>
 	{
 		for shape in &drawing { shape.check()?; }
-
-		if ! ( delay.is_finite() && delay > 0.0 ) { return Err( Error::Delay ); }
 
 		self.name = name;
 		self.drawing = drawing;
 		self.layout = layout;
-		self.delay = delay;
 
 		Ok( 0 )
 	}

@@ -35,7 +35,7 @@ fn laddered() -> Circuit
 fn enclosed() -> ( Circuit, u32 )
 {
 	let mut circuit = laddered();
-	let symbol = circuit.enclose( 1, -2, 7, 2, String::new(), &[], &[], 1e-9 ).ok().unwrap();
+	let symbol = circuit.enclose( 1, -2, 7, 2, String::new(), &[], &[] ).ok().unwrap();
 
 	( circuit, symbol )
 }
@@ -297,7 +297,7 @@ fn it_opens_parts_in_place_of_the_drawing()
 {
 	let mut circuit = powered();
 
-	circuit.open( &[ 0.0, 1.0, 220.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 6.0, 1.0, 0.0, 2.0, 0.0, 2.0, 2.0 ], Vec::new(), &[], Vec::new(), &[], &[], &[] ).ok();
+	circuit.open( &[ 0.0, 1.0, 220.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 6.0, 1.0, 0.0, 2.0, 0.0, 2.0, 2.0 ], Vec::new(), &[], Vec::new(), &[], &[] ).ok();
 
 	let elements = circuit.elements();
 
@@ -311,8 +311,8 @@ fn it_rejects_parts_it_cannot_place()
 {
 	let mut circuit = powered();
 
-	assert!( circuit.open( &[ 0.0, 12.0, 0.0, 0.0, 0.0, 0.0, 2.0, 0.0 ], Vec::new(), &[], Vec::new(), &[], &[], &[] ).is_err() );
-	assert!( circuit.open( &[ 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 2.0, 0.0 ], Vec::new(), &[], Vec::new(), &[], &[], &[] ).is_err() );
+	assert!( circuit.open( &[ 0.0, 12.0, 0.0, 0.0, 0.0, 0.0, 2.0, 0.0 ], Vec::new(), &[], Vec::new(), &[], &[] ).is_err() );
+	assert!( circuit.open( &[ 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 2.0, 0.0 ], Vec::new(), &[], Vec::new(), &[], &[] ).is_err() );
 	assert_eq!( circuit.elements().len(), 65 );
 }
 
@@ -410,7 +410,7 @@ fn it_opens_a_mirrored_transistor()
 {
 	let mut circuit = Circuit::new();
 
-	circuit.open( &[ 0.0, 10.0, 1.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 1.0, 1000.0, 0.0, 4.0, 0.0, 6.0, 0.0 ], Vec::new(), &[], Vec::new(), &[], &[], &[] ).ok();
+	circuit.open( &[ 0.0, 10.0, 1.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 1.0, 1000.0, 0.0, 4.0, 0.0, 6.0, 0.0 ], Vec::new(), &[], Vec::new(), &[], &[] ).ok();
 
 	let elements = circuit.elements();
 
@@ -500,13 +500,11 @@ fn it_describes_the_symbol_it_is_in()
 
 	circuit.enter( symbol ).ok();
 
-	assert!( circuit.describe( "foo".to_string(), &[ 1, 0, 0, 8 ], &[ -3, 0, 3, 0 ], 1e-9 ).is_ok() );
+	assert!( circuit.describe( "foo".to_string(), &[ 1, 0, 0, 8 ], &[ -3, 0, 3, 0 ] ).is_ok() );
 	assert_eq!( [ circuit.name( 1 ), circuit.drawing( 1 ).iter().map( | value | value.to_string() ).collect::<Vec<_>>().join( "," ) ], [ "foo".to_string(), "1,0,0,8".to_string() ] );
 	assert_eq!( circuit.layout( 1 ), vec![ -3, 0, 3, 0 ] );
-	assert!( circuit.describe( String::new(), &[ 9 ], &[], 1e-9 ).is_err() );
-	assert!( circuit.describe( String::new(), &[], &[], 0.0 ).is_err() );
-	assert!( circuit.describe( String::new(), &[], &[], 3e-9 ).is_ok() );
-	assert_eq!( circuit.delay( 1 ), 3e-9 );
+	assert!( circuit.describe( String::new(), &[ 9 ], &[] ).is_err() );
+	assert!( circuit.delay( 1 ).is_nan() );
 }
 
 #[wasm_bindgen_test]
@@ -547,9 +545,9 @@ fn it_opens_a_symbol_with_four_pins_and_its_layer()
 
 	for y in [ 0.0, 2.0 ] { data.extend( [ 1.0, 13.0, 0.0, 0.0, -1.0, y, 0.0, y, 1.0, 15.0, 0.0, 0.0, 5.0, y, 4.0, y ] ); }
 
-	circuit.open( &data, Vec::new(), &[], Vec::new(), &[], &[], &[] ).ok();
+	circuit.open( &data, Vec::new(), &[], Vec::new(), &[], &[] ).ok();
 	circuit.enter( 0 ).ok();
-	circuit.open( &data, Vec::new(), &[], Vec::new(), &[], &[], &[] ).ok();
+	circuit.open( &data, Vec::new(), &[], Vec::new(), &[], &[] ).ok();
 
 	assert_eq!( circuit.layer(), 0 );
 
@@ -565,13 +563,13 @@ fn it_encloses_a_named_symbol_with_its_drawing_and_its_layout()
 {
 	let mut circuit = laddered();
 
-	assert!( circuit.enclose( 1, -2, 7, 2, String::new(), &[ 3 ], &[], 1e-9 ).is_err() );
-	assert!( circuit.enclose( 1, -2, 7, 2, String::new(), &[ 2, 2, 0, 0 ], &[], 1e-9 ).is_err() );
-	assert!( circuit.enclose( 1, -2, 7, 2, String::new(), &[ 2, -1, 0, 0 ], &[], 1e-9 ).is_err() );
-	assert!( circuit.enclose( 1, -2, 7, 2, String::new(), &[ 1, 0, 0, 0 ], &[], 1e-9 ).is_err() );
+	assert!( circuit.enclose( 1, -2, 7, 2, String::new(), &[ 3 ], &[] ).is_err() );
+	assert!( circuit.enclose( 1, -2, 7, 2, String::new(), &[ 2, 2, 0, 0 ], &[] ).is_err() );
+	assert!( circuit.enclose( 1, -2, 7, 2, String::new(), &[ 2, -1, 0, 0 ], &[] ).is_err() );
+	assert!( circuit.enclose( 1, -2, 7, 2, String::new(), &[ 1, 0, 0, 0 ], &[] ).is_err() );
 
 	let drawing = [ 1, 0, 0, 2, 2, -1, 0, 1, 1, 3, -4, -4, 0, 0, -4, 4 ];
-	let symbol = circuit.enclose( 1, -2, 7, 2, "foo".to_string(), &drawing, &[ -3, 0, 3, 0 ], 1e-9 ).ok().unwrap();
+	let symbol = circuit.enclose( 1, -2, 7, 2, "foo".to_string(), &drawing, &[ -3, 0, 3, 0 ] ).ok().unwrap();
 
 	assert_eq!( ( circuit.name( 1 ), circuit.drawing( 1 ), circuit.layout( 1 ) ), ( "foo".to_string(), drawing.to_vec(), vec![ -3, 0, 3, 0 ] ) );
 	assert_eq!( ( circuit.name( 0 ), circuit.drawing( 9 ), circuit.layout( 9 ) ), ( String::new(), Vec::new(), Vec::new() ) );
@@ -584,19 +582,17 @@ fn it_opens_the_names_the_drawings_the_layouts_and_the_labels_of_the_layers()
 	let mut circuit = Circuit::new();
 	let data = [ 0.0, 14.0, 1.0, 0.0, 5.0, 5.0, 5.0, 5.0, 1.0, 13.0, 1.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 15.0, 0.0, 0.0, 5.0, 0.0, 4.0, 0.0 ];
 
-	circuit.open( &data, vec![ String::new(), "foo".to_string(), "bar".to_string() ], &[ 1 ], vec![ "baz".to_string() ], &[ 4, 1, 0, 0, 2 ], &[ 2, -3, 0, 3, 0 ], &[ 2e-9 ] ).ok();
+	circuit.open( &data, vec![ String::new(), "foo".to_string(), "bar".to_string() ], &[ 1 ], vec![ "baz".to_string() ], &[ 4, 1, 0, 0, 2 ], &[ 2, -3, 0, 3, 0 ] ).ok();
 
 	let values : Vec<f64> = circuit.contents( 1 ).chunks( 13 ).map( | row | row[ 6 ] ).collect();
 
 	assert_eq!( ( circuit.name( 1 ), circuit.drawing( 1 ), circuit.layout( 1 ), circuit.labels( 1 ) ), ( "baz".to_string(), vec![ 1, 0, 0, 2 ], vec![ -3, 0, 3, 0 ], vec![ "foo".to_string(), "bar".to_string() ] ) );
 	assert_eq!( values, vec![ 1.0, 0.0 ] );
-	assert_eq!( circuit.delay( 1 ), 2e-9 );
-	assert!( circuit.open( &data, Vec::new(), &[ 1 ], vec![ String::new() ], &[ 5, 1, 0, 0, 2 ], &[ 0 ], &[ 1e-9 ] ).is_err() );
-	assert!( circuit.open( &data, Vec::new(), &[ 1 ], vec![ String::new() ], &[ 4, 1, 0, 0, 0 ], &[ 0 ], &[ 1e-9 ] ).is_err() );
-	assert!( circuit.open( &data, Vec::new(), &[ 1 ], vec![ String::new() ], &[], &[ 0 ], &[ 1e-9 ] ).is_err() );
-	assert!( circuit.open( &data, Vec::new(), &[ 1 ], vec![ String::new() ], &[ 0 ], &[ 3, -3, 0, 3, 0 ], &[ 1e-9 ] ).is_err() );
-	assert!( circuit.open( &data, Vec::new(), &[ 1 ], vec![ String::new() ], &[ 0 ], &[], &[] ).is_err() );
-	assert!( circuit.open( &data, Vec::new(), &[ 1 ], vec![ String::new() ], &[ 0 ], &[ 0 ], &[] ).is_err() );
+	assert!( circuit.open( &data, Vec::new(), &[ 1 ], vec![ String::new() ], &[ 5, 1, 0, 0, 2 ], &[ 0 ] ).is_err() );
+	assert!( circuit.open( &data, Vec::new(), &[ 1 ], vec![ String::new() ], &[ 4, 1, 0, 0, 0 ], &[ 0 ] ).is_err() );
+	assert!( circuit.open( &data, Vec::new(), &[ 1 ], vec![ String::new() ], &[], &[ 0 ] ).is_err() );
+	assert!( circuit.open( &data, Vec::new(), &[ 1 ], vec![ String::new() ], &[ 0 ], &[ 3, -3, 0, 3, 0 ] ).is_err() );
+	assert!( circuit.open( &data, Vec::new(), &[ 1 ], vec![ String::new() ], &[ 0 ], &[] ).is_err() );
 	assert_eq!( circuit.name( 1 ), "baz" );
 }
 
@@ -606,7 +602,7 @@ fn it_opens_sets_and_lists_the_level_of_a_free_input()
 	let mut circuit = Circuit::new();
 	let data = [ 0.0, 14.0, 1.0, 0.0, 5.0, 5.0, 5.0, 5.0, 1.0, 13.0, 1.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1000.0, 0.0, 0.0, 0.0, 4.0, 0.0, 1.0, 15.0, 0.0, 0.0, 5.0, 0.0, 4.0, 0.0 ];
 
-	circuit.open( &data, Vec::new(), &[], Vec::new(), &[], &[], &[] ).ok();
+	circuit.open( &data, Vec::new(), &[], Vec::new(), &[], &[] ).ok();
 	circuit.enter( 0 ).ok();
 
 	let reading = | circuit : &Circuit | ( circuit.elements()[ 6 ], circuit.elements()[ 9 ] );

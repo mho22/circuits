@@ -80,7 +80,7 @@ describe( 'toggle', () =>
 		const circuit = new Circuit();
 		const data = [ 0, Kind.Symbol, 1, 0, 5, 5, 5, 5, 0, Kind.Wire, 0, 0, 1, 5, 3, 5, 1, Kind.Input, 0, 0, -1, 0, 0, 0, 1, Kind.Output, 0, 0, 5, 0, 4, 0 ];
 
-		circuit.open( new Float64Array( data ), [], new Uint32Array(), [], new Int32Array(), new Int32Array(), new Float64Array() );
+		circuit.open( new Float64Array( data ), [], new Uint32Array(), [], new Int32Array(), new Int32Array() );
 		circuit.enter( 0 );
 
 		expect( toggle( circuit, { x : -1, y : 0 } ) ).toBe( true );

@@ -1,5 +1,3 @@
-import { parse, SEPARATOR, write } from './decimal.ts';
-import { NANO } from './si.ts';
 import type { Area } from './types/area.ts';
 import type { Definition } from './types/definition.ts';
 import type { Point } from './types/point.ts';
@@ -24,14 +22,11 @@ export class Maker
 
 	private name = document.createElement( 'input' );
 
-	private delay = document.createElement( 'input' );
-
 	private delete = document.createElement( 'button' );
 
 
-	constructor( parent : HTMLElement, picker : HTMLElement, finish : ( target : Area | number, name : string, drawing : Shape[], layout : Point[], delay : number ) => void, draw : () => void, private discard : ( steps : number, layer : number | null ) => void, remove : ( layer : number ) => void )
+	constructor( parent : HTMLElement, picker : HTMLElement, finish : ( target : Area | number, name : string, drawing : Shape[], layout : Point[] ) => void, draw : () => void, private discard : ( steps : number, layer : number | null ) => void, remove : ( layer : number ) => void )
 	{
-		const unit = document.createElement( 'span' );
 		const icon = document.createElement( 'button' );
 		const done = document.createElement( 'button' );
 		const cancel = document.createElement( 'button' );
@@ -40,12 +35,6 @@ export class Maker
 		this.bar.hidden = true;
 
 		this.name.placeholder = 'Name';
-
-		this.delay.className = 'delay';
-		this.delay.placeholder = 'Delay';
-		this.delay.setAttribute( 'aria-label', 'Delay of each gate' );
-
-		unit.textContent = 'ns';
 
 		icon.textContent = 'Icon';
 		icon.addEventListener( 'click', draw );
@@ -62,17 +51,16 @@ export class Maker
 
 			const drawing = this.drawing;
 			const layout = this.layout;
-			const delay = parse( this.delay.value.trim() ) * NANO;
 
 			this.close();
 
-			finish( target, this.name.value.trim(), drawing, layout, delay );
+			finish( target, this.name.value.trim(), drawing, layout );
 		} );
 
 		cancel.textContent = 'Cancel';
 		cancel.addEventListener( 'click', () => this.cancel() );
 
-		this.bar.append( this.name, picker, this.delay, unit, icon, this.delete, done, cancel );
+		this.bar.append( this.name, picker, icon, this.delete, done, cancel );
 
 		parent.append( this.bar );
 	}
@@ -80,7 +68,7 @@ export class Maker
 
 	open( area : Area ) : void
 	{
-		this.show( null, '', [], [], NANO );
+		this.show( null, '', [], [] );
 
 		this.area = area;
 		this.delete.hidden = true;
@@ -90,7 +78,7 @@ export class Maker
 
 	edit( layer : number, definition : Definition ) : void
 	{
-		this.show( layer, definition.name, definition.drawing, definition.layout, definition.delay );
+		this.show( layer, definition.name, definition.drawing, definition.layout );
 
 		this.delete.hidden = false;
 	}
@@ -142,7 +130,7 @@ export class Maker
 		this.bar.hidden = true;
 	}
 
-	private show( layer : number | null, name : string, drawing : Shape[], layout : Point[], delay : number ) : void
+	private show( layer : number | null, name : string, drawing : Shape[], layout : Point[] ) : void
 	{
 		this.area = null;
 		this.layer = layer;
@@ -151,7 +139,6 @@ export class Maker
 		this.steps = 0;
 		this.undone = 0;
 		this.name.value = name;
-		this.delay.value = write( delay / NANO, SEPARATOR );
 		this.bar.hidden = false;
 	}
 }

@@ -30,7 +30,12 @@ export function describe( element : Element, branch : Branch | undefined ) : str
 
 	if( element.kind === Kind.Wire ) return [ title, format( element.potentials[ 0 ], 'V' ), format( Math.abs( branch?.current ?? NaN ), 'A' ) ].join( ' · ' );
 
-	if( element.kind === Kind.Symbol ) return [ title, ... element.potentials.map( potential => format( potential, 'V' ) ) ].join( ' · ' );
+	if( element.kind === Kind.Symbol )
+	{
+		const delay = element.definition?.delay ?? NaN;
+
+		return [ title, Number.isFinite( delay ) ? format( delay, 's' ) : '', ... element.potentials.map( potential => format( potential, 'V' ) ) ].filter( Boolean ).join( ' · ' );
+	}
 
 	if( PINS.includes( element.kind ) ) return [ title, String( bit( element.potentials[ 0 ] ) ), format( element.potentials[ 0 ], 'V' ) ].join( ' · ' );
 

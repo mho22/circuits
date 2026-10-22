@@ -24,9 +24,7 @@ impl Catalog<'_>
 
 		for &child in &children { self.visit( child ); }
 
-		let delayed = self.models[ layer ].as_ref().is_some_and( | model | model.delay != self.layers[ layer ].delay() );
-
-		self.changed[ layer ] = self.sources[ layer ] != elements || delayed || children.iter().any( | &child | self.changed[ child ] );
+		self.changed[ layer ] = self.sources[ layer ] != elements || children.iter().any( | &child | self.changed[ child ] );
 
 		if self.changed[ layer ]
 		{

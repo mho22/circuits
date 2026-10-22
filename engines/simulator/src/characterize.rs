@@ -1,5 +1,5 @@
 use crate::flatten::STRIDE;
-use crate::{ flatten, settle, Device, Document, Drive, Element, History, Kind, Logic, Model, Netlist, Plan, Point, Registry, Segment, Solution, FLOOR, THRESHOLD };
+use crate::{ delay, flatten, settle, Device, Document, Drive, Element, History, Kind, Logic, Model, Netlist, Plan, Point, Registry, Segment, Solution, FLOOR, THRESHOLD };
 
 
 const INPUTS : usize = 8;
@@ -132,6 +132,7 @@ pub fn characterize( layers : &[ Document ], models : &[ Option<Model> ], layer 
 	let width = 1usize << inputs.len();
 	let mut seeds = vec![ Logic::default() ];
 	let mut entries : Vec<( Vec<Drive>, usize )> = Vec::new();
+	let mut settled : Vec<( usize, Logic )> = Vec::new();
 
 	while entries.len() < seeds.len() * width
 	{
@@ -143,6 +144,8 @@ pub fn characterize( layers : &[ Document ], models : &[ Option<Model> ], layer 
 		for ( &drive, bit ) in drives.iter().zip( 0 .. ) { elements[ drive ].kind = Kind::Supply { volts : if row >> bit & 1 == 1 { SUPPLY } else { 0.0 } }; }
 
 		let ( open, after ) = run( &elements, &devices, models, step, &seed )?;
+
+		settled.push( ( row, after.clone() ) );
 
 		let outputs = probes.iter().map( | &probe |
 		{
@@ -170,5 +173,5 @@ pub fn characterize( layers : &[ Document ], models : &[ Option<Model> ], layer 
 
 	let ( rows, next ) = minimize( &entries, width );
 
-	Some( Model { rows, next, delay : layers[ layer ].delay() } )
+	Some( Model { rows, next, delay : delay( &elements, &devices, models, &drives, &probes, &settled ) } )
 }

@@ -24,7 +24,7 @@ Requires Rust through `rustup`. `rust-toolchain.toml` pins the version and the `
 - Right-click a wire to delete it.
 - Right-click any other part to open its menu: `Move`, `Rotate`, `Mirror horizontally`, `Mirror vertically` and `Delete`. A ground and a VCC have only `Move` and `Delete`. An LED also has `Change in green`, `Change in blue` or `Change in red`, to light it in the next color. A red LED drops about 1.9 V, a green one about 2 V and a blue one about 3 V. After `Move`, the part follows the cursor: click to drop it, or press `Escape` to cancel. `Rotate` turns the part a quarter clockwise. The wires on the part follow it, and bend at a right angle where they must. A part that touched another part, or the middle of a wire, stays joined to it by a new wire. A mirrored transistor swaps the sides of its collector and its emitter, or of its drain and its source.
 - Press `Ctrl Z` (`⌘ Z` on a Mac) to undo, and `Ctrl Shift Z` or `Ctrl Y` (`⌘ Shift Z`) to redo.
-- Hover a part to read its voltage and current.
+- Hover a part to read its voltage and current. A symbol that runs as a gate also shows its delay: each stage of transistors takes 1 ns, and the engine measures how long a symbol made of other symbols takes to switch.
 - Move the view with a two-finger swipe or the mouse wheel, by dragging with the middle button, or by holding `Space` and dragging.
 - Click the target button in the bottom right to bring the view back to the start.
 - Click `Save` or press `Ctrl S` (`⌘ S`) to save the drawing as a `.circuit` file. Chrome and Edge ask for the name and the folder. The other browsers download the file. Click `Open` or press `Ctrl O` (`⌘ O`) to replace the drawing with a file. Undo brings the previous drawing back.
