@@ -25,7 +25,8 @@ function actions( kind : Kind ) : Action[]
 
 export function open( parent : HTMLElement, position : Point, element : Element, act : ( action : Action ) => void ) : HTMLElement
 {
-	const labels = { ... LABELS, color : `Change in ${ NAMES[ NEXT[ element.value as Color ] ].toLowerCase() }`, label : element.label ? 'Edit label' : 'Add label' };
+	const color = element.kind === Kind.Led ? `Change in ${ NAMES[ NEXT[ element.value as Color ] ].toLowerCase() }` : '';
+	const labels = { ... LABELS, color, label : element.label ? 'Edit label' : 'Add label' };
 
 	return context( parent, position, labels, actions( element.kind ), act );
 }

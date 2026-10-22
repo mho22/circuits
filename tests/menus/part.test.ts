@@ -21,6 +21,12 @@ describe( 'part menu', () =>
 		expect( labels( menu ) ).toEqual( [ 'Move', 'Rotate', 'Mirror horizontally', 'Mirror vertically', 'Copy', 'Delete' ] );
 	} );
 
+	it( 'opens for a part whose value is not a color', () =>
+	{
+		expect( labels( open( document.body, { x : 0, y : 0 }, element( { kind : Kind.Resistor, value : 1000 } ), () => {} ) ) ).toEqual( [ 'Move', 'Rotate', 'Mirror horizontally', 'Mirror vertically', 'Copy', 'Delete' ] );
+		expect( labels( open( document.body, { x : 0, y : 0 }, element( { kind : Kind.Battery, value : 5 } ), () => {} ) ) ).toEqual( [ 'Move', 'Rotate', 'Mirror horizontally', 'Mirror vertically', 'Copy', 'Delete' ] );
+	} );
+
 	it( 'offers only a move, a copy and a delete for a ground or a vcc', () =>
 	{
 		expect( labels( open( document.body, { x : 0, y : 0 }, element( { kind : Kind.Ground } ), () => {} ) ) ).toEqual( [ 'Move', 'Copy', 'Delete' ] );
