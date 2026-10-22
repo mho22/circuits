@@ -1,6 +1,12 @@
 use crate::{ characterize, Document, Element, Kind, Model };
 
 
+fn source( elements : &[ Element ] ) -> Vec<Element>
+{
+	elements.iter().map( | element | match element.kind { Kind::Input { .. } => Element { kind : Kind::Input { high : false }, ..*element }, _ => *element } ).collect()
+}
+
+
 struct Catalog<'a>
 {
 	layers : &'a [ Document ],
@@ -20,16 +26,17 @@ impl Catalog<'_>
 		self.states[ layer ] = 1;
 
 		let elements = self.layers[ layer ].elements();
+		let source = source( elements );
 		let children : Vec<usize> = elements.iter().filter_map( | element | match element.kind { Kind::Symbol { layer, .. } => Some( layer as usize ), _ => None } ).filter( | &child | child > 0 && child < self.layers.len() ).collect();
 
 		for &child in &children { self.visit( child ); }
 
-		self.changed[ layer ] = self.sources[ layer ] != elements || children.iter().any( | &child | self.changed[ child ] );
+		self.changed[ layer ] = self.sources[ layer ] != source || children.iter().any( | &child | self.changed[ child ] );
 
 		if self.changed[ layer ]
 		{
 			self.models[ layer ] = characterize( self.layers, &self.models, layer, self.step );
-			self.sources[ layer ] = elements.to_vec();
+			self.sources[ layer ] = source;
 		}
 
 		self.states[ layer ] = 2;

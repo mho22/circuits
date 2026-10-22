@@ -76,6 +76,19 @@ fn it_keeps_the_model_of_an_unchanged_layer()
 }
 
 #[test]
+fn it_keeps_the_model_of_a_layer_whose_input_changes_level()
+{
+	let mut changed = inverter();
+	let id = changed.elements()[ 0 ].id;
+
+	changed.apply( Operation::SetHigh { id, high : true } ).unwrap();
+
+	let ( models, _ ) = catalog( &[ Document::default(), changed ], &[ None, Some( fake() ) ], &[ Vec::new(), inverter().elements().to_vec() ], STEP );
+
+	assert_eq!( models[ 1 ], Some( fake() ) );
+}
+
+#[test]
 fn it_adds_the_delays_of_the_layers_inside_a_layer()
 {
 	let ( models, _ ) = catalog( &[ Document::default(), inverter(), buffer() ], &[], &[], STEP );
