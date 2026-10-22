@@ -47,7 +47,8 @@ impl Outline
 
 			[ Point { x : low.x.div_euclid( FINE ), y : low.y.div_euclid( FINE ) }, Point { x : ceil( high.x ), y : ceil( high.y ) } ]
 		} );
-		let points : Vec<Point> = pins.iter().copied().chain( shapes ).chain( [ Point { x : - MARGIN, y : - MARGIN }, Point { x : MARGIN, y : MARGIN } ] ).collect();
+		let margin = if document.drawing().is_empty() { vec![ Point { x : - MARGIN, y : - MARGIN }, Point { x : MARGIN, y : MARGIN } ] } else { Vec::new() };
+		let points : Vec<Point> = pins.iter().copied().chain( shapes ).chain( margin ).collect();
 		let low = Point { x : points.iter().map( | point | point.x ).min().unwrap(), y : points.iter().map( | point | point.y ).min().unwrap() };
 		let high = Point { x : points.iter().map( | point | point.x ).max().unwrap(), y : points.iter().map( | point | point.y ).max().unwrap() };
 
@@ -56,8 +57,8 @@ impl Outline
 
 	pub fn zone( &self, center : Point, rotation : u8 ) -> Segment
 	{
-		let first = rotate( Point { x : ( self.low.x + 1 ).min( 0 ), y : ( self.low.y + 1 ).min( 0 ) }, rotation );
-		let second = rotate( Point { x : ( self.high.x - 1 ).max( 0 ), y : ( self.high.y - 1 ).max( 0 ) }, rotation );
+		let first = rotate( Point { x : self.low.x + 1, y : self.low.y + 1 }, rotation );
+		let second = rotate( Point { x : self.high.x - 1, y : self.high.y - 1 }, rotation );
 
 		Segment { from : Point { x : center.x + first.x.min( second.x ), y : center.y + first.y.min( second.y ) }, to : Point { x : center.x + first.x.max( second.x ), y : center.y + first.y.max( second.y ) } }
 	}

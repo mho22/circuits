@@ -974,6 +974,22 @@ fn it_finds_a_symbol_anywhere_on_its_turned_box()
 }
 
 #[test]
+fn it_finds_a_symbol_on_its_drawing_but_not_on_a_wire_beside_its_center_away_from_the_drawing()
+{
+	let mut simulation = Simulation::new( STEP );
+	let layer = define( &mut simulation, &[ ( Kind::Input { high : false }, ( -1, 0 ), ( 0, 0 ) ), ( Kind::Output, ( 5, 0 ), ( 4, 0 ) ) ] );
+
+	simulation.apply( layer as usize, Operation::Describe { name : String::new(), drawing : vec![ Shape::Line { from : Point { x : -32, y : -28 }, to : Point { x : -12, y : -8 } } ], layout : vec![ Point { x : -8, y : -6 }, Point { x : -3, y : -5 } ] } ).unwrap();
+
+	add( &mut simulation, Kind::Symbol { layer, rotation : 0 }, ( 24, 23 ), ( 24, 23 ) );
+	add( &mut simulation, Kind::Wire, ( 21, 18 ), ( 24, 18 ) );
+
+	assert_eq!( simulation.elements_at( 0, Point { x : 19, y : 20 } ), vec![ 0 ] );
+	assert_eq!( simulation.elements_at( 0, Point { x : 23, y : 18 } ), vec![ 1 ] );
+	assert!( simulation.elements_at( 0, Point { x : 24, y : 23 } ).is_empty() );
+}
+
+#[test]
 fn it_erases_several_parts_with_one_undo_step()
 {
 	let mut simulation = series( Kind::Resistor { ohms : 1000.0 } );

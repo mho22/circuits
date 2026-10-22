@@ -35,11 +35,11 @@ fn it_places_the_pins_where_the_layout_puts_them_and_the_others_in_their_column(
 }
 
 #[test]
-fn it_bounds_the_pins_and_the_drawing_in_whole_grid_steps()
+fn it_bounds_the_pins_and_the_drawing_in_whole_grid_steps_without_a_box_around_the_center()
 {
 	let drawing = vec![ Shape::Circle { center : point( 10, 0 ), radius : 3 }, Shape::Line { from : point( -9, 1 ), to : point( 0, -13 ) } ];
 
-	assert_eq!( Outline::of( &layer( &[], drawing, vec![] ) ), Outline { low : point( -3, -4 ), high : point( 4, 2 ), pins : vec![] } );
+	assert_eq!( Outline::of( &layer( &[], drawing, vec![] ) ), Outline { low : point( -3, -4 ), high : point( 4, 1 ), pins : vec![] } );
 }
 
 #[test]
@@ -61,4 +61,12 @@ fn it_gives_the_inside_of_its_bounds_one_step_from_each_side_after_a_turn()
 
 	assert_eq!( outline.zone( point( 10, 10 ), 0 ), Segment { from : point( 9, 7 ), to : point( 12, 13 ) } );
 	assert_eq!( outline.zone( point( 10, 10 ), 3 ), Segment { from : point( 7, 8 ), to : point( 13, 11 ) } );
+}
+
+#[test]
+fn it_gives_the_inside_of_its_bounds_without_its_center_when_the_bounds_are_away_from_it()
+{
+	let outline = Outline { low : point( -8, -7 ), high : point( -3, -2 ), pins : vec![] };
+
+	assert_eq!( outline.zone( point( 10, 10 ), 0 ), Segment { from : point( 3, 4 ), to : point( 6, 7 ) } );
 }
