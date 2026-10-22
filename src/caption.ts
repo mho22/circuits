@@ -3,7 +3,7 @@ import type { Element } from './types/element.ts';
 import type { Point } from './types/point.ts';
 
 
-export const OFFSET = 11;
+export const OFFSET = 15;
 const SIZE = 11;
 
 const WIDTH = 0.6 * SIZE;

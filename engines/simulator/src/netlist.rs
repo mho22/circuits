@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::union_find::UnionFind;
-use crate::{ Element, Kind, Point, Segment };
+use crate::{ Element, Kind, Point };
 
 
 pub struct Netlist
@@ -30,16 +30,7 @@ impl Netlist
 			}
 		}
 
-		let mut edges = Vec::new();
-
-		for element in elements.iter().filter( | element | element.kind == Kind::Wire )
-		{
-			let mut on : Vec<usize> = ( 0 .. points.len() ).filter( | &index | element.segment.contains( points[ index ] ) ).collect();
-
-			on.sort_by_key( | &index | Segment { from : element.segment.from, to : points[ index ] }.length() );
-
-			edges.extend( on.windows( 2 ).map( | pair | ( pair[ 0 ], pair[ 1 ] ) ) );
-		}
+		let edges : Vec<( usize, usize )> = elements.iter().filter( | element | element.kind == Kind::Wire ).map( | element | ( indices[ &element.segment.from ], indices[ &element.segment.to ] ) ).collect();
 
 		let links : Vec<( usize, usize )> = elements.iter().filter( | element | element.kind == Kind::Switch { closed : true } ).map( | element | ( indices[ &element.segment.from ], indices[ &element.segment.to ] ) ).collect();
 

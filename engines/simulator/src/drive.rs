@@ -11,5 +11,5 @@ fn terminals( layers : &[ Document ], element : &Element ) -> Vec<Point>
 
 pub fn driven( layers : &[ Document ], layer : usize, id : u32, point : Point ) -> bool
 {
-	layers[ layer ].elements().iter().filter( | element | element.id != id ).any( | element | terminals( layers, element ).contains( &point ) || ( element.kind == Kind::Wire && element.segment.contains( point ) ) )
+	layers[ layer ].elements().iter().filter( | element | element.id != id ).any( | element | terminals( layers, element ).contains( &point ) )
 }

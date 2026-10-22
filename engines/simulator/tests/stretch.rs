@@ -77,12 +77,12 @@ fn it_bends_a_wire_around_a_turned_part()
 }
 
 #[test]
-fn it_adds_a_wire_to_a_wire_that_the_part_touched_in_its_middle()
+fn it_adds_no_wire_to_a_wire_that_the_part_touched_in_its_middle()
 {
 	let part = element( 0, RESISTOR, ( 0, 0 ), ( 0, 2 ) );
 	let elements = [ part, element( 1, Kind::Wire, ( -2, 0 ), ( 2, 0 ) ) ];
 
-	assert_eq!( stretched( &elements, &part, &moved( part, ( 0, 4 ), ( 0, 6 ) ) ), vec![ piece( ( 0, 0 ), ( 0, 4 ) ) ] );
+	assert!( stretched( &elements, &part, &moved( part, ( 0, 4 ), ( 0, 6 ) ) ).is_empty() );
 }
 
 #[test]

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{ Element, Error, Kind, Operation, Point, Segment, Shape };
 
 
-#[derive( Clone, Debug )]
+#[derive( Clone, Debug, Default )]
 pub struct Document
 {
 	elements : Vec<Element>,
@@ -12,14 +12,6 @@ pub struct Document
 	drawing : Vec<Shape>,
 	layout : Vec<Point>,
 	labels : HashMap<u32, String>,
-}
-
-impl Default for Document
-{
-	fn default() -> Document
-	{
-		Document { elements : Vec::new(), next : 0, name : String::new(), drawing : Vec::new(), layout : Vec::new(), labels : HashMap::new() }
-	}
 }
 
 impl Document

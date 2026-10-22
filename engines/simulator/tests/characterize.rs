@@ -20,11 +20,13 @@ fn gate( x : i32 ) -> Vec<Part>
 {
 	vec![
 		( Kind::Supply { volts : 5.0 }, ( x + 3, -1 ), ( x + 3, -1 ) ),
-		( Kind::Wire, ( x, -2 ), ( x, 2 ) ),
+		( Kind::Wire, ( x, -2 ), ( x, 0 ) ),
+		( Kind::Wire, ( x, 0 ), ( x, 2 ) ),
 		( Kind::Pmos, ( x, -2 ), ( x + 2, -2 ) ),
 		( Kind::Nmos, ( x, 2 ), ( x + 2, 2 ) ),
 		( Kind::Wire, ( x + 3, -3 ), ( x + 5, -3 ) ),
-		( Kind::Wire, ( x + 5, -3 ), ( x + 5, 1 ) ),
+		( Kind::Wire, ( x + 5, -3 ), ( x + 5, 0 ) ),
+		( Kind::Wire, ( x + 5, 0 ), ( x + 5, 1 ) ),
 		( Kind::Wire, ( x + 5, 1 ), ( x + 3, 1 ) ),
 		( Kind::Ground, ( x + 3, 3 ), ( x + 3, 3 ) ),
 	]
@@ -49,13 +51,16 @@ fn nand() -> Document
 		( Kind::Nmos, ( 0, 2 ), ( 2, 2 ) ),
 		( Kind::Nmos, ( 0, 6 ), ( 2, 6 ) ),
 		( Kind::Ground, ( 3, 7 ), ( 3, 7 ) ),
-		( Kind::Wire, ( 0, -2 ), ( 0, 2 ) ),
+		( Kind::Wire, ( 0, -2 ), ( 0, 0 ) ),
+		( Kind::Wire, ( 0, 0 ), ( 0, 2 ) ),
 		( Kind::Wire, ( 6, -2 ), ( 6, 4 ) ),
 		( Kind::Wire, ( 6, 4 ), ( -2, 4 ) ),
 		( Kind::Wire, ( -2, 4 ), ( -2, 6 ) ),
 		( Kind::Wire, ( -2, 6 ), ( 0, 6 ) ),
-		( Kind::Wire, ( 3, -3 ), ( 11, -3 ) ),
-		( Kind::Wire, ( 11, -3 ), ( 11, 1 ) ),
+		( Kind::Wire, ( 3, -3 ), ( 9, -3 ) ),
+		( Kind::Wire, ( 9, -3 ), ( 11, -3 ) ),
+		( Kind::Wire, ( 11, -3 ), ( 11, 0 ) ),
+		( Kind::Wire, ( 11, 0 ), ( 11, 1 ) ),
 		( Kind::Wire, ( 11, 1 ), ( 3, 1 ) ),
 		( Kind::Wire, ( 3, 3 ), ( 3, 5 ) ),
 	] )
@@ -87,12 +92,18 @@ fn flip_flop() -> Document
 	let gates = ( 0 .. 9 ).map( | gate | ( Kind::Symbol { layer : 1, rotation : 0 }, ( 10 * gate, 0 ), ( 10 * gate, 0 ) ) );
 	let wires = nets.iter().zip( 3 .. ).flat_map( | ( net, lane ) |
 	{
-		let stubs = net.iter().map( move | &( x, side ) | ( Kind::Wire, ( x, if side == 0 { - lane } else { side } ), ( x, if side < 0 { - lane } else { lane } ) ) );
+		let stubs = net.iter().flat_map( move | &( x, side ) | match side
+		{
+			0 => vec![ ( Kind::Wire, ( x, - lane ), ( x, 0 ) ), ( Kind::Wire, ( x, 0 ), ( x, lane ) ) ],
+			_ => vec![ ( Kind::Wire, ( x, side ), ( x, side.signum() * lane ) ) ],
+		} );
 		let span = | y : i32, sign : i32 |
 		{
-			let columns : Vec<i32> = net.iter().filter( | &&( _, side ) | side * sign >= 0 ).map( | &( x, _ ) | x ).collect();
+			let mut columns : Vec<i32> = net.iter().filter( | &&( _, side ) | side * sign >= 0 ).map( | &( x, _ ) | x ).collect();
 
-			( columns.len() > 1 ).then( || ( Kind::Wire, ( *columns.iter().min().unwrap(), y ), ( *columns.iter().max().unwrap(), y ) ) )
+			columns.sort();
+
+			columns.windows( 2 ).map( | pair | ( Kind::Wire, ( pair[ 0 ], y ), ( pair[ 1 ], y ) ) ).collect::<Vec<_>>()
 		};
 
 		stubs.chain( span( - lane, -1 ) ).chain( span( lane, 1 ) ).collect::<Vec<Part>>()

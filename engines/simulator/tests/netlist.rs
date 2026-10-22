@@ -22,12 +22,12 @@ fn it_joins_wires_that_share_an_end()
 }
 
 #[test]
-fn it_joins_an_end_that_touches_the_middle_of_a_wire()
+fn it_keeps_an_end_on_the_middle_of_a_wire_apart()
 {
 	let netlist = Netlist::build( &[ element( Kind::Wire, ( 0, 0 ), ( 4, 0 ) ), element( Kind::Wire, ( 2, 0 ), ( 2, 3 ) ) ] );
 
-	assert_eq!( netlist.count, 1 );
-	assert_eq!( netlist.edges, vec![ ( 0, 2 ), ( 2, 1 ), ( 2, 3 ) ] );
+	assert_eq!( netlist.count, 2 );
+	assert_eq!( netlist.edges, vec![ ( 0, 1 ), ( 2, 3 ) ] );
 }
 
 #[test]
@@ -49,12 +49,11 @@ fn it_keeps_the_two_ends_of_a_part_apart()
 }
 
 #[test]
-fn it_joins_a_part_end_on_the_middle_of_a_wire()
+fn it_keeps_a_part_end_on_the_middle_of_a_wire_apart()
 {
 	let netlist = Netlist::build( &[ element( Kind::Wire, ( 0, 0 ), ( 4, 0 ) ), element( Kind::Battery { volts : 1.0 }, ( 2, 0 ), ( 2, 2 ) ) ] );
 
-	assert_eq!( netlist.net( point( 0, 0 ) ), netlist.net( point( 2, 0 ) ) );
-	assert_ne!( netlist.net( point( 2, 0 ) ), netlist.net( point( 2, 2 ) ) );
+	assert_ne!( netlist.net( point( 0, 0 ) ), netlist.net( point( 2, 0 ) ) );
 }
 
 #[test]

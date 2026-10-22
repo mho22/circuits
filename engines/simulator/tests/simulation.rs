@@ -4,6 +4,9 @@ use simulator::{ Element, Error, Kind, Mode, Operation, Outline, Point, Segment,
 const STEP : f64 = 1e-6;
 
 
+type Part = ( Kind, ( i32, i32 ), ( i32, i32 ) );
+
+
 fn segment( from : ( i32, i32 ), to : ( i32, i32 ) ) -> Segment
 {
 	Segment { from : Point { x : from.0, y : from.1 }, to : Point { x : to.0, y : to.1 } }
@@ -519,7 +522,7 @@ fn it_slides_a_part_along_its_wire()
 	assert_eq!( wires, vec![ segment( ( 0, 0 ), ( 5, 0 ) ), segment( ( 7, 0 ), ( 8, 0 ) ) ] );
 }
 
-fn define( simulation : &mut Simulation, parts : &[ ( Kind, ( i32, i32 ), ( i32, i32 ) ) ] ) -> u32
+fn define( simulation : &mut Simulation, parts : &[ Part ] ) -> u32
 {
 	let layer = simulation.create();
 
@@ -658,11 +661,13 @@ fn inverter( simulation : &mut Simulation ) -> u32
 		( Kind::Input { high : false }, ( -1, 0 ), ( 0, 0 ) ),
 		( Kind::Supply { volts : 5.0 }, ( 3, -1 ), ( 3, -1 ) ),
 		( Kind::Output, ( 6, 0 ), ( 5, 0 ) ),
-		( Kind::Wire, ( 0, -2 ), ( 0, 2 ) ),
+		( Kind::Wire, ( 0, -2 ), ( 0, 0 ) ),
+		( Kind::Wire, ( 0, 0 ), ( 0, 2 ) ),
 		( Kind::Pmos, ( 0, -2 ), ( 2, -2 ) ),
 		( Kind::Nmos, ( 0, 2 ), ( 2, 2 ) ),
 		( Kind::Wire, ( 3, -3 ), ( 5, -3 ) ),
-		( Kind::Wire, ( 5, -3 ), ( 5, 1 ) ),
+		( Kind::Wire, ( 5, -3 ), ( 5, 0 ) ),
+		( Kind::Wire, ( 5, 0 ), ( 5, 1 ) ),
 		( Kind::Wire, ( 5, 1 ), ( 3, 1 ) ),
 		( Kind::Ground, ( 3, 3 ), ( 3, 3 ) ),
 	] );
@@ -670,6 +675,27 @@ fn inverter( simulation : &mut Simulation ) -> u32
 	add( simulation, Kind::Symbol { layer, rotation : 0 }, ( 10, 10 ), ( 10, 10 ) );
 
 	layer
+}
+
+#[test]
+fn it_captions_each_toggle_with_the_label_of_a_pin_on_its_net()
+{
+	let mut simulation = Simulation::new( STEP );
+	let layer = inverter( &mut simulation ) as usize;
+	let end = Outline::of( simulation.document( layer ).unwrap() ).terminals( point( 10, 10 ), 0 )[ 0 ];
+
+	simulation.apply( layer, Operation::Label { id : 0, label : "foo".to_string() } ).unwrap();
+	add( &mut simulation, Kind::Toggle { high : false }, ( end.x - 4, end.y ), ( end.x - 3, end.y ) );
+	add( &mut simulation, Kind::Wire, ( end.x - 3, end.y ), ( end.x, end.y ) );
+	add( &mut simulation, Kind::Toggle { high : false }, ( 0, 20 ), ( 1, 20 ) );
+
+	let output = add( &mut simulation, Kind::Output, ( 2, 20 ), ( 1, 20 ) );
+
+	assert_eq!( simulation.captions(), vec![ "foo".to_string(), String::new() ] );
+
+	simulation.apply( 0, Operation::Label { id : output, label : "bar".to_string() } ).unwrap();
+
+	assert_eq!( simulation.captions(), vec![ "foo".to_string(), "bar".to_string() ] );
 }
 
 #[test]
@@ -1174,7 +1200,7 @@ fn it_rejects_a_purge_of_the_drawing_or_a_missing_layer()
 	assert_eq!( simulation.purge( 3 ), Err( Error::Layerless ) );
 }
 
-fn nand() -> Vec<( Kind, ( i32, i32 ), ( i32, i32 ) )>
+fn nand() -> Vec<Part>
 {
 	vec![
 		( Kind::Input { high : false }, ( -1, 0 ), ( 0, 0 ) ),
@@ -1187,19 +1213,22 @@ fn nand() -> Vec<( Kind, ( i32, i32 ), ( i32, i32 ) )>
 		( Kind::Nmos, ( 0, 2 ), ( 2, 2 ) ),
 		( Kind::Nmos, ( 0, 6 ), ( 2, 6 ) ),
 		( Kind::Ground, ( 3, 7 ), ( 3, 7 ) ),
-		( Kind::Wire, ( 0, -2 ), ( 0, 2 ) ),
+		( Kind::Wire, ( 0, -2 ), ( 0, 0 ) ),
+		( Kind::Wire, ( 0, 0 ), ( 0, 2 ) ),
 		( Kind::Wire, ( 6, -2 ), ( 6, 4 ) ),
 		( Kind::Wire, ( 6, 4 ), ( -2, 4 ) ),
 		( Kind::Wire, ( -2, 4 ), ( -2, 6 ) ),
 		( Kind::Wire, ( -2, 6 ), ( 0, 6 ) ),
-		( Kind::Wire, ( 3, -3 ), ( 11, -3 ) ),
-		( Kind::Wire, ( 11, -3 ), ( 11, 1 ) ),
+		( Kind::Wire, ( 3, -3 ), ( 9, -3 ) ),
+		( Kind::Wire, ( 9, -3 ), ( 11, -3 ) ),
+		( Kind::Wire, ( 11, -3 ), ( 11, 0 ) ),
+		( Kind::Wire, ( 11, 0 ), ( 11, 1 ) ),
 		( Kind::Wire, ( 11, 1 ), ( 3, 1 ) ),
 		( Kind::Wire, ( 3, 3 ), ( 3, 5 ) ),
 	]
 }
 
-fn flip_flop() -> Vec<( Kind, ( i32, i32 ), ( i32, i32 ) )>
+fn flip_flop() -> Vec<Part>
 {
 	let input = | gate : i32, side : i32 | ( 10 * gate - 2, side );
 	let output = | gate : i32 | ( 10 * gate + 2, 0 );
@@ -1225,12 +1254,18 @@ fn flip_flop() -> Vec<( Kind, ( i32, i32 ), ( i32, i32 ) )>
 	let gates = ( 0 .. 9 ).map( | gate | ( Kind::Symbol { layer : 1, rotation : 0 }, ( 10 * gate, 0 ), ( 10 * gate, 0 ) ) );
 	let wires = nets.iter().zip( 3 .. ).flat_map( | ( net, lane ) |
 	{
-		let stubs = net.iter().map( move | &( x, side ) | ( Kind::Wire, ( x, if side == 0 { - lane } else { side } ), ( x, if side < 0 { - lane } else { lane } ) ) );
+		let stubs = net.iter().flat_map( move | &( x, side ) | match side
+		{
+			0 => vec![ ( Kind::Wire, ( x, - lane ), ( x, 0 ) ), ( Kind::Wire, ( x, 0 ), ( x, lane ) ) ],
+			_ => vec![ ( Kind::Wire, ( x, side ), ( x, side.signum() * lane ) ) ],
+		} );
 		let span = | y : i32, sign : i32 |
 		{
-			let columns : Vec<i32> = net.iter().filter( | &&( _, side ) | side * sign >= 0 ).map( | &( x, _ ) | x ).collect();
+			let mut columns : Vec<i32> = net.iter().filter( | &&( _, side ) | side * sign >= 0 ).map( | &( x, _ ) | x ).collect();
 
-			( columns.len() > 1 ).then( || ( Kind::Wire, ( *columns.iter().min().unwrap(), y ), ( *columns.iter().max().unwrap(), y ) ) )
+			columns.sort();
+
+			columns.windows( 2 ).map( | pair | ( Kind::Wire, ( pair[ 0 ], y ), ( pair[ 1 ], y ) ) ).collect::<Vec<_>>()
 		};
 
 		stubs.chain( span( - lane, -1 ) ).chain( span( lane, 1 ) ).collect::<Vec<_>>()
@@ -1242,7 +1277,7 @@ fn flip_flop() -> Vec<( Kind, ( i32, i32 ), ( i32, i32 ) )>
 fn counter() -> Simulation
 {
 	let mut simulation = Simulation::new( STEP );
-	let mut parts : Vec<( Kind, ( i32, i32 ), ( i32, i32 ) )> = ( 0 .. 4 ).map( | bit | ( Kind::Symbol { layer : 2, rotation : 0 }, ( 20 * bit, 0 ), ( 20 * bit, 0 ) ) ).collect();
+	let mut parts : Vec<Part> = ( 0 .. 4 ).map( | bit | ( Kind::Symbol { layer : 2, rotation : 0 }, ( 20 * bit, 0 ), ( 20 * bit, 0 ) ) ).collect();
 
 	parts.push( ( Kind::Clock { hertz : 1e6 }, ( -8, 1 ), ( -2, 1 ) ) );
 	parts.extend( ( 0 .. 4 ).map( | bit | 20 * bit ).flat_map( | x | [ ( Kind::Wire, ( x + 2, 1 ), ( x + 2, 4 ) ), ( Kind::Wire, ( x + 2, 4 ), ( x - 4, 4 ) ), ( Kind::Wire, ( x - 4, 4 ), ( x - 4, -1 ) ), ( Kind::Wire, ( x - 4, -1 ), ( x - 2, -1 ) ) ] ) );

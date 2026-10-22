@@ -155,7 +155,7 @@ pub fn characterize( layers : &[ Document ], models : &[ Option<Model> ], layer 
 
 			let target = if volts > THRESHOLD { 0.0 } else { SUPPLY };
 			let loaded = run( &load( &elements, elements[ probe ].segment.to, target ), &devices, models, step, &after )?.0.readings[ probe ].potentials[ 0 ];
-			let ohms = ( ( volts - loaded ) / ( ( loaded - target ) / LOAD ) ).max( FLOOR ).min( CEILING );
+			let ohms = ( ( volts - loaded ) / ( ( loaded - target ) / LOAD ) ).clamp( FLOOR, CEILING );
 
 			Some( Drive { volts, ohms } )
 		} ).collect::<Option<Vec<Drive>>>()?;

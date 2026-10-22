@@ -4,12 +4,15 @@ use simulator::{ flatten, Device, Document, Drive, Element, Error, Kind, Model, 
 const SCOPE : i32 = 1 << 16;
 
 
+type Part = ( Kind, ( i32, i32 ), ( i32, i32 ) );
+
+
 fn segment( from : ( i32, i32 ), to : ( i32, i32 ) ) -> Segment
 {
 	Segment { from : Point { x : from.0, y : from.1 }, to : Point { x : to.0, y : to.1 } }
 }
 
-fn layer( parts : &[ ( Kind, ( i32, i32 ), ( i32, i32 ) ) ] ) -> Document
+fn layer( parts : &[ Part ] ) -> Document
 {
 	let mut document = Document::default();
 
@@ -153,7 +156,7 @@ fn it_keeps_a_toggle_at_its_level_with_its_id_at_the_end_of_its_lead()
 #[test]
 fn it_turns_a_toggle_into_a_probe_on_a_net_that_a_source_a_channel_or_a_gate_drives()
 {
-	let kinds = | parts : &[ ( Kind, ( i32, i32 ), ( i32, i32 ) ) ], models : &[ Option<Model> ] | flatten( &[ layer( parts ), input( true ) ], &mut Registry::default(), models, 0, &[] ).unwrap().0.iter().map( | element | element.kind ).collect::<Vec<Kind>>();
+	let kinds = | parts : &[ Part ], models : &[ Option<Model> ] | flatten( &[ layer( parts ), input( true ) ], &mut Registry::default(), models, 0, &[] ).unwrap().0.iter().map( | element | element.kind ).collect::<Vec<Kind>>();
 	let model = Model { rows : vec![ vec![ Drive { volts : 5.0, ohms : 10.0 } ]; 2 ], next : vec![ 0; 2 ], delay : DELAY };
 	let high = Kind::Toggle { high : true };
 

@@ -1,12 +1,15 @@
 use simulator::{ driven, Document, Kind, Operation, Point, Segment };
 
 
+type Part = ( Kind, ( i32, i32 ), ( i32, i32 ) );
+
+
 fn point( x : i32, y : i32 ) -> Point
 {
 	Point { x, y }
 }
 
-fn layer( parts : &[ ( Kind, ( i32, i32 ), ( i32, i32 ) ) ] ) -> Document
+fn layer( parts : &[ Part ] ) -> Document
 {
 	let mut document = Document::default();
 
@@ -22,12 +25,12 @@ fn pair() -> Document
 
 
 #[test]
-fn it_finds_a_point_driven_by_the_end_or_the_middle_of_a_wire()
+fn it_finds_a_point_driven_by_the_end_of_a_wire_but_not_by_its_middle()
 {
 	let layers = [ layer( &[ ( Kind::Wire, ( 0, 0 ), ( 4, 0 ) ), ( Kind::Resistor { ohms : 1000.0 }, ( 0, 2 ), ( 4, 2 ) ) ] ) ];
 
 	assert!( driven( &layers, 0, 9, point( 0, 0 ) ) );
-	assert!( driven( &layers, 0, 9, point( 2, 0 ) ) );
+	assert!( ! driven( &layers, 0, 9, point( 2, 0 ) ) );
 	assert!( driven( &layers, 0, 9, point( 4, 2 ) ) );
 	assert!( ! driven( &layers, 0, 9, point( 2, 2 ) ) );
 }

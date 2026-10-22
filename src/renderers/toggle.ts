@@ -7,6 +7,8 @@ import * as capsule from './capsule.ts';
 
 
 const KNOB = 3;
+const GAP = 8;
+const TEXT = '#8a8a8a';
 
 
 export function draw( context : CanvasRenderingContext2D, element : Element, scale : Scale ) : void
@@ -21,4 +23,15 @@ export function draw( context : CanvasRenderingContext2D, element : Element, sca
 	context.beginPath();
 	context.arc( toScreen( element.from.x ) + side * ( capsule.WIDTH - capsule.HALF ), toScreen( element.from.y ), KNOB, 0, 2 * Math.PI );
 	context.fill();
+
+	if( ! element.label ) return;
+
+	const dx = Math.sign( element.to.x - element.from.x );
+	const dy = Math.sign( element.to.y - element.from.y );
+
+	context.fillStyle = TEXT;
+	context.font = '11px ui-monospace, monospace';
+	context.textAlign = dx > 0 ? 'right' : dx < 0 ? 'left' : 'center';
+	context.textBaseline = dy > 0 ? 'bottom' : dy < 0 ? 'top' : 'middle';
+	context.fillText( element.label, toScreen( element.from.x ) - dx * ( capsule.WIDTH + GAP ), toScreen( element.from.y ) - dy * ( capsule.HALF + GAP ) );
 }

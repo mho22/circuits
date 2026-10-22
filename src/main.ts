@@ -19,6 +19,7 @@ import { Figure } from './enums/figure.ts';
 import { INPUTS, Kind, NAMES, PINS, POINTS } from './enums/kind.ts';
 import { snap } from './grid.ts';
 import { read, shape } from './keyboard.ts';
+import { junctions } from './junctions.ts';
 import { leads } from './leads.ts';
 import { Library } from './library.ts';
 import { Maker } from './maker.ts';
@@ -35,6 +36,7 @@ import * as cursor from './renderers/cursor.ts';
 import * as drawing from './renderers/drawing.ts';
 import * as element from './renderers/element.ts';
 import * as grid from './renderers/grid.ts';
+import * as junction from './renderers/junction.ts';
 import * as mask from './renderers/mask.ts';
 import { measure } from './scale.ts';
 import { cover, inside, span } from './selection.ts';
@@ -148,11 +150,19 @@ function labelled( elements : Element[], layer : number ) : Element[]
 	return elements.map( item => PINS.includes( item.kind ) ? { ... item, label : labels[ index++ ] } : item );
 }
 
+function captioned( elements : Element[] ) : Element[]
+{
+	const captions = circuit.captions();
+	let index = 0;
+
+	return elements.map( item => item.kind === Kind.Toggle ? { ... item, label : captions[ index++ ] } : item );
+}
+
 function parts() : Element[]
 {
 	const listening = Array.from( circuit.listening() );
 
-	return labelled( decodeElements( circuit.elements() ), circuit.layer ).map( outlined ).map( item => listening.includes( item.id ) ? { ... item, listening : true } : item );
+	return captioned( labelled( decodeElements( circuit.elements() ), circuit.layer ) ).map( outlined ).map( item => listening.includes( item.id ) ? { ... item, listening : true } : item );
 }
 
 function layered( layer : number ) : Element[]
@@ -240,7 +250,7 @@ function make( target : Area | number, name : string, shapes : Shape[], layout :
 
 	const area = target;
 
-	attempt( () => circuit.enclose( area.low.x, area.low.y, area.high.x, area.high.y, name, encodeDrawing( shapes ), new Int32Array( layout.flatMap( point => [ point.x, point.y ] ) ) ) );
+	attempt( () => circuit.enclose( new Int32Array( [ area.low.x, area.low.y, area.high.x, area.high.y ] ), name, encodeDrawing( shapes ), new Int32Array( layout.flatMap( point => [ point.x, point.y ] ) ) ) );
 }
 
 function rename( layer : number, name : string, shapes : Shape[], layout : Point[] ) : void
@@ -437,6 +447,8 @@ function paint( elements : Element[], branches : Branch[], seconds : number ) : 
 	grid.draw( context, view.x, view.y, innerWidth, innerHeight, false );
 
 	elements.forEach( item => element.draw( context, item, scale ) );
+
+	junctions( elements ).forEach( item => junction.draw( context, item, scale ) );
 
 	paths.forEach( ( path, index ) => current.draw( context, path.from, path.to, path.current, scale.current, distances[ index ] ) );
 

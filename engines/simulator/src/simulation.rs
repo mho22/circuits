@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::flatten::STRIDE;
-use crate::{ advance, catalog, enclose, flatten, place, settle, stretch, Device, Document, Element, Enclosure, Error, History, Kind, Logic, Mode, Model, Operation, Outline, Plan, Point, Reading, Registry, Segment, Shape, Solution };
+use crate::{ advance, catalog, enclose, flatten, place, settle, stretch, Device, Document, Element, Enclosure, Error, History, Kind, Logic, Mode, Model, Netlist, Operation, Outline, Plan, Point, Reading, Registry, Segment, Shape, Solution };
 
 
 const DIVISIONS : f64 = 20.0;
@@ -258,6 +258,39 @@ impl Simulation
 		let probe = | element : &&Element | self.registry.find( &[ path, &[ element.id ] ].concat() ).is_some_and( | id | self.elements.iter().any( | flat | flat.id == id && flat.kind == Kind::Output ) );
 
 		self.layers[ layer ].elements().iter().filter( | element | matches!( element.kind, Kind::Toggle { .. } ) ).filter( probe ).map( | element | element.id ).collect()
+	}
+
+	pub fn captions( &self ) -> Vec<String>
+	{
+		let document = &self.layers[ self.descend( &self.focus ).unwrap_or( 0 ) ];
+		let mut elements = Vec::new();
+		let mut pins = Vec::new();
+
+		for element in document.elements()
+		{
+			let Kind::Symbol { layer, .. } = element.kind else
+			{
+				if element.kind.pin() { pins.push( ( element.segment.to, document.label( element.id ) ) ); }
+
+				elements.push( *element );
+
+				continue;
+			};
+
+			let inner = &self.layers[ layer as usize ];
+			let labels = inner.elements().iter().filter( | part | part.kind.pin() ).map( | part | inner.label( part.id ) );
+
+			for ( end, label ) in self.terminals( element ).into_iter().zip( labels )
+			{
+				pins.push( ( end, label ) );
+				elements.push( Element { id : element.id, kind : Kind::Wire, segment : Segment { from : end, to : end }, mirrored : false } );
+			}
+		}
+
+		let netlist = Netlist::build( &elements );
+		let caption = | toggle : &Element | pins.iter().find( | ( point, label ) | ! label.is_empty() && netlist.net( *point ) == netlist.net( toggle.segment.to ) ).map_or( String::new(), | ( _, label ) | label.to_string() );
+
+		document.elements().iter().filter( | element | matches!( element.kind, Kind::Toggle { .. } ) ).map( caption ).collect()
 	}
 
 	pub fn delay( &self, layer : usize ) -> Option<f64>

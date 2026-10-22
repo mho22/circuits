@@ -72,12 +72,7 @@ fn bend( start : Point, end : Point, horizontal : bool, zone : Segment, laid : &
 
 fn tapped( elements : &[ Element ], point : Point, terminals : &impl Fn( &Element ) -> Vec<Point> ) -> bool
 {
-	elements.iter().any( | element |
-	{
-		if element.kind != Kind::Wire { return terminals( element ).contains( &point ); }
-
-		element.segment.contains( point ) && point != element.segment.from && point != element.segment.to
-	} )
+	elements.iter().filter( | element | element.kind != Kind::Wire ).any( | element | terminals( element ).contains( &point ) )
 }
 
 

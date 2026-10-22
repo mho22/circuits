@@ -75,7 +75,7 @@ describe( 'pin renderer', () =>
 
 		draw( context, { ... input, label : 'foo' }, scale );
 
-		expect( calls ).toContainEqual( [ 'fillText', 'foo', SPACING - 11, SPACING ] );
+		expect( calls ).toContainEqual( [ 'fillText', 'foo', SPACING - 15, SPACING ] );
 		expect( calls ).toContainEqual( [ 'set', 'textAlign', 'right' ] );
 	} );
 } );

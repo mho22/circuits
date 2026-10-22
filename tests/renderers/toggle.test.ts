@@ -12,11 +12,11 @@ describe( 'toggle renderer', () =>
 	const x = SPACING;
 	const y = SPACING;
 
-	function drawn( value : number, potential : number, to = { x : 3, y : 1 }, listening = false ) : unknown[][]
+	function drawn( value : number, potential : number, to = { x : 3, y : 1 }, listening = false, label = '' ) : unknown[][]
 	{
 		const { context, calls } = record();
 
-		draw( context, element( { kind : Kind.Toggle, value, from : { x : 1, y : 1 }, to, potentials : [ 0, potential ], listening } ), { voltage : 5, current : 0 } );
+		draw( context, element( { kind : Kind.Toggle, value, from : { x : 1, y : 1 }, to, potentials : [ 0, potential ], listening, label } ), { voltage : 5, current : 0 } );
 
 		return calls;
 	}
@@ -46,5 +46,13 @@ describe( 'toggle renderer', () =>
 	{
 		expect( drawn( 0, 5, undefined, true ).filter( call => call[ 0 ] === 'arc' ) ).toEqual( [ [ 'arc', x + 5, y, 3, 0, 2 * Math.PI ] ] );
 		expect( drawn( 1, 0, undefined, true ).filter( call => call[ 0 ] === 'arc' ) ).toEqual( [ [ 'arc', x - 5, y, 3, 0, 2 * Math.PI ] ] );
+	} );
+
+	it( 'writes the label of its pin on the side away from the lead', () =>
+	{
+		expect( drawn( 1, 5, undefined, false, 'foo' ) ).toContainEqual( [ 'fillText', 'foo', x - 19, y ] );
+		expect( drawn( 1, 5, undefined, false, 'foo' ) ).toContainEqual( [ 'set', 'textAlign', 'right' ] );
+		expect( drawn( 1, 5, { x : 1, y : 0 }, false, 'foo' ) ).toContainEqual( [ 'fillText', 'foo', x, y + 14 ] );
+		expect( drawn( 1, 5 ).filter( call => call[ 0 ] === 'fillText' ) ).toEqual( [] );
 	} );
 } );

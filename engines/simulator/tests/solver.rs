@@ -28,6 +28,20 @@ fn loop_with( resistors : &[ Element ] ) -> Vec<Element>
 	elements
 }
 
+fn parallel() -> Vec<Element>
+{
+	let mut elements = loop_with( &[
+		element( Kind::Resistor { ohms : 1000.0 }, ( 4, 0 ), ( 4, 4 ) ),
+		element( Kind::Resistor { ohms : 1000.0 }, ( 2, 0 ), ( 2, 4 ) ),
+	] );
+
+	elements[ 1 ] = element( Kind::Wire, ( 0, 0 ), ( 2, 0 ) );
+	elements[ 2 ] = element( Kind::Wire, ( 0, 4 ), ( 2, 4 ) );
+	elements.extend( [ element( Kind::Wire, ( 2, 0 ), ( 4, 0 ) ), element( Kind::Wire, ( 2, 4 ), ( 4, 4 ) ) ] );
+
+	elements
+}
+
 
 #[test]
 fn it_solves_an_empty_circuit()
@@ -67,10 +81,7 @@ fn it_divides_a_voltage_between_resistors_in_series()
 #[test]
 fn it_splits_a_current_between_resistors_in_parallel()
 {
-	let solution = solve( &loop_with( &[
-		element( Kind::Resistor { ohms : 1000.0 }, ( 4, 0 ), ( 4, 4 ) ),
-		element( Kind::Resistor { ohms : 1000.0 }, ( 2, 0 ), ( 2, 4 ) ),
-	] ), &History::default(), STEP ).unwrap();
+	let solution = solve( &parallel(), &History::default(), STEP ).unwrap();
 
 	assert!( near( solution.readings[ 0 ].currents[ 0 ], 0.01 ) );
 	assert!( near( solution.readings[ 4 ].currents[ 0 ], 0.005 ) );
@@ -80,10 +91,7 @@ fn it_splits_a_current_between_resistors_in_parallel()
 #[test]
 fn it_carries_the_current_through_each_piece_of_wire()
 {
-	let solution = solve( &loop_with( &[
-		element( Kind::Resistor { ohms : 1000.0 }, ( 4, 0 ), ( 4, 4 ) ),
-		element( Kind::Resistor { ohms : 1000.0 }, ( 2, 0 ), ( 2, 4 ) ),
-	] ), &History::default(), STEP ).unwrap();
+	let solution = solve( &parallel(), &History::default(), STEP ).unwrap();
 
 	let current = | x : i32, y : i32 | solution.branches[ solution.branch_at( Point { x, y } ).unwrap() ].current.abs();
 
@@ -337,13 +345,14 @@ fn amplifier( kind : Kind, volts : f64, base : f64 ) -> Vec<Element>
 {
 	vec![
 		element( Kind::Battery { volts }, ( 0, 6 ), ( 0, 0 ) ),
-		element( Kind::Wire, ( 0, 0 ), ( 8, 0 ) ),
+		element( Kind::Wire, ( 0, 0 ), ( 4, 0 ) ),
 		element( Kind::Resistor { ohms : base }, ( 4, 0 ), ( 4, 3 ) ),
 		element( Kind::Resistor { ohms : 1000.0 }, ( 7, 0 ), ( 7, 2 ) ),
 		element( kind, ( 4, 3 ), ( 6, 3 ) ),
 		element( Kind::Wire, ( 7, 4 ), ( 7, 6 ) ),
 		element( Kind::Wire, ( 0, 6 ), ( 7, 6 ) ),
 		element( Kind::Ground, ( 0, 6 ), ( 0, 6 ) ),
+		element( Kind::Wire, ( 4, 0 ), ( 7, 0 ) ),
 	]
 }
 
@@ -413,13 +422,14 @@ fn switch( kind : Kind, gate : f64 ) -> Vec<Element>
 {
 	vec![
 		element( Kind::Battery { volts : 5.0 }, ( 0, 6 ), ( 0, 0 ) ),
-		element( Kind::Wire, ( 0, 0 ), ( 8, 0 ) ),
+		element( Kind::Wire, ( 0, 0 ), ( 7, 0 ) ),
 		element( Kind::Battery { volts : gate }, ( 4, 6 ), ( 4, 3 ) ),
 		element( Kind::Resistor { ohms : 1000.0 }, ( 7, 0 ), ( 7, 2 ) ),
 		element( kind, ( 4, 3 ), ( 6, 3 ) ),
 		element( Kind::Wire, ( 7, 4 ), ( 7, 6 ) ),
-		element( Kind::Wire, ( 0, 6 ), ( 7, 6 ) ),
+		element( Kind::Wire, ( 0, 6 ), ( 4, 6 ) ),
 		element( Kind::Ground, ( 0, 6 ), ( 0, 6 ) ),
+		element( Kind::Wire, ( 4, 6 ), ( 7, 6 ) ),
 	]
 }
 
@@ -433,13 +443,15 @@ fn inverter( input : f64 ) -> Vec<Element>
 		element( Kind::Wire, ( 7, 4 ), ( 7, 6 ) ),
 		element( Kind::Nmos, ( 4, 7 ), ( 6, 7 ) ),
 		element( Kind::Wire, ( 7, 8 ), ( 7, 10 ) ),
-		element( Kind::Wire, ( 0, 10 ), ( 12, 10 ) ),
+		element( Kind::Wire, ( 0, 10 ), ( 7, 10 ) ),
 		element( Kind::Ground, ( 0, 10 ), ( 0, 10 ) ),
 		element( Kind::Battery { volts : input }, ( 12, 10 ), ( 12, 1 ) ),
-		element( Kind::Wire, ( 12, 1 ), ( 2, 1 ) ),
+		element( Kind::Wire, ( 12, 1 ), ( 10, 1 ) ),
 		element( Kind::Wire, ( 10, 1 ), ( 10, 3 ) ),
 		element( Kind::Wire, ( 2, 1 ), ( 2, 7 ) ),
 		element( Kind::Wire, ( 2, 7 ), ( 4, 7 ) ),
+		element( Kind::Wire, ( 10, 1 ), ( 2, 1 ) ),
+		element( Kind::Wire, ( 7, 10 ), ( 12, 10 ) ),
 	]
 }
 

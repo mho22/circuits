@@ -35,7 +35,7 @@ fn laddered() -> Circuit
 fn enclosed() -> ( Circuit, u32 )
 {
 	let mut circuit = laddered();
-	let symbol = circuit.enclose( 1, -2, 7, 2, String::new(), &[], &[] ).ok().unwrap();
+	let symbol = circuit.enclose( &[ 1, -2, 7, 2 ], String::new(), &[], &[] ).ok().unwrap();
 
 	( circuit, symbol )
 }
@@ -264,13 +264,14 @@ fn it_lists_a_transistor_with_the_voltage_and_the_current_of_each_terminal()
 	let mut circuit = Circuit::new();
 
 	circuit.add( 2, 5.0, 0, 6, 0, 0 ).ok();
-	circuit.add( 0, 0.0, 0, 0, 8, 0 ).ok();
+	circuit.add( 0, 0.0, 0, 0, 4, 0 ).ok();
 	circuit.add( 1, 200_000.0, 4, 0, 4, 3 ).ok();
 	circuit.add( 1, 1000.0, 7, 0, 7, 2 ).ok();
 	circuit.add( 8, 0.0, 4, 3, 6, 3 ).ok();
 	circuit.add( 0, 0.0, 7, 4, 7, 6 ).ok();
 	circuit.add( 0, 0.0, 0, 6, 7, 6 ).ok();
 	circuit.add( 3, 0.0, 0, 6, 0, 6 ).ok();
+	circuit.add( 0, 0.0, 4, 0, 7, 0 ).ok();
 
 	let elements = circuit.elements();
 	let transistor = &elements[ 52 .. 67 ];
@@ -291,14 +292,15 @@ fn it_lists_a_mosfet_with_its_drain_current()
 	let mut circuit = Circuit::new();
 
 	circuit.add( 2, 5.0, 0, 6, 0, 0 ).ok();
-	circuit.add( 0, 0.0, 0, 0, 8, 0 ).ok();
+	circuit.add( 0, 0.0, 0, 0, 7, 0 ).ok();
 	circuit.add( 2, 2.0, 4, 6, 4, 3 ).ok();
 	circuit.add( 1, 1000.0, 7, 0, 7, 2 ).ok();
 	circuit.add( 10, 0.0, 4, 3, 6, 3 ).ok();
 	circuit.add( 0, 0.0, 7, 4, 7, 6 ).ok();
-	circuit.add( 0, 0.0, 0, 6, 7, 6 ).ok();
+	circuit.add( 0, 0.0, 0, 6, 4, 6 ).ok();
 	circuit.add( 3, 0.0, 0, 6, 0, 6 ).ok();
 	circuit.add( 11, 0.0, 10, 3, 12, 3 ).ok();
+	circuit.add( 0, 0.0, 4, 6, 7, 6 ).ok();
 
 	let elements = circuit.elements();
 	let transistor = &elements[ 52 .. 67 ];
@@ -576,17 +578,27 @@ fn it_opens_a_symbol_with_four_pins_and_its_layer()
 }
 
 #[wasm_bindgen_test]
+fn it_starts_a_default_circuit_on_an_empty_drawing()
+{
+	let circuit = Circuit::default();
+
+	assert!( circuit.elements().is_empty() );
+	assert_eq!( circuit.layer(), 0 );
+}
+
+#[wasm_bindgen_test]
 fn it_encloses_a_named_symbol_with_its_drawing_and_its_layout()
 {
 	let mut circuit = laddered();
 
-	assert!( circuit.enclose( 1, -2, 7, 2, String::new(), &[ 3 ], &[] ).is_err() );
-	assert!( circuit.enclose( 1, -2, 7, 2, String::new(), &[ 2, 2, 0, 0 ], &[] ).is_err() );
-	assert!( circuit.enclose( 1, -2, 7, 2, String::new(), &[ 2, -1, 0, 0 ], &[] ).is_err() );
-	assert!( circuit.enclose( 1, -2, 7, 2, String::new(), &[ 1, 0, 0, 0 ], &[] ).is_err() );
+	assert!( circuit.enclose( &[ 1, -2, 7 ], String::new(), &[], &[] ).is_err() );
+	assert!( circuit.enclose( &[ 1, -2, 7, 2 ], String::new(), &[ 3 ], &[] ).is_err() );
+	assert!( circuit.enclose( &[ 1, -2, 7, 2 ], String::new(), &[ 2, 2, 0, 0 ], &[] ).is_err() );
+	assert!( circuit.enclose( &[ 1, -2, 7, 2 ], String::new(), &[ 2, -1, 0, 0 ], &[] ).is_err() );
+	assert!( circuit.enclose( &[ 1, -2, 7, 2 ], String::new(), &[ 1, 0, 0, 0 ], &[] ).is_err() );
 
 	let drawing = [ 1, 0, 0, 2, 2, -1, 0, 1, 1, 3, -4, -4, 0, 0, -4, 4 ];
-	let symbol = circuit.enclose( 1, -2, 7, 2, "foo".to_string(), &drawing, &[ -3, 0, 3, 0 ] ).ok().unwrap();
+	let symbol = circuit.enclose( &[ 1, -2, 7, 2 ], "foo".to_string(), &drawing, &[ -3, 0, 3, 0 ] ).ok().unwrap();
 
 	assert_eq!( ( circuit.name( 1 ), circuit.drawing( 1 ), circuit.layout( 1 ) ), ( "foo".to_string(), drawing.to_vec(), vec![ -3, 0, 3, 0 ] ) );
 	assert_eq!( ( circuit.name( 0 ), circuit.drawing( 9 ), circuit.layout( 9 ) ), ( String::new(), Vec::new(), Vec::new() ) );
@@ -633,6 +645,20 @@ fn it_sets_the_label_of_a_pin_and_undoes_it()
 	circuit.leave();
 
 	assert!( circuit.set_label( 0, "bar".to_string() ).is_err() );
+}
+
+#[wasm_bindgen_test]
+fn it_captions_a_toggle_with_the_label_of_the_pin_on_its_net()
+{
+	let mut circuit = Circuit::new();
+
+	circuit.add( 16, 0.0, 0, 0, 1, 0 ).ok();
+
+	let output = circuit.add( 15, 0.0, 2, 0, 1, 0 ).unwrap();
+
+	circuit.set_label( output, "foo".to_string() ).ok();
+
+	assert_eq!( circuit.captions(), vec![ "foo".to_string() ] );
 }
 
 #[wasm_bindgen_test]

@@ -121,8 +121,9 @@ impl Circuit
 		self.simulation.open( edits ).map_err( | error | JsError::new( &error.to_string() ) )
 	}
 
-	pub fn enclose( &mut self, low_x : i32, low_y : i32, high_x : i32, high_y : i32, name : String, drawing : &[ i32 ], layout : &[ i32 ] ) -> Result<u32, JsError>
+	pub fn enclose( &mut self, area : &[ i32 ], name : String, drawing : &[ i32 ], layout : &[ i32 ] ) -> Result<u32, JsError>
 	{
+		let &[ low_x, low_y, high_x, high_y ] = area else { return Err( JsError::new( "Unknown area." ) ); };
 		let drawing = shapes( drawing )?;
 
 		self.simulation.enclose( self.current(), Point { x : low_x, y : low_y }, Point { x : high_x, y : high_y }, &name, &drawing, &points( layout ) ).map_err( | error | JsError::new( &error.to_string() ) )
@@ -346,6 +347,11 @@ impl Circuit
 		self.simulation.listening()
 	}
 
+	pub fn captions( &self ) -> Vec<String>
+	{
+		self.simulation.captions()
+	}
+
 	pub fn error( &self ) -> Option<String>
 	{
 		self.simulation.solution().err().map( | error | error.to_string() )
@@ -446,5 +452,13 @@ impl Circuit
 		};
 
 		Ok( kind )
+	}
+}
+
+impl Default for Circuit
+{
+	fn default() -> Circuit
+	{
+		Circuit::new()
 	}
 }
