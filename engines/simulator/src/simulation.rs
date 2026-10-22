@@ -81,7 +81,7 @@ impl Simulation
 	pub fn shift( &mut self, layer : usize, low : Point, high : Point, dx : i32, dy : i32 ) -> Result<u32, Error>
 	{
 		let document = self.document( layer ).ok_or( Error::Layerless )?;
-		let enclosure = enclose( document.elements(), low, high, | element | self.terminals( element ) )?;
+		let enclosure = enclose( document.elements(), low, high, | element | self.points( element ) )?;
 		let ids : Vec<u32> = enclosure.inner.iter().map( | element | element.id ).collect();
 		let others : Vec<Element> = document.elements().iter().filter( | element | ! ids.contains( &element.id ) ).copied().collect();
 		let moved : Vec<Element> = enclosure.inner.iter().map( | element | Element { segment : element.segment.shifted( dx, dy ), ..*element } ).collect();
@@ -367,7 +367,7 @@ impl Simulation
 	fn gather( &self, layer : usize, low : Point, high : Point, name : &str, drawing : &[ Shape ], layout : &[ Point ] ) -> Result<( Enclosure, Vec<Operation>, Document ), Error>
 	{
 		let document = self.document( layer ).ok_or( Error::Layerless )?;
-		let enclosure = enclose( document.elements(), low, high, | element | self.terminals( element ) )?;
+		let enclosure = enclose( document.elements(), low, high, | element | self.points( element ) )?;
 		let parts = enclosure.inner.iter().map( | element | Operation::Add { kind : element.kind, segment : element.segment, mirrored : element.mirrored } );
 		let labels = enclosure.inner.iter().zip( 0 .. ).filter( | ( element, _ ) | ! document.label( element.id ).is_empty() ).map( | ( element, id ) | Operation::Label { id, label : document.label( element.id ).to_string() } );
 		let description = Operation::Describe { name : name.to_string(), drawing : drawing.to_vec(), layout : layout.to_vec() };
@@ -377,6 +377,13 @@ impl Simulation
 		for operation in &inside { inner.apply( operation.clone() )?; }
 
 		Ok( ( enclosure, inside, inner ) )
+	}
+
+	fn points( &self, element : &Element ) -> Vec<Point>
+	{
+		let Segment { from, to } = self.zone( element );
+
+		[ self.terminals( element ), vec![ from, to ] ].concat()
 	}
 
 	fn zone( &self, element : &Element ) -> Segment

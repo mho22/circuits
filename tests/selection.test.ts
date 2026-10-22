@@ -42,6 +42,17 @@ describe( 'selection', () =>
 		expect( inside( elements, area ) ).toEqual( [ 1 ] );
 	} );
 
+	it( 'keeps a symbol by its body and its pins, even when its center is outside the area', () =>
+	{
+		const outline = { low : { x : -6, y : -2 }, high : { x : -2, y : 2 }, pins : [ { x : -6, y : 0 } ] };
+		const elements = [
+			element( { id : 1, kind : Kind.Symbol, from : { x : 7, y : 2 }, to : { x : 7, y : 2 }, outline } ),
+			element( { id : 2, kind : Kind.Symbol, from : { x : 8, y : 2 }, to : { x : 8, y : 2 }, outline } ),
+		];
+
+		expect( inside( elements, area ) ).toEqual( [ 1 ] );
+	} );
+
 	it( 'grows the area to cover points with one step around them and keeps it for points one step inside', () =>
 	{
 		expect( cover( area, [ { x : -2, y : 1 }, { x : 1, y : 6 } ] ) ).toEqual( { low : { x : -3, y : 0 }, high : { x : 4, y : 7 } } );
@@ -81,6 +92,13 @@ describe( 'selection', () =>
 
 		expect( span( [ element( { kind : Kind.Symbol, from : { x : 0, y : 0 }, to : { x : 0, y : 0 }, outline, definition } ) ] ) ).toEqual( { low : { x : -3, y : -4 }, high : { x : 2, y : 3 } } );
 		expect( span( [ element( { kind : Kind.Symbol, from : { x : 0, y : 0 }, to : { x : 0, y : 0 }, rotation : 1, outline, definition } ) ] ) ).toEqual( { low : { x : -3, y : -3 }, high : { x : 4, y : 2 } } );
+	} );
+
+	it( 'spans a symbol without its center when its center is away from its box', () =>
+	{
+		const outline = { low : { x : -6, y : -2 }, high : { x : -2, y : 2 }, pins : [ { x : -6, y : 0 } ] };
+
+		expect( span( [ element( { kind : Kind.Symbol, from : { x : 7, y : 2 }, to : { x : 7, y : 2 }, outline } ) ] ) ).toEqual( { low : { x : 0, y : -1 }, high : { x : 6, y : 5 } } );
 	} );
 
 	it( 'spans the box of a symbol without a drawing with one step around it', () =>

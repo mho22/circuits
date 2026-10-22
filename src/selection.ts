@@ -7,15 +7,21 @@ import { terminals } from './terminals.ts';
 import { turn } from './turn.ts';
 import type { Area } from './types/area.ts';
 import type { Element } from './types/element.ts';
+import type { Outline } from './types/outline.ts';
 import type { Point } from './types/point.ts';
 
 
 const MARGIN = 1;
 
 
+function body( center : Point, outline : Outline, rotation : number ) : Point[]
+{
+	return [ { x : outline.low.x + 1, y : outline.low.y + 1 }, { x : outline.high.x - 1, y : outline.high.y - 1 } ].map( corner => turn( corner, rotation ) ).map( corner => ( { x : center.x + corner.x, y : center.y + corner.y } ) );
+}
+
 function points( element : Element ) : Point[]
 {
-	if( element.kind === Kind.Symbol ) return [ element.from, ... element.outline ? pins( element.from, element.outline, element.rotation ) : [] ];
+	if( element.kind === Kind.Symbol ) return element.outline ? [ ... body( element.from, element.outline, element.rotation ), ... pins( element.from, element.outline, element.rotation ) ] : [ element.from ];
 
 	return [ element.from, element.to, ... terminals( element.kind, element.from, element.to, element.mirrored ) ];
 }

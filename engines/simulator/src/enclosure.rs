@@ -21,13 +21,13 @@ pub struct Enclosure
 }
 
 
-pub fn enclose( elements : &[ Element ], low : Point, high : Point, terminals : impl Fn( &Element ) -> Vec<Point> ) -> Result<Enclosure, Error>
+pub fn enclose( elements : &[ Element ], low : Point, high : Point, points : impl Fn( &Element ) -> Vec<Point> ) -> Result<Enclosure, Error>
 {
 	let mut inner = Vec::new();
 
 	for element in elements
 	{
-		let points = [ terminals( element ), vec![ element.segment.from, element.segment.to ] ].concat();
+		let points = points( element );
 
 		if points.iter().all( | &point | within( point, low, high ) ) { inner.push( *element ); continue; }
 

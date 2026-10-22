@@ -1068,6 +1068,34 @@ fn it_finds_a_symbol_on_its_drawing_but_not_on_a_wire_beside_its_center_away_fro
 }
 
 #[test]
+fn it_shifts_a_symbol_whose_box_and_pins_are_inside_the_selection_but_whose_center_is_not()
+{
+	let mut simulation = Simulation::new( STEP );
+	let layer = define( &mut simulation, &[ ( Kind::Input { high : false }, ( -1, 0 ), ( 0, 0 ) ), ( Kind::Output, ( 5, 0 ), ( 4, 0 ) ) ] );
+
+	simulation.apply( layer as usize, Operation::Describe { name : String::new(), drawing : vec![ Shape::Line { from : Point { x : -32, y : -28 }, to : Point { x : -12, y : -8 } } ], layout : vec![ Point { x : -8, y : -6 }, Point { x : -3, y : -5 } ] } ).unwrap();
+
+	add( &mut simulation, Kind::Symbol { layer, rotation : 0 }, ( 24, 23 ), ( 24, 23 ) );
+
+	simulation.shift( 0, point( 15, 15 ), point( 22, 21 ), 0, -10 ).unwrap();
+
+	assert_eq!( simulation.document( 0 ).unwrap().elements()[ 0 ].segment, segment( ( 24, 13 ), ( 24, 13 ) ) );
+}
+
+#[test]
+fn it_encloses_a_symbol_whose_box_and_pins_are_inside_the_selection_but_whose_center_is_not()
+{
+	let mut simulation = Simulation::new( STEP );
+	let layer = define( &mut simulation, &[ ( Kind::Input { high : false }, ( -1, 0 ), ( 0, 0 ) ), ( Kind::Output, ( 5, 0 ), ( 4, 0 ) ) ] );
+
+	simulation.apply( layer as usize, Operation::Describe { name : String::new(), drawing : vec![ Shape::Line { from : Point { x : -32, y : -28 }, to : Point { x : -12, y : -8 } } ], layout : vec![ Point { x : -8, y : -6 }, Point { x : -3, y : -5 } ] } ).unwrap();
+
+	add( &mut simulation, Kind::Symbol { layer, rotation : 0 }, ( 24, 23 ), ( 24, 23 ) );
+
+	assert!( simulation.enclose( 0, point( 15, 15 ), point( 22, 21 ), "", &[], &[] ).is_ok() );
+}
+
+#[test]
 fn it_erases_several_parts_with_one_undo_step()
 {
 	let mut simulation = series( Kind::Resistor { ohms : 1000.0 } );
