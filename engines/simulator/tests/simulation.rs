@@ -450,6 +450,40 @@ fn it_splits_a_wire_under_a_shifted_part()
 }
 
 #[test]
+fn it_keeps_the_wire_to_a_terminal_that_a_moved_part_now_covers()
+{
+	let mut simulation = Simulation::new( STEP );
+
+	add( &mut simulation, Kind::Supply { volts : 5.0 }, ( 3, 0 ), ( 3, 0 ) );
+
+	let toggle = add( &mut simulation, Kind::Toggle { high : false }, ( 5, 0 ), ( 3, 0 ) );
+
+	simulation.transform( 0, toggle, Kind::Toggle { high : false }, segment( ( 4, 0 ), ( 2, 0 ) ), false ).unwrap();
+
+	let wires : Vec<Segment> = simulation.document( 0 ).unwrap().elements().iter().filter( | element | element.kind == Kind::Wire ).map( | element | element.segment ).collect();
+
+	assert_eq!( wires, vec![ segment( ( 3, 0 ), ( 2, 0 ) ) ] );
+	assert_eq!( simulation.listening(), vec![ toggle ] );
+}
+
+#[test]
+fn it_keeps_the_wire_to_a_terminal_that_a_shifted_part_now_covers()
+{
+	let mut simulation = Simulation::new( STEP );
+
+	add( &mut simulation, Kind::Battery { volts : 5.0 }, ( 3, 0 ), ( 3, 4 ) );
+
+	let toggle = add( &mut simulation, Kind::Toggle { high : false }, ( 5, 0 ), ( 3, 0 ) );
+
+	simulation.shift( 0, point( 3, -1 ), point( 5, 1 ), -1, 0 ).unwrap();
+
+	let wires : Vec<Segment> = simulation.document( 0 ).unwrap().elements().iter().filter( | element | element.kind == Kind::Wire ).map( | element | element.segment ).collect();
+
+	assert_eq!( wires, vec![ segment( ( 3, 0 ), ( 2, 0 ) ) ] );
+	assert_eq!( simulation.listening(), vec![ toggle ] );
+}
+
+#[test]
 fn it_rejects_a_shift_of_an_empty_or_a_cut_selection()
 {
 	let mut simulation = series( Kind::Resistor { ohms : 1000.0 } );

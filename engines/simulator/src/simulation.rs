@@ -63,10 +63,13 @@ impl Simulation
 		let ( old, new ) = ( self.terminals( &before ), self.terminals( &after ) );
 		let mut operations = stretch( &others, &old, &new, self.zone( &after ), | element | self.terminals( element ) );
 		let mut draft = document.clone();
+		let mut laid = Vec::new();
 
-		for operation in &operations { draft.apply( operation.clone() )?; }
+		for operation in &operations { laid.push( draft.apply( operation.clone() )? ); }
 
-		operations.extend( place( draft.elements(), kind, segment ) );
+		let cut : Vec<Element> = draft.elements().iter().filter( | element | ! laid.contains( &element.id ) ).copied().collect();
+
+		operations.extend( place( &cut, kind, segment ) );
 		operations.pop();
 		operations.push( Operation::Move { id, kind, segment, mirrored } );
 
@@ -86,12 +89,13 @@ impl Simulation
 		let new : Vec<Point> = moved.iter().flat_map( | element | self.terminals( element ) ).collect();
 		let mut operations = stretch( &others, &old, &new, Segment { from : low, to : high }.shifted( dx, dy ), | element | self.terminals( element ) );
 		let mut draft = document.clone();
+		let mut laid = Vec::new();
 
-		for operation in &operations { draft.apply( operation.clone() )?; }
+		for operation in &operations { laid.push( draft.apply( operation.clone() )? ); }
 
 		for element in moved.iter().filter( | element | element.kind != Kind::Wire )
 		{
-			let outside : Vec<Element> = draft.elements().iter().filter( | other | ! ids.contains( &other.id ) ).copied().collect();
+			let outside : Vec<Element> = draft.elements().iter().filter( | other | ! ids.contains( &other.id ) && ! laid.contains( &other.id ) ).copied().collect();
 			let mut cuts = place( &outside, element.kind, element.segment );
 
 			cuts.pop();
