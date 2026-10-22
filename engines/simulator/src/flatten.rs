@@ -33,13 +33,13 @@ fn visit( layers : &[ Document ], layer : usize, open : &mut Vec<usize>, done : 
 	Ok( () )
 }
 
-fn listen( elements : &mut [ Element ], devices : &[ Device ], toggles : &[ usize ] )
+fn listen( elements : &mut [ Element ], devices : &[ Device ] )
 {
 	let netlist = Netlist::build( elements );
 	let outputs : Vec<usize> = devices.iter().flat_map( | device | device.outputs.iter().map( | &( _, resistor ) | resistor ) ).collect();
 	let mut driven = vec![ false; netlist.count ];
 
-	for ( index, element ) in elements.iter().enumerate().filter( | ( index, _ ) | ! toggles.contains( index ) )
+	for ( index, element ) in elements.iter().enumerate()
 	{
 		let points = match element.kind
 		{
@@ -52,9 +52,9 @@ fn listen( elements : &mut [ Element ], devices : &[ Device ], toggles : &[ usiz
 		for point in points { driven[ netlist.net( point ) ] = true; }
 	}
 
-	for &toggle in toggles
+	for element in elements.iter_mut().filter( | element | matches!( element.kind, Kind::Toggle { .. } ) )
 	{
-		if driven[ netlist.net( elements[ toggle ].segment.to ) ] { elements[ toggle ].kind = Kind::Output; }
+		if driven[ netlist.net( element.segment.to ) ] { element.kind = Kind::Output; }
 	}
 }
 
@@ -68,7 +68,6 @@ struct Walk<'a>
 	devices : Vec<Device>,
 	depth : usize,
 	scopes : i32,
-	toggles : Vec<usize>,
 }
 
 impl Walk<'_>
@@ -85,16 +84,13 @@ impl Walk<'_>
 			{
 				if element.kind.pin() && path.len() > self.depth { continue; }
 
-				let ( kind, from ) = match element.kind
+				let from = match element.kind
 				{
-					Kind::Toggle { high } => ( Kind::Supply { volts : if high { HIGH } else { 0.0 } }, element.segment.to ),
-					Kind::Clock { .. } => ( element.kind, element.segment.to ),
-					kind => ( kind, element.segment.from ),
+					Kind::Toggle { .. } | Kind::Clock { .. } => element.segment.to,
+					_ => element.segment.from,
 				};
 
-				if let Kind::Toggle { .. } = element.kind { self.toggles.push( self.elements.len() ); }
-
-				self.elements.push( Element { id : self.registry.id( &key ), kind, segment : Segment { from : shift( from, offset ), to : shift( element.segment.to, offset ) }, mirrored : element.mirrored } );
+				self.elements.push( Element { id : self.registry.id( &key ), kind : element.kind, segment : Segment { from : shift( from, offset ), to : shift( element.segment.to, offset ) }, mirrored : element.mirrored } );
 
 				if let Kind::Input { high } = element.kind { self.drive( &key, shift( element.segment.to, offset ), high ); }
 
@@ -179,11 +175,11 @@ pub fn flatten( layers : &[ Document ], registry : &mut Registry, models : &[ Op
 
 	for layer in 0 .. layers.len() { visit( layers, layer, &mut Vec::new(), &mut done )?; }
 
-	let mut walk = Walk { layers, registry, models, elements : Vec::new(), devices : Vec::new(), depth : path.len(), scopes : 0, toggles : Vec::new() };
+	let mut walk = Walk { layers, registry, models, elements : Vec::new(), devices : Vec::new(), depth : path.len(), scopes : 0 };
 
 	walk.expand( layer, path, 0 );
 
-	listen( &mut walk.elements, &walk.devices, &walk.toggles );
+	listen( &mut walk.elements, &walk.devices );
 
 	Ok( ( walk.elements, walk.devices ) )
 }

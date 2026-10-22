@@ -214,6 +214,21 @@ fn it_drives_an_analog_load_with_the_level_of_a_clock()
 }
 
 #[test]
+fn it_drives_an_analog_load_with_the_level_of_a_toggle()
+{
+	let current = | high |
+	{
+		let mut circuit = circuit( &[ ( Kind::Toggle { high }, ( 0, -2 ), ( 0, 0 ) ), ( Kind::Resistor { ohms : 1000.0 }, ( 0, 0 ), ( 0, 4 ) ), ( Kind::Ground, ( 0, 4 ), ( 0, 4 ) ) ] );
+		let resistor = circuit.elements.iter().position( | element | element.kind == Kind::Resistor { ohms : 1000.0 } ).unwrap();
+
+		circuit.settle().unwrap().readings[ resistor ].currents[ 0 ]
+	};
+
+	assert!( current( false ).abs() < 1e-9 );
+	assert!( ( current( true ).abs() - 5e-3 ).abs() < 1e-9 );
+}
+
+#[test]
 fn it_keeps_the_state_of_each_gate_when_it_settles_again()
 {
 	let mut circuit = circuit( &[ symbol( 10 ), symbol( 14 ), ( Kind::Wire, ( 16, 0 ), ( 16, 3 ) ), ( Kind::Wire, ( 16, 3 ), ( 8, 3 ) ), ( Kind::Wire, ( 8, 3 ), ( 8, 0 ) ) ] );

@@ -50,7 +50,7 @@ fn looped( elements : &[ Element ], devices : &[ Device ], drives : &[ usize ] )
 	let mut fixed = vec![ false; netlist.count ];
 	let mut edges = vec![ Vec::new(); netlist.count ];
 
-	for ( _, element ) in elements.iter().enumerate().filter( | ( index, element ) | ! drives.contains( index ) && matches!( element.kind, Kind::Ground | Kind::Supply { .. } | Kind::Battery { .. } ) )
+	for ( _, element ) in elements.iter().enumerate().filter( | ( index, element ) | ! drives.contains( index ) && matches!( element.kind, Kind::Ground | Kind::Supply { .. } | Kind::Battery { .. } | Kind::Toggle { .. } ) )
 	{
 		for point in element.terminals() { fixed[ netlist.net( point ) ] = true; }
 	}

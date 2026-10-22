@@ -27,7 +27,7 @@ pub struct Plan
 	pub nets : Vec<Net>,
 	pub inputs : Vec<Vec<Source>>,
 	pub outputs : Vec<Vec<Option<usize>>>,
-	pub clocks : Vec<( usize, Option<usize> )>,
+	pub generators : Vec<( usize, Option<usize> )>,
 }
 
 impl Plan
@@ -39,7 +39,7 @@ impl Plan
 		let mut drivers : HashMap<usize, usize> = HashMap::new();
 		let mut touched = vec![ false; netlist.count ];
 
-		let generators : Vec<usize> = ( 0 .. elements.len() ).filter( | &index | matches!( elements[ index ].kind, Kind::Clock { .. } ) ).collect();
+		let generators : Vec<usize> = ( 0 .. elements.len() ).filter( | &index | matches!( elements[ index ].kind, Kind::Clock { .. } | Kind::Toggle { .. } ) ).collect();
 
 		for index in devices.iter().flat_map( | device | device.inputs.iter().copied().chain( device.outputs.iter().flat_map( | &( supply, resistor ) | [ supply, resistor ] ) ) ) { joined[ index ] = true; }
 
@@ -78,7 +78,7 @@ impl Plan
 		};
 
 		let outputs : Vec<Vec<Option<usize>>> = devices.iter().map( | device | device.outputs.iter().map( | &( _, resistor ) | number( netlist.net( elements[ resistor ].segment.to ) ) ).collect() ).collect();
-		let clocks : Vec<( usize, Option<usize> )> = generators.iter().map( | &index | ( index, number( netlist.net( elements[ index ].segment.to ) ) ) ).collect();
+		let generators : Vec<( usize, Option<usize> )> = generators.iter().map( | &index | ( index, number( netlist.net( elements[ index ].segment.to ) ) ) ).collect();
 		let inputs : Vec<Vec<Source>> = devices.iter().map( | device | device.inputs.iter().map( | &input | number( netlist.net( elements[ input ].segment.to ) ).map_or( Source::Analog( input ), Source::Net ) ).collect() ).collect();
 		let inert : Vec<( usize, Option<usize> )> = elements.iter().enumerate().filter( | ( _, element ) | matches!( element.kind, Kind::Wire | Kind::Output ) ).map( | ( index, element ) | ( index, number( netlist.net( element.terminals()[ 0 ] ) ) ) ).collect();
 		let pieces : Vec<( Segment, Option<usize> )> = netlist.edges.iter().map( | &( a, b ) | ( Segment { from : netlist.points[ a ], to : netlist.points[ b ] }, number( netlist.nets[ a ] ) ) ).collect();
@@ -98,7 +98,7 @@ impl Plan
 			}
 		}
 
-		for &( index, net ) in &clocks
+		for &( index, net ) in &generators
 		{
 			let Some( net ) = net else { continue; };
 
@@ -133,6 +133,6 @@ impl Plan
 
 		let analog = ( 0 .. elements.len() ).filter( | &index | ! digital[ index ] ).collect();
 
-		Plan { analog, nets, inputs, outputs, clocks }
+		Plan { analog, nets, inputs, outputs, generators }
 	}
 }

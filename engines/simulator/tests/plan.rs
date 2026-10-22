@@ -80,12 +80,24 @@ fn it_keeps_a_net_that_a_clock_drives_alone_out_of_the_analog_circuit()
 	let driven = plan( layer( &[ ( Kind::Clock { hertz : 1e6 }, ( 4, 0 ), ( 8, 0 ) ), symbol( 10 ) ] ) );
 	let loaded = plan( layer( &[ ( Kind::Clock { hertz : 1e6 }, ( 4, 0 ), ( 8, 0 ) ), ( Kind::Resistor { ohms : 1000.0 }, ( 8, 0 ), ( 8, 4 ) ) ] ) );
 
-	assert_eq!( driven.clocks.len(), 1 );
-	assert_eq!( driven.inputs[ 0 ], vec![ Source::Net( driven.clocks[ 0 ].1.unwrap() ) ] );
-	assert_eq!( driven.nets[ driven.clocks[ 0 ].1.unwrap() ].readers, vec![ 0 ] );
-	assert!( ! driven.analog.contains( &driven.clocks[ 0 ].0 ) );
-	assert_eq!( loaded.clocks[ 0 ].1, None );
-	assert!( loaded.analog.contains( &loaded.clocks[ 0 ].0 ) );
+	assert_eq!( driven.generators.len(), 1 );
+	assert_eq!( driven.inputs[ 0 ], vec![ Source::Net( driven.generators[ 0 ].1.unwrap() ) ] );
+	assert_eq!( driven.nets[ driven.generators[ 0 ].1.unwrap() ].readers, vec![ 0 ] );
+	assert!( ! driven.analog.contains( &driven.generators[ 0 ].0 ) );
+	assert_eq!( loaded.generators[ 0 ].1, None );
+	assert!( loaded.analog.contains( &loaded.generators[ 0 ].0 ) );
+}
+
+#[test]
+fn it_keeps_a_net_that_a_toggle_drives_alone_out_of_the_analog_circuit()
+{
+	let driven = plan( layer( &[ ( Kind::Toggle { high : true }, ( 4, 0 ), ( 8, 0 ) ), symbol( 10 ) ] ) );
+	let loaded = plan( layer( &[ ( Kind::Toggle { high : true }, ( 4, 0 ), ( 8, 0 ) ), ( Kind::Resistor { ohms : 1000.0 }, ( 8, 0 ), ( 8, 4 ) ) ] ) );
+
+	assert_eq!( driven.inputs[ 0 ], vec![ Source::Net( driven.generators[ 0 ].1.unwrap() ) ] );
+	assert!( ! driven.analog.contains( &driven.generators[ 0 ].0 ) );
+	assert_eq!( loaded.generators[ 0 ].1, None );
+	assert!( loaded.analog.contains( &loaded.generators[ 0 ].0 ) );
 }
 
 #[test]

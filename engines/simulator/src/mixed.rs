@@ -16,6 +16,16 @@ fn level( count : u64 ) -> f64
 	if count % 2 == 1 { HIGH } else { 0.0 }
 }
 
+fn emit( kind : Kind, time : f64 ) -> f64
+{
+	match kind
+	{
+		Kind::Clock { hertz } => level( count( hertz, time ) ),
+		Kind::Toggle { high : true } => HIGH,
+		_ => 0.0,
+	}
+}
+
 
 struct Run<'a>
 {
@@ -41,7 +51,7 @@ impl<'a> Run<'a>
 		for ( position, &index ) in plan.analog.iter().enumerate() { positions[ index ] = Some( position ); }
 
 		let analog = plan.analog.iter().map( | &index | elements[ index ] ).collect();
-		let budget = EVENTS * ( devices.len() + plan.clocks.len() + 1 );
+		let budget = EVENTS * ( devices.len() + plan.generators.len() + 1 );
 
 		Ok( Run { elements, devices, plan, tables, positions, analog, logic, instant, events : 0, budget } )
 	}
@@ -82,12 +92,15 @@ impl<'a> Run<'a>
 			}
 		}
 
-		for ( clock, &( index, net ) ) in self.plan.clocks.iter().enumerate()
+		for ( clock, &( index, net ) ) in self.plan.generators.iter().enumerate()
 		{
-			let ( Kind::Clock { hertz }, Some( net ) ) = ( self.elements[ index ].kind, net ) else { continue; };
+			let Some( net ) = net else { continue; };
+
+			self.logic.levels[ net ] = emit( self.elements[ index ].kind, time );
+
+			let Kind::Clock { hertz } = self.elements[ index ].kind else { continue; };
 			let edges = count( hertz, time );
 
-			self.logic.levels[ net ] = level( edges );
 			self.logic.schedule( ( edges + 1 ) as f64 / ( 2.0 * hertz ), Action::Edge { clock, count : edges + 1 } );
 		}
 
@@ -182,7 +195,7 @@ impl<'a> Run<'a>
 
 	fn tick( &mut self, clock : usize, count : u64, time : f64 )
 	{
-		let ( index, net ) = self.plan.clocks[ clock ];
+		let ( index, net ) = self.plan.generators[ clock ];
 		let ( Kind::Clock { hertz }, Some( net ) ) = ( self.elements[ index ].kind, net ) else { return; };
 
 		self.set( net, level( count ), time );
@@ -206,11 +219,11 @@ impl<'a> Run<'a>
 			}
 		}
 
-		for &( index, net ) in &plan.clocks
+		for &( index, net ) in &plan.generators
 		{
-			let ( Kind::Clock { hertz }, None, Some( position ) ) = ( self.elements[ index ].kind, net, self.positions[ index ] ) else { continue; };
+			let ( None, Some( position ) ) = ( net, self.positions[ index ] ) else { continue; };
 
-			self.analog[ position ].kind = Kind::Supply { volts : level( count( hertz, time ) ) };
+			self.analog[ position ].kind = Kind::Supply { volts : emit( self.elements[ index ].kind, time ) };
 		}
 
 		let solution = solve( &self.analog, history, step )?;
@@ -246,7 +259,7 @@ impl<'a> Run<'a>
 				readings[ index ] = Some( match self.elements[ index ].kind
 				{
 					Kind::Wire | Kind::Output => Reading { potentials : vec![ volts; 2 ], currents : vec![ f64::NAN; 2 ] },
-					Kind::Supply { .. } | Kind::Clock { .. } => Reading { potentials : vec![ 0.0, volts ], currents : vec![ 0.0; 2 ] },
+					Kind::Supply { .. } | Kind::Clock { .. } | Kind::Toggle { .. } => Reading { potentials : vec![ 0.0, volts ], currents : vec![ 0.0; 2 ] },
 					_ => Reading { potentials : vec![ volts; 2 ], currents : vec![ 0.0; 2 ] },
 				} );
 			}

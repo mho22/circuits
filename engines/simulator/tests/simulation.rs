@@ -732,6 +732,24 @@ fn it_names_the_engine_that_runs_the_view()
 }
 
 #[test]
+fn it_runs_a_gate_that_a_toggle_drives_as_digital()
+{
+	let mut simulation = Simulation::new( STEP );
+
+	inverter( &mut simulation );
+
+	let toggle = add( &mut simulation, Kind::Toggle { high : false }, ( 4, 10 ), ( 8, 10 ) );
+	let output = | simulation : &Simulation | simulation.solution().unwrap().readings[ 0 ].potentials[ 1 ];
+
+	assert_eq!( simulation.mode(), Mode::Digital );
+	assert!( near( output( &simulation ), 5.0, 1e-3 ) );
+
+	simulation.apply( 0, Operation::SetHigh { id : toggle, high : true } ).unwrap();
+
+	assert!( near( output( &simulation ), 0.0, 1e-3 ) );
+}
+
+#[test]
 fn it_inverts_a_level_with_a_cmos_symbol_fed_by_its_own_vcc()
 {
 	let mut simulation = Simulation::new( STEP );

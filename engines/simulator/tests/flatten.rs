@@ -141,12 +141,13 @@ fn it_drives_an_input_of_the_drawing_with_its_level_at_the_end_of_its_lead()
 }
 
 #[test]
-fn it_turns_a_toggle_into_a_vcc_at_its_level_with_its_id_at_the_end_of_its_lead()
+fn it_keeps_a_toggle_at_its_level_with_its_id_at_the_end_of_its_lead()
 {
 	let drawing = layer( &[ ( Kind::Toggle { high : true }, ( 1, 0 ), ( 2, 0 ) ), ( Kind::Toggle { high : false }, ( 3, 0 ), ( 3, 2 ) ) ] );
 	let elements = flatten( &[ drawing ], &mut Registry::default(), &[], 0, &[] ).unwrap().0;
+	let toggle = | id, high, at | Element { id, kind : Kind::Toggle { high }, segment : segment( at, at ), mirrored : false };
 
-	assert_eq!( elements, vec![ supply( 0, 5.0, ( 2, 0 ) ), supply( 1, 0.0, ( 3, 2 ) ) ] );
+	assert_eq!( elements, vec![ toggle( 0, true, ( 2, 0 ) ), toggle( 1, false, ( 3, 2 ) ) ] );
 }
 
 #[test]
@@ -154,7 +155,7 @@ fn it_turns_a_toggle_into_a_probe_on_a_net_that_a_source_a_channel_or_a_gate_dri
 {
 	let kinds = | parts : &[ ( Kind, ( i32, i32 ), ( i32, i32 ) ) ], models : &[ Option<Model> ] | flatten( &[ layer( parts ), input( true ) ], &mut Registry::default(), models, 0, &[] ).unwrap().0.iter().map( | element | element.kind ).collect::<Vec<Kind>>();
 	let model = Model { rows : vec![ vec![ Drive { volts : 5.0, ohms : 10.0 } ]; 2 ], next : vec![ 0; 2 ], delay : DELAY };
-	let high = Kind::Supply { volts : 5.0 };
+	let high = Kind::Toggle { high : true };
 
 	assert_eq!( kinds( &[ ( Kind::Toggle { high : true }, ( 1, 0 ), ( 2, 0 ) ), ( Kind::Wire, ( 2, 0 ), ( 6, 0 ) ), ( Kind::Supply { volts : 5.0 }, ( 6, 0 ), ( 6, 0 ) ) ], &[] )[ 0 ], Kind::Output );
 	assert_eq!( kinds( &[ ( Kind::Toggle { high : true }, ( 1, 0 ), ( 2, 0 ) ), ( Kind::Led { color : 0 }, ( 2, 0 ), ( 2, 4 ) ), ( Kind::Ground, ( 2, 4 ), ( 2, 4 ) ) ], &[] )[ 0 ], high );
