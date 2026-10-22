@@ -10,6 +10,7 @@ import { decode as decodeLayout } from './decoders/layout.ts';
 import { decode as decodeOutline } from './decoders/outline.ts';
 import { Drift } from './drift.ts';
 import { download } from './download.ts';
+import { edit as entitle } from './editors/text.ts';
 import { edit } from './editors/value.ts';
 import { encode as encodeDrawing } from './encoders/drawing.ts';
 import { encode } from './encoders/file.ts';
@@ -193,9 +194,11 @@ function attempt( change : () => void ) : void
 	catch( error ) { notice = ( error as Error ).message; }
 }
 
-function act( target : Element, anchor : Point, action : Action ) : void
+function act( target : Element, anchor : Point, position : Point, action : Action ) : void
 {
 	if( action === 'move' ) { mover.start( [ target ], anchor, null ); return; }
+
+	if( action === 'label' ) { entitle( document.body, position, target.label ?? '', '', text => attempt( () => circuit.setLabel( target.id, text.trim() ) ) ); return; }
 
 	if( action === 'copy' ) { copied = circuit.copy( new Uint32Array( [ target.id ] ) ); return; }
 
@@ -372,7 +375,9 @@ function menu( event : MouseEvent ) : void
 
 	if( target.kind === Kind.Wire ) { circuit.delete( target.id ); return; }
 
-	open( document.body, { x : event.clientX, y : event.clientY }, target, action => act( target, point, action ) );
+	const position = { x : event.clientX, y : event.clientY };
+
+	open( document.body, position, target, action => act( target, point, position, action ) );
 }
 
 function paste( point : Point ) : void

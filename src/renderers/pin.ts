@@ -1,4 +1,5 @@
 import { bit } from '../bit.ts';
+import { OFFSET } from '../caption.ts';
 import { color } from '../colors/voltage.ts';
 import { Kind } from '../enums/kind.ts';
 import { toScreen } from '../grid.ts';
@@ -8,7 +9,6 @@ import type { Scale } from '../types/scale.ts';
 
 const HALF = 7;
 const RADIUS = 4;
-const GAP = 4;
 const TEXT = '#8a8a8a';
 const PRESSED = '#000000';
 
@@ -52,5 +52,5 @@ export function draw( context : CanvasRenderingContext2D, element : Element, sca
 	context.fillStyle = TEXT;
 	context.textAlign = dx > 0 ? 'right' : dx < 0 ? 'left' : 'center';
 	context.textBaseline = dy > 0 ? 'bottom' : dy < 0 ? 'top' : 'middle';
-	context.fillText( element.label, x - dx * ( HALF + GAP ), y - dy * ( HALF + GAP ) );
+	context.fillText( element.label, x - dx * OFFSET, y - dy * OFFSET );
 }

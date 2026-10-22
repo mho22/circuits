@@ -57,6 +57,14 @@ describe( 'selection', () =>
 		expect( span( [] ) ).toBeNull();
 	} );
 
+	it( 'spans the label of an input or an output with one step around it', () =>
+	{
+		const input = element( { kind : Kind.Input, from : { x : 10, y : 10 }, to : { x : 11, y : 10 }, label : 'foo' } );
+
+		expect( span( [ input ] ) ).toEqual( { low : { x : 7, y : 8 }, high : { x : 12, y : 12 } } );
+		expect( span( [ { ... input, label : '' } ] ) ).toEqual( { low : { x : 9, y : 9 }, high : { x : 12, y : 11 } } );
+	} );
+
 	it( 'spans the bars of a ground below its point and of a vcc above its point', () =>
 	{
 		const ground = element( { kind : Kind.Ground, from : { x : 0, y : 0 }, to : { x : 0, y : 0 } } );

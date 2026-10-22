@@ -1,5 +1,6 @@
 import { bounds } from './bounds.ts';
-import { Kind } from './enums/kind.ts';
+import { caption } from './caption.ts';
+import { Kind, PINS } from './enums/kind.ts';
 import { FINE } from './grid.ts';
 import { pins } from './pins.ts';
 import { terminals } from './terminals.ts';
@@ -35,6 +36,8 @@ function reach( element : Element ) : Point[]
 	if( element.kind === Kind.Ground ) return [ element.from, { x, y : y + 1 } ];
 
 	if( element.kind === Kind.Supply ) return [ element.from, { x, y : y - 1 } ];
+
+	if( PINS.includes( element.kind ) ) return [ ... points( element ), ... caption( element ) ];
 
 	if( element.kind === Kind.Symbol ) return [ ... points( element ), ... corners( element ).map( corner => ( { x : x + corner.x, y : y + corner.y } ) ) ];
 

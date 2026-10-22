@@ -614,6 +614,28 @@ fn it_opens_the_names_the_drawings_the_layouts_and_the_labels_of_the_layers()
 }
 
 #[wasm_bindgen_test]
+fn it_sets_the_label_of_a_pin_and_undoes_it()
+{
+	let mut circuit = Circuit::new();
+	let data = [ 0.0, 14.0, 1.0, 0.0, 5.0, 5.0, 5.0, 5.0, 1.0, 13.0, 1.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 15.0, 0.0, 0.0, 5.0, 0.0, 4.0, 0.0 ];
+
+	circuit.open( &data, Vec::new(), &[ 1 ], vec![ String::new() ], &[ 4, 1, 0, 0, 2 ], &[ 2, -3, 0, 3, 0 ] ).ok();
+	circuit.enter( 0 ).ok();
+
+	assert_eq!( circuit.set_label( 1, "foo".to_string() ).ok(), Some( 1 ) );
+	assert_eq!( circuit.labels( 1 ), vec![ String::new(), "foo".to_string() ] );
+	assert!( circuit.set_label( 9, "bar".to_string() ).is_err() );
+
+	circuit.undo().ok();
+
+	assert_eq!( circuit.labels( 1 ), vec![ String::new(), String::new() ] );
+
+	circuit.leave();
+
+	assert!( circuit.set_label( 0, "bar".to_string() ).is_err() );
+}
+
+#[wasm_bindgen_test]
 fn it_opens_sets_and_lists_the_level_of_a_free_input()
 {
 	let mut circuit = Circuit::new();

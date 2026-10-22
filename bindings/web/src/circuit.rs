@@ -266,6 +266,12 @@ impl Circuit
 		self.apply( Operation::SetHigh { id, high } )
 	}
 
+	#[wasm_bindgen( js_name = setLabel )]
+	pub fn set_label( &mut self, id : u32, label : String ) -> Result<u32, JsError>
+	{
+		self.apply( Operation::Label { id, label } )
+	}
+
 	pub fn translate( &mut self, id : u32, dx : i32, dy : i32 ) -> Result<u32, JsError>
 	{
 		let element = self.element( id )?;
