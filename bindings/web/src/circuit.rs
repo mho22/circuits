@@ -50,6 +50,7 @@ fn flat( shapes : &[ Shape ] ) -> Vec<i32>
 pub struct Circuit
 {
 	simulation : Simulation,
+	clipboard : Vec<( Element, String )>,
 }
 
 #[wasm_bindgen]
@@ -58,7 +59,7 @@ impl Circuit
 	#[wasm_bindgen( constructor )]
 	pub fn new() -> Circuit
 	{
-		Circuit { simulation : Simulation::new( STEP ) }
+		Circuit { simulation : Simulation::new( STEP ), clipboard : Vec::new() }
 	}
 
 	pub fn snap( from_x : i32, from_y : i32, cursor_x : i32, cursor_y : i32 ) -> Vec<i32>
@@ -218,6 +219,23 @@ impl Circuit
 		let Some( document ) = self.simulation.document( layer as usize ) else { return vec![]; };
 
 		Circuit::sides( &Outline::of( document ) )
+	}
+
+	pub fn copy( &mut self, ids : &[ u32 ] ) -> usize
+	{
+		let document = self.document();
+
+		self.clipboard = document.elements().iter().filter( | element | ids.contains( &element.id ) ).map( | element | ( *element, document.label( element.id ).to_string() ) ).collect();
+
+		self.clipboard.len()
+	}
+
+	pub fn paste( &mut self, x : i32, y : i32 ) -> Result<u32, JsError>
+	{
+		let low_x = self.clipboard.iter().map( | ( element, _ ) | element.segment.from.x.min( element.segment.to.x ) ).min().unwrap_or( x );
+		let low_y = self.clipboard.iter().map( | ( element, _ ) | element.segment.from.y.min( element.segment.to.y ) ).min().unwrap_or( y );
+
+		self.simulation.paste( self.current(), &self.clipboard, x - low_x, y - low_y ).map_err( | error | JsError::new( &error.to_string() ) )
 	}
 
 	pub fn delete( &mut self, id : u32 ) -> Result<u32, JsError>

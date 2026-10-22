@@ -8,12 +8,12 @@ describe( 'selection menu', () =>
 {
 	beforeEach( () => document.body.replaceChildren() );
 
-	it( 'opens at a position with a move, a make symbol and a delete', () =>
+	it( 'opens at a position with a move, a make symbol, a copy and a delete', () =>
 	{
 		const menu = open( document.body, { x : 10, y : 20 }, () => {} );
 
 		expect( [ menu.style.left, menu.style.top ] ).toEqual( [ '10px', '20px' ] );
-		expect( Array.from( menu.children ).map( item => item.textContent ) ).toEqual( [ 'Move', 'Make symbol', 'Delete' ] );
+		expect( Array.from( menu.children ).map( item => item.textContent ) ).toEqual( [ 'Move', 'Make symbol', 'Copy', 'Delete' ] );
 	} );
 
 	it( 'runs the picked choice and closes', () =>

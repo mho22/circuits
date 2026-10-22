@@ -37,9 +37,17 @@ describe( 'keyboard', () =>
 		expect( press( 'o', { metaKey : true } ) ).toBe( 'open' );
 	} );
 
+	it( 'copies and pastes with control or command and c or v', () =>
+	{
+		expect( press( 'c', { metaKey : true } ) ).toBe( 'copy' );
+		expect( press( 'C', { ctrlKey : true } ) ).toBe( 'copy' );
+		expect( press( 'v', { metaKey : true } ) ).toBe( 'paste' );
+		expect( press( 'v', { ctrlKey : true } ) ).toBe( 'paste' );
+	} );
+
 	it( 'leaves other shortcuts of the browser alone', () =>
 	{
-		expect( press( 'c', { metaKey : true } ) ).toBeUndefined();
+		expect( press( 'a', { metaKey : true } ) ).toBeUndefined();
 		expect( press( 'r', { ctrlKey : true } ) ).toBeUndefined();
 	} );
 

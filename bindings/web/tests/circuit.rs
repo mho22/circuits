@@ -113,6 +113,23 @@ fn it_erases_several_parts_and_brings_them_back_with_one_undo()
 }
 
 #[wasm_bindgen_test]
+fn it_pastes_the_copied_parts_with_their_corner_on_a_point_and_takes_them_back_with_one_undo()
+{
+	let mut circuit = powered();
+
+	assert_eq!( circuit.copy( &[ 1, 2, 9 ] ), 2 );
+	assert!( circuit.paste( 10, 10 ).is_ok() );
+	assert_eq!( circuit.elements().len(), 7 * 13 );
+	assert_eq!( circuit.elements_at( 12, 12 ).len(), 1 );
+
+	circuit.undo().ok();
+
+	assert_eq!( circuit.elements().len(), 5 * 13 );
+	assert_eq!( circuit.copy( &[] ), 0 );
+	assert!( circuit.paste( 10, 10 ).is_err() );
+}
+
+#[wasm_bindgen_test]
 fn it_rejects_an_invalid_part()
 {
 	let mut circuit = Circuit::new();

@@ -108,6 +108,40 @@ impl Simulation
 		self.commit( &edits )
 	}
 
+	pub fn paste( &mut self, layer : usize, parts : &[ ( Element, String ) ], dx : i32, dy : i32 ) -> Result<u32, Error>
+	{
+		if parts.is_empty() { return Err( Error::Unselected ); }
+
+		let mut draft = self.document( layer ).ok_or( Error::Layerless )?.clone();
+		let mut operations = Vec::new();
+
+		for ( element, label ) in parts
+		{
+			let segment = element.segment.shifted( dx, dy );
+			let mut steps = place( draft.elements(), element.kind, segment );
+
+			steps.pop();
+			steps.push( Operation::Add { kind : element.kind, segment, mirrored : element.mirrored } );
+
+			let mut id = 0;
+
+			for step in &steps { id = draft.apply( step.clone() )?; }
+
+			operations.extend( steps );
+
+			if label.is_empty() { continue; }
+
+			let naming = Operation::Label { id, label : label.clone() };
+
+			draft.apply( naming.clone() )?;
+			operations.push( naming );
+		}
+
+		let edits : Vec<( usize, Operation )> = operations.into_iter().map( | operation | ( layer, operation ) ).collect();
+
+		self.commit( &edits )
+	}
+
 	pub fn enclose( &mut self, layer : usize, low : Point, high : Point, name : &str, drawing : &[ Shape ], layout : &[ Point ] ) -> Result<u32, Error>
 	{
 		let ( enclosure, inside, inner ) = self.gather( layer, low, high, name, drawing, layout )?;

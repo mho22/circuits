@@ -1,4 +1,4 @@
-use simulator::{ Error, Kind, Mode, Operation, Outline, Point, Segment, Shape, Simulation, DELAY };
+use simulator::{ Element, Error, Kind, Mode, Operation, Outline, Point, Segment, Shape, Simulation, DELAY };
 
 
 const STEP : f64 = 1e-6;
@@ -215,6 +215,38 @@ fn it_undoes_a_split_in_one_step()
 	simulation.redo().unwrap();
 
 	assert_eq!( simulation.document( 0 ).unwrap().elements().len(), 7 );
+}
+
+#[test]
+fn it_pastes_parts_shifted_with_their_mirror_and_their_label_and_cuts_the_wire_under_them_in_one_step()
+{
+	let mut simulation = Simulation::new( STEP );
+
+	add( &mut simulation, Kind::Wire, ( 10, 0 ), ( 10, 8 ) );
+
+	let before = simulation.document( 0 ).unwrap().elements().to_vec();
+	let element = | id, kind, from, to, mirrored | Element { id, kind, segment : segment( from, to ), mirrored };
+	let parts = [
+		( element( 7, Kind::Nmos, ( 0, 0 ), ( 2, 0 ), true ), String::new() ),
+		( element( 8, Kind::Input { high : false }, ( 0, 4 ), ( 1, 4 ), false ), "foo".to_string() ),
+		( element( 9, Kind::Resistor { ohms : 1000.0 }, ( 0, 2 ), ( 0, 6 ), false ), String::new() ),
+	];
+
+	simulation.paste( 0, &parts, 10, 0 ).unwrap();
+
+	let document = simulation.document( 0 ).unwrap();
+	let kinds : Vec<( Kind, Segment, bool )> = document.elements().iter().map( | element | ( element.kind, element.segment, element.mirrored ) ).collect();
+	let input = document.elements().iter().find( | element | element.kind.pin() ).unwrap();
+
+	assert!( kinds.contains( &( Kind::Nmos, segment( ( 10, 0 ), ( 12, 0 ) ), true ) ) );
+	assert!( kinds.contains( &( Kind::Resistor { ohms : 1000.0 }, segment( ( 10, 2 ), ( 10, 6 ) ), false ) ) );
+	assert!( kinds.contains( &( Kind::Wire, segment( ( 10, 0 ), ( 10, 2 ) ), false ) ) && kinds.contains( &( Kind::Wire, segment( ( 10, 6 ), ( 10, 8 ) ), false ) ) );
+	assert_eq!( ( input.segment, document.label( input.id ) ), ( segment( ( 10, 4 ), ( 11, 4 ) ), "foo" ) );
+
+	simulation.undo().unwrap();
+
+	assert_eq!( simulation.document( 0 ).unwrap().elements(), before.as_slice() );
+	assert_eq!( simulation.paste( 0, &[], 0, 0 ), Err( Error::Unselected ) );
 }
 
 #[test]

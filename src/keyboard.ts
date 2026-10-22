@@ -20,6 +20,10 @@ export function read( event : Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'metaKey' 
 
 	if( modified && key === 'y' ) return 'redo';
 
+	if( modified && key === 'c' ) return 'copy';
+
+	if( modified && key === 'v' ) return 'paste';
+
 	if( modified && key === 's' ) return 'save';
 
 	if( modified && key === 'o' ) return 'open';

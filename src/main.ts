@@ -21,6 +21,7 @@ import { read, shape } from './keyboard.ts';
 import { leads } from './leads.ts';
 import { Library } from './library.ts';
 import { Maker } from './maker.ts';
+import { open as fill } from './menus/blank.ts';
 import { open } from './menus/part.ts';
 import { open as offer } from './menus/selection.ts';
 import { open as amend } from './menus/sketch.ts';
@@ -90,6 +91,7 @@ let previous : number | null = null;
 let spaced = false;
 let pressed : Point | null = null;
 let marked : { area : Area, menu : HTMLElement } | null = null;
+let copied = 0;
 let sketching = false;
 let origin : Point = { x : 0, y : 0 };
 let pins : Pin[] = [];
@@ -192,6 +194,8 @@ function act( target : Element, anchor : Point, action : Action ) : void
 {
 	if( action === 'move' ) { mover.start( [ target ], anchor, null ); return; }
 
+	if( action === 'copy' ) { copied = circuit.copy( new Uint32Array( [ target.id ] ) ); return; }
+
 	attempt( () =>
 	{
 		if( action === 'rotate' ) circuit.rotate( target.id );
@@ -212,6 +216,8 @@ function settle( area : Area, anchor : Point, choice : Choice ) : void
 	const ids = inside( elements, area );
 
 	if( choice === 'move' ) { mover.start( elements.filter( item => ids.includes( item.id ) ), anchor, area ); return; }
+
+	if( choice === 'copy' ) { copied = circuit.copy( new Uint32Array( ids ) ); return; }
 
 	attempt( () =>
 	{
@@ -357,11 +363,25 @@ function menu( event : MouseEvent ) : void
 	const targets = Array.from( circuit.elementsAt( point.x, point.y ) ).map( id => elements.find( item => item.id === id )! );
 	const target = targets.find( item => item.kind !== Kind.Wire ) ?? targets[ 0 ];
 
+	if( ! target && copied > 0 ) { fill( document.body, { x : event.clientX, y : event.clientY }, () => paste( point ) ); return; }
+
 	if( ! target ) return;
 
 	if( target.kind === Kind.Wire ) { circuit.delete( target.id ); return; }
 
 	open( document.body, { x : event.clientX, y : event.clientY }, target, action => act( target, point, action ) );
+}
+
+function paste( point : Point ) : void
+{
+	attempt( () => circuit.paste( point.x, point.y ) );
+}
+
+function copy() : void
+{
+	const ids = marked?.menu.isConnected ? inside( parts(), marked.area ) : hover ? Array.from( circuit.elementsAt( hover.x, hover.y ) ).slice( 0, 1 ) : [];
+
+	if( ids.length > 0 ) copied = circuit.copy( new Uint32Array( ids ) );
 }
 
 function report( text : string, error : boolean ) : void
@@ -657,6 +677,10 @@ addEventListener( 'keydown', ( event : KeyboardEvent ) =>
 	if( command === 'undo' ) { circuit.undo(); return; }
 
 	if( command === 'redo' ) { circuit.redo(); return; }
+
+	if( command === 'copy' ) { copy(); return; }
+
+	if( command === 'paste' ) { if( hover && ! maker.area ) paste( hover ); return; }
 
 	if( command === 'save' ) { save(); return; }
 

@@ -6,18 +6,18 @@ import type { Point } from '../types/point.ts';
 import { open as context } from './context.ts';
 
 
-const LABELS : Record<Exclude<Action, 'color'>, string> = { move : 'Move', rotate : 'Rotate', horizontal : 'Mirror horizontally', vertical : 'Mirror vertically', delete : 'Delete' };
+const LABELS : Record<Exclude<Action, 'color'>, string> = { move : 'Move', rotate : 'Rotate', horizontal : 'Mirror horizontally', vertical : 'Mirror vertically', copy : 'Copy', delete : 'Delete' };
 
 
 function actions( kind : Kind ) : Action[]
 {
-	if( kind === Kind.Symbol ) return [ 'move', 'rotate', 'delete' ];
+	if( kind === Kind.Symbol ) return [ 'move', 'rotate', 'copy', 'delete' ];
 
-	if( POINTS.includes( kind ) ) return [ 'move', 'delete' ];
+	if( POINTS.includes( kind ) ) return [ 'move', 'copy', 'delete' ];
 
-	if( kind === Kind.Led ) return [ 'move', 'rotate', 'horizontal', 'vertical', 'color', 'delete' ];
+	if( kind === Kind.Led ) return [ 'move', 'rotate', 'horizontal', 'vertical', 'color', 'copy', 'delete' ];
 
-	return [ 'move', 'rotate', 'horizontal', 'vertical', 'delete' ];
+	return [ 'move', 'rotate', 'horizontal', 'vertical', 'copy', 'delete' ];
 }
 
 

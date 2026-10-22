@@ -1,1 +1,1 @@
-export type Choice = 'move' | 'symbol' | 'delete';
+export type Choice = 'move' | 'symbol' | 'copy' | 'delete';
