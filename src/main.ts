@@ -178,6 +178,7 @@ async function load() : Promise<void>
 		const contents = decodeFile( await file.text() );
 
 		circuit.open( contents.parts, contents.labels, contents.layers, contents.names, contents.drawings, contents.layouts );
+		view.forget();
 
 		name = file.name;
 	}

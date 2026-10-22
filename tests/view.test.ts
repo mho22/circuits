@@ -88,4 +88,51 @@ describe( 'view', () =>
 
 		expect( [ view.x, view.y ] ).toEqual( [ 30, 10 ] );
 	} );
+
+	it( 'shows a layer again where it was left, wherever its symbol is', () =>
+	{
+		const view = new View();
+
+		view.enter( 2, { x : 10, y : 5 }, { x : 4, y : 8 } );
+		view.scroll( 30, 10, 0 );
+
+		const left = [ view.x, view.y ];
+
+		view.follow( 0 );
+		view.enter( 2, { x : 20, y : 0 }, { x : 9, y : 9 } );
+
+		expect( [ view.x, view.y ] ).toEqual( left );
+	} );
+
+	it( 'keeps the place of each layer that a move to the top leaves at once', () =>
+	{
+		const view = new View();
+
+		view.enter( 2, { x : 0, y : 0 }, { x : 0, y : 0 } );
+		view.scroll( 30, 0, 0 );
+		view.enter( 3, { x : 0, y : 0 }, { x : 0, y : 0 } );
+		view.scroll( 0, 10, 0 );
+		view.follow( 0 );
+		view.enter( 3, { x : 5, y : 5 }, { x : 0, y : 0 } );
+
+		expect( [ view.x, view.y ] ).toEqual( [ 30, 10 ] );
+
+		view.follow( 0 );
+		view.enter( 2, { x : 5, y : 5 }, { x : 0, y : 0 } );
+
+		expect( [ view.x, view.y ] ).toEqual( [ 30, 0 ] );
+	} );
+
+	it( 'shows the middle of a layer again after it forgets the places', () =>
+	{
+		const view = new View();
+
+		view.enter( 2, { x : 10, y : 5 }, { x : 4, y : 8 } );
+		view.scroll( 30, 10, 0 );
+		view.follow( 0 );
+		view.forget();
+		view.enter( 2, { x : 10, y : 5 }, { x : 4, y : 8 } );
+
+		expect( [ view.x, view.y ] ).toEqual( [ - SPACING * 6, SPACING * 3 ] );
+	} );
 } );
