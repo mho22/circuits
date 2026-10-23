@@ -88,7 +88,7 @@ impl Circuit
 		self.simulation.place( self.current(), kind, Segment { from : Point { x : from_x, y : from_y }, to : Point { x : to_x, y : to_y } } ).map_err( | error | JsError::new( &error.to_string() ) )
 	}
 
-	pub fn open( &mut self, data : &[ f64 ], labels : Vec<String>, layers : &[ u32 ], names : Vec<String>, drawings : &[ i32 ], layouts : &[ i32 ] ) -> Result<u32, JsError>
+	pub fn load( &mut self, data : &[ f64 ], labels : Vec<String>, layers : &[ u32 ], names : Vec<String>, drawings : &[ i32 ], layouts : &[ i32 ] ) -> Result<(), JsError>
 	{
 		let mut counts : Vec<u32> = Vec::new();
 		let mut edits = Vec::new();
@@ -130,7 +130,18 @@ impl Circuit
 			places = &others[ 2 * count .. ];
 		}
 
-		self.simulation.open( edits ).map_err( | error | JsError::new( &error.to_string() ) )
+		self.simulation.load( edits ).map_err( | error | JsError::new( &error.to_string() ) )
+	}
+
+	pub fn proceed( &mut self ) -> Result<bool, JsError>
+	{
+		self.simulation.proceed().map_err( | error | JsError::new( &error.to_string() ) )
+	}
+
+	#[wasm_bindgen( getter )]
+	pub fn progress( &self ) -> f64
+	{
+		self.simulation.progress()
 	}
 
 	pub fn enclose( &mut self, area : &[ i32 ], name : String, drawing : &[ i32 ], layout : &[ i32 ] ) -> Result<u32, JsError>

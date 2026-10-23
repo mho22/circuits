@@ -1,4 +1,4 @@
-use simulator::{ characterize, Document, Kind, Model, Operation, Point, Segment, DELAY, FLOOR };
+use simulator::{ Characterization, Document, Kind, Model, Operation, Point, Segment, DELAY, FLOOR };
 
 
 const STEP : f64 = 1e-6;
@@ -112,6 +112,15 @@ fn flip_flop() -> Document
 	layer( &pins.into_iter().chain( gates ).chain( wires ).collect::<Vec<Part>>() )
 }
 
+fn characterize( layers : &[ Document ], models : &[ Option<Model> ], layer : usize ) -> Option<Model>
+{
+	let mut characterization = Characterization::new( layers, models, layer, STEP )?;
+
+	while ! characterization.done() { characterization.advance( models )?; }
+
+	Some( characterization.model() )
+}
+
 fn walk( model : &Model, rows : &[ usize ] ) -> Vec<bool>
 {
 	let width = 4;
@@ -131,7 +140,7 @@ fn walk( model : &Model, rows : &[ usize ] ) -> Vec<bool>
 #[test]
 fn it_measures_the_truth_table_of_an_inverter()
 {
-	let model = characterize( &[ Document::default(), inverter( &[] ) ], &[], 1, STEP ).unwrap();
+	let model = characterize( &[ Document::default(), inverter( &[] ) ], &[], 1 ).unwrap();
 
 	assert_eq!( model.rows.len(), 2 );
 	assert_eq!( model.rows.iter().map( | row | row.iter().map( | drive | drive.high() ).collect::<Vec<_>>() ).collect::<Vec<_>>(), vec![ vec![ true ], vec![ false ] ] );
@@ -145,8 +154,8 @@ fn it_measures_the_truth_table_of_an_inverter()
 fn it_measures_a_flip_flop_built_from_gates_as_a_gate_that_changes_its_state_on_a_rising_clock()
 {
 	let layers = [ Document::default(), nand(), flip_flop() ];
-	let models = [ None, characterize( &layers, &[], 1, STEP ) ];
-	let model = characterize( &layers, &models, 2, STEP ).unwrap();
+	let models = [ None, characterize( &layers, &[], 1 ) ];
+	let model = characterize( &layers, &models, 2 ).unwrap();
 
 	assert!( model.rows.len() > 4 );
 	assert_eq!( model.next.len(), model.rows.len() );
@@ -160,7 +169,7 @@ fn it_leaves_a_layer_without_a_transistor_or_a_gate_analog()
 {
 	let resistor = layer( &[ ( Kind::Input { high : false }, ( -1, 0 ), ( 0, 0 ) ), ( Kind::Resistor { ohms : 1000.0 }, ( 0, 0 ), ( 4, 0 ) ), ( Kind::Output, ( 5, 0 ), ( 4, 0 ) ) ] );
 
-	assert_eq!( characterize( &[ Document::default(), resistor ], &[], 1, STEP ), None );
+	assert_eq!( characterize( &[ Document::default(), resistor ], &[], 1 ), None );
 }
 
 #[test]
@@ -170,9 +179,9 @@ fn it_leaves_a_layer_with_a_capacitor_an_inductor_or_a_clock_analog()
 	let inductor = inverter( &[ ( Kind::Inductor { henries : 1.0 }, ( 5, 1 ), ( 5, 3 ) ) ] );
 	let clock = inverter( &[ ( Kind::Clock { hertz : 1.0 }, ( 8, 4 ), ( 8, 6 ) ) ] );
 
-	assert_eq!( characterize( &[ Document::default(), capacitor ], &[], 1, STEP ), None );
-	assert_eq!( characterize( &[ Document::default(), inductor ], &[], 1, STEP ), None );
-	assert_eq!( characterize( &[ Document::default(), clock ], &[], 1, STEP ), None );
+	assert_eq!( characterize( &[ Document::default(), capacitor ], &[], 1 ), None );
+	assert_eq!( characterize( &[ Document::default(), inductor ], &[], 1 ), None );
+	assert_eq!( characterize( &[ Document::default(), clock ], &[], 1 ), None );
 }
 
 #[test]
@@ -188,7 +197,7 @@ fn it_leaves_a_layer_with_feedback_analog()
 		( Kind::Wire, ( -2, 0 ), ( 0, 0 ) ),
 	][ .. ], gate( 0 ).as_slice(), gate( 10 ).as_slice() ].concat() );
 
-	assert_eq!( characterize( &[ Document::default(), ring ], &[], 1, STEP ), None );
+	assert_eq!( characterize( &[ Document::default(), ring ], &[], 1 ), None );
 }
 
 #[test]
@@ -197,18 +206,45 @@ fn it_leaves_a_layer_without_an_output_or_with_more_than_eight_inputs_analog()
 	let silent = layer( &[ &[ ( Kind::Input { high : false }, ( -1, 0 ), ( 0, 0 ) ) ][ .. ], gate( 0 ).as_slice() ].concat() );
 	let inputs : Vec<Part> = ( 0 .. 9 ).map( | y | ( Kind::Input { high : false }, ( -20, y * 2 ), ( -19, y * 2 ) ) ).collect();
 
-	assert_eq!( characterize( &[ Document::default(), silent ], &[], 1, STEP ), None );
-	assert_eq!( characterize( &[ Document::default(), inverter( &inputs ) ], &[], 1, STEP ), None );
+	assert_eq!( characterize( &[ Document::default(), silent ], &[], 1 ), None );
+	assert_eq!( characterize( &[ Document::default(), inverter( &inputs ) ], &[], 1 ), None );
 }
 
 #[test]
 fn it_leaves_an_output_on_the_net_of_an_input_analog()
 {
-	assert_eq!( characterize( &[ Document::default(), inverter( &[ ( Kind::Output, ( 0, 4 ), ( 0, 2 ) ) ] ) ], &[], 1, STEP ), None );
+	assert_eq!( characterize( &[ Document::default(), inverter( &[ ( Kind::Output, ( 0, 4 ), ( 0, 2 ) ) ] ) ], &[], 1 ), None );
+}
+
+#[test]
+fn it_measures_one_input_combination_at_each_step()
+{
+	let layers = [ Document::default(), inverter( &[] ) ];
+	let mut characterization = Characterization::new( &layers, &[], 1, STEP ).unwrap();
+	let mut progress = vec![ characterization.progress() ];
+
+	while ! characterization.done() { characterization.advance( &[] ).unwrap(); progress.push( characterization.progress() ); }
+
+	assert_eq!( progress, vec![ 0.0, 0.5, 1.0 ] );
+	assert_eq!( Some( characterization.model() ), characterize( &layers, &[], 1 ) );
+}
+
+#[test]
+fn it_flips_each_input_of_each_combination_after_the_combinations_of_a_layer_with_gates()
+{
+	let layers = [ Document::default(), nand(), flip_flop() ];
+	let models = [ None, characterize( &layers, &[], 1 ) ];
+	let mut characterization = Characterization::new( &layers, &models, 2, STEP ).unwrap();
+	let mut steps = 0;
+
+	while ! characterization.done() { characterization.advance( &models ).unwrap(); steps += 1; }
+
+	assert_eq!( ( steps % 3, characterization.progress() ), ( 0, 1.0 ) );
+	assert_eq!( Some( characterization.model() ), characterize( &layers, &models, 2 ) );
 }
 
 #[test]
 fn it_leaves_a_missing_layer_without_a_model()
 {
-	assert_eq!( characterize( &[ Document::default() ], &[], 3, STEP ), None );
+	assert_eq!( characterize( &[ Document::default() ], &[], 3 ), None );
 }

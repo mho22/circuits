@@ -52,6 +52,7 @@ describe( 'toggle renderer', () =>
 	{
 		expect( drawn( 1, 5, undefined, false, 'foo' ) ).toContainEqual( [ 'fillText', 'foo', x - 19, y ] );
 		expect( drawn( 1, 5, undefined, false, 'foo' ) ).toContainEqual( [ 'set', 'textAlign', 'right' ] );
+		expect( drawn( 1, 5, undefined, false, 'foo' ) ).toContainEqual( [ 'set', 'font', '12px ui-monospace, monospace' ] );
 		expect( drawn( 1, 5, { x : 1, y : 0 }, false, 'foo' ) ).toContainEqual( [ 'fillText', 'foo', x, y + 14 ] );
 		expect( drawn( 1, 5 ).filter( call => call[ 0 ] === 'fillText' ) ).toEqual( [] );
 	} );

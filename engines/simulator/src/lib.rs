@@ -41,10 +41,10 @@ mod union_find;
 
 pub use action::Action;
 pub use branch::Branch;
-pub use catalog::catalog;
+pub use catalog::{ catalog, Catalog };
 pub use channel::conduct;
-pub use characterize::characterize;
-pub use delay::delay;
+pub use characterize::Characterization;
+pub use delay::{ flip, stages };
 pub use companion::companion;
 pub use device::Device;
 pub use document::Document;

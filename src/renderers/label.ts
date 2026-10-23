@@ -22,7 +22,7 @@ export function draw( context : CanvasRenderingContext2D, element : Element ) : 
 	const normalY = length ? - dx / length : -1;
 
 	context.fillStyle = COLOR;
-	context.font = '11px ui-monospace, monospace';
+	context.font = '12px ui-monospace, monospace';
 	context.textAlign = normalX > SIDEWAYS ? 'left' : normalX < - SIDEWAYS ? 'right' : 'center';
 	context.textBaseline = normalY > SIDEWAYS ? 'top' : normalY < - SIDEWAYS ? 'bottom' : 'middle';
 	context.fillText( format( element.value, unit ), toScreen( ( element.from.x + element.to.x ) / 2 ) + normalX * OFFSET, toScreen( ( element.from.y + element.to.y ) / 2 ) + normalY * OFFSET );

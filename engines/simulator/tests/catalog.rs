@@ -1,4 +1,4 @@
-use simulator::{ catalog, Document, Drive, Element, Kind, Model, Operation, Point, Segment, DELAY };
+use simulator::{ catalog, Catalog, Document, Drive, Element, Kind, Model, Operation, Point, Segment, DELAY };
 
 
 const STEP : f64 = 1e-6;
@@ -104,4 +104,27 @@ fn it_measures_a_layer_again_when_a_layer_inside_it_changes()
 	let ( models, _ ) = catalog( &layers, &[ None, None, Some( fake() ) ], &sources, STEP );
 
 	assert_eq!( highs( &models[ 2 ] ), vec![ false, true ] );
+}
+
+#[test]
+fn it_measures_one_step_at_a_time_from_the_layers_inside_a_layer()
+{
+	let layers = [ Document::default(), inverter(), buffer() ];
+	let mut stepped = Catalog::new( &layers, &[], &[], STEP );
+	let mut steps = vec![ stepped.progress() ];
+
+	while stepped.advance( &layers ) { steps.push( stepped.progress() ); }
+
+	assert!( steps.windows( 2 ).all( | pair | pair[ 0 ] <= pair[ 1 ] ) );
+	assert_eq!( ( steps[ 0 ], steps[ steps.len() - 1 ] ), ( 0.0, 1.0 ) );
+	assert_eq!( stepped.finish(), catalog( &layers, &[], &[], STEP ) );
+}
+
+#[test]
+fn it_has_nothing_to_measure_when_no_layer_changed()
+{
+	let layers = [ Document::default(), inverter() ];
+	let mut stepped = Catalog::new( &layers, &[ None, Some( fake() ) ], &[ Vec::new(), inverter().elements().to_vec() ], STEP );
+
+	assert_eq!( ( stepped.progress(), stepped.advance( &layers ) ), ( 1.0, false ) );
 }

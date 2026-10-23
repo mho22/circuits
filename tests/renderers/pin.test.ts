@@ -42,6 +42,7 @@ describe( 'pin renderer', () =>
 		draw( context, { ... input, potentials : [ 2.5, 2.5 ] }, scale );
 
 		expect( calls.filter( call => call[ 0 ] === 'fillText' ).map( call => call[ 1 ] ) ).toEqual( [ '1', '0' ] );
+		expect( calls ).toContainEqual( [ 'set', 'font', '12px ui-monospace, monospace' ] );
 	} );
 
 	it( 'centers the drawn glyph of its bit on the square', () =>

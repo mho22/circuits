@@ -41,6 +41,7 @@ import * as element from './renderers/element.ts';
 import * as grid from './renderers/grid.ts';
 import * as junction from './renderers/junction.ts';
 import * as mask from './renderers/mask.ts';
+import * as progress from './renderers/progress.ts';
 import { measure } from './scale.ts';
 import { cover, inside, span } from './selection.ts';
 import { socket } from './socket.ts';
@@ -69,6 +70,9 @@ await init();
 
 
 const STEPS_PER_FRAME = 100;
+const LOAD_BUDGET = 12;
+const LOAD_DELAY = 150;
+const LOAD_DOTS = 16;
 const KINDS = Object.keys( NAMES ).map( Number ) as Kind[];
 
 const canvas = document.querySelector( 'canvas' )!;
@@ -105,6 +109,7 @@ let sketching = false;
 let origin : Point = { x : 0, y : 0 };
 let aim : Point | null = null;
 let picked : { area : Area, menu : HTMLElement } | null = null;
+let loading : { name : string, since : number, progress : number } | null = null;
 
 
 function select( kind : Kind | null ) : void
@@ -196,13 +201,46 @@ async function load() : Promise<void>
 	{
 		const contents = decodeFile( await file.text() );
 
-		circuit.open( contents.parts, contents.labels, contents.layers, contents.names, contents.drawings, contents.layouts );
-		view.forget();
+		circuit.load( contents.parts, contents.labels, contents.layers, contents.names, contents.drawings, contents.layouts );
 
-		name = file.name;
+		loading = { name : file.name, since : performance.now(), progress : 0 };
 	}
 
 	catch( error ) { notice = ( error as Error ).message; }
+}
+
+function proceed() : void
+{
+	if( ! loading ) return;
+
+	const start = performance.now();
+	let pending = true;
+
+	try { while( pending && performance.now() - start < LOAD_BUDGET ) pending = circuit.proceed(); }
+
+	catch( error ) { notice = ( error as Error ).message; loading = null; return; }
+
+	loading.progress = Math.max( loading.progress, circuit.progress );
+
+	if( pending ) return;
+
+	view.forget();
+
+	name = loading.name;
+	loading = null;
+}
+
+function indicate() : void
+{
+	if( ! loading || performance.now() - loading.since < LOAD_DELAY ) return;
+
+	const middle = view.toGrid( innerWidth / 2, innerHeight / 2 );
+	const from = { x : middle.x - Math.floor( ( LOAD_DOTS - 1 ) / 2 ), y : middle.y };
+	const to = { x : from.x + LOAD_DOTS - 1, y : middle.y };
+
+	context.setTransform( devicePixelRatio, 0, 0, devicePixelRatio, - view.x * devicePixelRatio, - view.y * devicePixelRatio );
+
+	progress.draw( context, from, to, loading.progress );
 }
 
 function attempt( change : () => void ) : void
@@ -492,7 +530,7 @@ function paint( elements : Element[], branches : Branch[], seconds : number ) : 
 
 	junctions( elements ).forEach( item => junction.draw( context, item, scale ) );
 
-	paths.forEach( ( path, index ) => current.draw( context, path.from, path.to, path.current, scale.current, distances[ index ] ) );
+	paths.forEach( ( path, index ) => current.draw( context, path.from, path.to, path.current, scale.current, distances[ index ], current.COLOR ) );
 
 	context.globalAlpha = 0.5;
 
@@ -520,6 +558,8 @@ function frame( time : number ) : void
 
 	previous = time;
 
+	proceed();
+
 	circuit.advance( clock.tick( seconds, circuit.rate ) );
 
 	follow();
@@ -528,6 +568,8 @@ function frame( time : number ) : void
 	const branches = decodeBranches( circuit.branches() );
 
 	paint( elements, branches, seconds );
+
+	indicate();
 
 	library.update( Array.from( circuit.symbols(), layer => [ layer, circuit.name( layer ) ] ) );
 

@@ -44,7 +44,7 @@ impl Graph
 }
 
 
-fn stages( elements : &[ Element ], drives : &[ usize ], probes : &[ usize ] ) -> f64
+pub fn stages( elements : &[ Element ], drives : &[ usize ], probes : &[ usize ] ) -> f64
 {
 	let netlist = Netlist::build( elements );
 	let net = | point | netlist.net( point );
@@ -92,50 +92,33 @@ fn stages( elements : &[ Element ], drives : &[ usize ], probes : &[ usize ] ) -
 	drives.iter().filter_map( | &drive | graph.reach( forest.find( net( elements[ drive ].segment.to ) ), &mut visiting, &mut memo ) ).fold( 0.0, f64::max )
 }
 
-fn measure( elements : &[ Element ], devices : &[ Device ], models : &[ Option<Model> ], drives : &[ usize ], probes : &[ usize ], settled : &[ ( usize, Logic ) ] ) -> Option<f64>
+pub fn flip( elements : &[ Element ], devices : &[ Device ], models : &[ Option<Model> ], drives : &[ usize ], probes : &[ usize ], settled : &( usize, Logic ), bit : usize ) -> Option<f64>
 {
 	let step = devices.iter().filter_map( | device | models.get( device.layer ).and_then( Option::as_ref ) ).map( | model | model.delay ).fold( f64::INFINITY, f64::min ) / RESOLUTION;
+	let ( row, seed ) = settled;
+	let flipped = row ^ 1 << bit;
+	let mut elements = elements.to_vec();
+
+	for ( &drive, index ) in drives.iter().zip( 0 .. ) { elements[ drive ].kind = Kind::Supply { volts : if flipped >> index & 1 == 1 { SUPPLY } else { 0.0 } }; }
+
 	let history = History::default();
-	let mut longest : f64 = 0.0;
+	let plan = Plan::build( &elements, devices );
+	let highs = | logic : &mut Logic | advance( &elements, devices, &plan, models, &history, step, logic ).ok().map( | solution | probes.iter().map( | &probe | solution.readings[ probe ].potentials[ 0 ] > THRESHOLD ).collect::<Vec<bool>>() );
+	let mut logic = seed.clone();
+	let mut last = highs( &mut logic )?;
+	let start = logic.time;
+	let mut changed = start;
 
-	for ( row, seed ) in settled
+	for _ in 0 .. STEPS
 	{
-		for bit in 0 .. drives.len()
-		{
-			let flipped = row ^ 1 << bit;
-			let mut elements = elements.to_vec();
+		if ! logic.pending( f64::INFINITY ) { break; }
 
-			for ( &drive, index ) in drives.iter().zip( 0 .. ) { elements[ drive ].kind = Kind::Supply { volts : if flipped >> index & 1 == 1 { SUPPLY } else { 0.0 } }; }
+		let now = highs( &mut logic )?;
 
-			let plan = Plan::build( &elements, devices );
-			let highs = | logic : &mut Logic | advance( &elements, devices, &plan, models, &history, step, logic ).ok().map( | solution | probes.iter().map( | &probe | solution.readings[ probe ].potentials[ 0 ] > THRESHOLD ).collect::<Vec<bool>>() );
-			let mut logic = seed.clone();
-			let mut last = highs( &mut logic )?;
-			let start = logic.time;
-			let mut changed = start;
+		if now != last { changed = logic.time; }
 
-			for _ in 0 .. STEPS
-			{
-				if ! logic.pending( f64::INFINITY ) { break; }
-
-				let now = highs( &mut logic )?;
-
-				if now != last { changed = logic.time; }
-
-				last = now;
-			}
-
-			longest = longest.max( ( ( changed - start ) / step ).round() * step );
-		}
+		last = now;
 	}
 
-	Some( longest )
-}
-
-
-pub fn delay( elements : &[ Element ], devices : &[ Device ], models : &[ Option<Model> ], drives : &[ usize ], probes : &[ usize ], settled : &[ ( usize, Logic ) ] ) -> f64
-{
-	let delay = if devices.is_empty() { stages( elements, drives, probes ) } else { measure( elements, devices, models, drives, probes, settled ).unwrap_or( 0.0 ) };
-
-	delay.max( DELAY )
+	Some( ( ( changed - start ) / step ).round() * step )
 }

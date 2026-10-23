@@ -38,7 +38,7 @@ export function draw( context : CanvasRenderingContext2D, element : Element, sca
 	context.stroke();
 
 	context.fillStyle = element.kind === Kind.Input ? PRESSED : tint;
-	context.font = '11px ui-monospace, monospace';
+	context.font = '12px ui-monospace, monospace';
 	context.textAlign = 'center';
 	context.textBaseline = 'middle';
 

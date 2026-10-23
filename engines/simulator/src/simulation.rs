@@ -2,10 +2,13 @@ use std::collections::HashMap;
 
 use crate::flatten::STRIDE;
 use crate::shape::FINE;
-use crate::{ advance, catalog, enclose, flatten, place, settle, stretch, Device, Document, Element, Enclosure, Error, History, Kind, Logic, Mode, Model, Netlist, Operation, Outline, Plan, Point, Reading, Registry, Segment, Shape, Solution };
+use crate::{ advance, catalog, enclose, flatten, place, settle, stretch, Catalog, Device, Document, Element, Enclosure, Error, History, Kind, Logic, Mode, Model, Netlist, Operation, Outline, Plan, Point, Reading, Registry, Segment, Shape, Solution };
 
 
 const DIVISIONS : f64 = 20.0;
+
+
+type Loading = ( Vec<Document>, Vec<( usize, Operation )>, Catalog );
 
 
 fn centered( document : &Document, name : &str, drawing : &[ Shape ], layout : &[ Point ] ) -> Result<Operation, Error>
@@ -55,13 +58,14 @@ pub struct Simulation
 	step : f64,
 	undos : Vec<Vec<( usize, Operation )>>,
 	redos : Vec<Vec<( usize, Operation )>>,
+	loading : Option<Loading>,
 }
 
 impl Simulation
 {
 	pub fn new( step : f64 ) -> Simulation
 	{
-		Simulation { layers : vec![ Document::default() ], registry : Registry::default(), elements : Vec::new(), devices : Vec::new(), plan : Plan::default(), models : Vec::new(), sources : Vec::new(), focus : Vec::new(), history : History::default(), logic : Logic::default(), solution : Ok( Solution::default() ), base : step, step, undos : Vec::new(), redos : Vec::new() }
+		Simulation { layers : vec![ Document::default() ], registry : Registry::default(), elements : Vec::new(), devices : Vec::new(), plan : Plan::default(), models : Vec::new(), sources : Vec::new(), focus : Vec::new(), history : History::default(), logic : Logic::default(), solution : Ok( Solution::default() ), base : step, step, undos : Vec::new(), redos : Vec::new(), loading : None }
 	}
 
 	pub fn create( &mut self ) -> usize
@@ -262,6 +266,40 @@ impl Simulation
 		if result.is_err() { self.layers.truncate( count ); }
 
 		result
+	}
+
+	pub fn load( &mut self, additions : Vec<( usize, Operation )> ) -> Result<(), Error>
+	{
+		let needed = additions.iter().map( | addition | addition.0 + 1 ).max().unwrap_or( 1 );
+		let mut layers = vec![ Document::default(); needed ];
+
+		self.loading = None;
+
+		for ( layer, operation ) in &additions { layers[ *layer ].apply( operation.clone() )?; }
+
+		let catalog = Catalog::new( &layers, &self.models, &self.sources, self.base );
+
+		self.loading = Some( ( layers, additions, catalog ) );
+
+		Ok( () )
+	}
+
+	pub fn proceed( &mut self ) -> Result<bool, Error>
+	{
+		let Some( ( layers, _, catalog ) ) = &mut self.loading else { return Ok( false ); };
+
+		if catalog.advance( layers ) { return Ok( true ); }
+
+		let Some( ( _, additions, catalog ) ) = self.loading.take() else { return Ok( false ); };
+
+		( self.models, self.sources ) = catalog.finish();
+
+		self.open( additions ).map( | _ | false )
+	}
+
+	pub fn progress( &self ) -> f64
+	{
+		self.loading.as_ref().map_or( 1.0, | ( _, _, catalog ) | catalog.progress() )
 	}
 
 	pub fn undo( &mut self ) -> Result<Option<u32>, Error>

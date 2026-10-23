@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { SPACING } from '../../src/grid.ts';
-import { draw } from '../../src/renderers/current.ts';
+import { COLOR, draw } from '../../src/renderers/current.ts';
 import { record } from '../stubs/context.ts';
 
 
@@ -13,7 +13,7 @@ describe( 'current renderer', () =>
 	{
 		const { context, calls } = record();
 
-		draw( context, from, to, current, scale, distance );
+		draw( context, from, to, current, scale, distance, COLOR );
 
 		return calls.filter( call => call[ 0 ] === 'fillRect' ).map( call => ( call[ 1 ] as number ) + 1.5 );
 	}

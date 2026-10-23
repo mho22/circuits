@@ -1,4 +1,4 @@
-use simulator::{ characterize, Document, Kind, Operation, Point, Segment, DELAY };
+use simulator::{ catalog, Document, Kind, Operation, Point, Segment, DELAY };
 
 
 const STEP : f64 = 1e-6;
@@ -87,9 +87,7 @@ fn and() -> Document
 
 fn delay( layers : &[ Document ], layer : usize ) -> f64
 {
-	let models : Vec<_> = ( 0 .. layer ).map( | inner | characterize( layers, &[], inner, STEP ) ).collect();
-
-	characterize( layers, &models, layer, STEP ).unwrap().delay
+	catalog( layers, &[], &[], STEP ).0[ layer ].as_ref().unwrap().delay
 }
 
 

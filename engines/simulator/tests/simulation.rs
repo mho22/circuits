@@ -354,6 +354,75 @@ fn it_opens_the_layers_of_the_symbols_in_place_of_every_layer()
 	assert!( simulation.document( 2 ).unwrap().elements().is_empty() );
 }
 
+fn gate() -> Vec<( usize, Operation )>
+{
+	let parts = [
+		( Kind::Input { high : false }, ( -1, 0 ), ( 0, 0 ) ),
+		( Kind::Supply { volts : 5.0 }, ( 3, -1 ), ( 3, -1 ) ),
+		( Kind::Output, ( 6, 0 ), ( 5, 0 ) ),
+		( Kind::Wire, ( 0, -2 ), ( 0, 0 ) ),
+		( Kind::Wire, ( 0, 0 ), ( 0, 2 ) ),
+		( Kind::Pmos, ( 0, -2 ), ( 2, -2 ) ),
+		( Kind::Nmos, ( 0, 2 ), ( 2, 2 ) ),
+		( Kind::Wire, ( 3, -3 ), ( 5, -3 ) ),
+		( Kind::Wire, ( 5, -3 ), ( 5, 0 ) ),
+		( Kind::Wire, ( 5, 0 ), ( 5, 1 ) ),
+		( Kind::Wire, ( 5, 1 ), ( 3, 1 ) ),
+		( Kind::Ground, ( 3, 3 ), ( 3, 3 ) ),
+	].map( | ( kind, from, to ) | ( 1, kind, segment( from, to ), false ) );
+
+	[ added( &[ ( 0, Kind::Symbol { layer : 1, rotation : 0 }, segment( ( 10, 10 ), ( 10, 10 ) ), false ) ] ), added( &parts ), vec![ ( 1, Operation::Describe { name : "foo".to_string(), drawing : Vec::new(), layout : Vec::new() } ) ] ].concat()
+}
+
+#[test]
+fn it_loads_a_list_of_parts_one_step_at_a_time_and_opens_it_at_the_last_step()
+{
+	let mut simulation = series( Kind::Resistor { ohms : 1000.0 } );
+
+	simulation.load( gate() ).unwrap();
+
+	assert_eq!( simulation.progress(), 0.0 );
+	assert_eq!( simulation.document( 0 ).unwrap().elements().len(), 5 );
+
+	let mut steps = vec![ simulation.progress() ];
+
+	while simulation.proceed().unwrap() { steps.push( simulation.progress() ); }
+
+	assert!( steps.windows( 2 ).all( | pair | pair[ 0 ] <= pair[ 1 ] ) );
+	assert_eq!( simulation.progress(), 1.0 );
+	assert_eq!( simulation.proceed(), Ok( false ) );
+	assert_eq!( simulation.document( 0 ).unwrap().elements().len(), 1 );
+	assert_eq!( simulation.document( 1 ).unwrap().name(), "foo" );
+	assert_eq!( simulation.delay( 1 ), Some( DELAY ) );
+}
+
+#[test]
+fn it_rejects_a_load_with_an_invalid_part_and_keeps_the_drawing()
+{
+	let mut simulation = series( Kind::Resistor { ohms : 1000.0 } );
+
+	simulation.load( gate() ).unwrap();
+
+	assert_eq!( simulation.load( added( &[ ( 0, Kind::Wire, segment( ( 0, 0 ), ( 2, 1 ) ), false ) ] ) ), Err( Error::Crooked ) );
+	assert_eq!( ( simulation.progress(), simulation.proceed() ), ( 1.0, Ok( false ) ) );
+	assert_eq!( simulation.document( 0 ).unwrap().elements().len(), 5 );
+}
+
+#[test]
+fn it_reports_an_open_that_fails_at_the_last_step_of_a_load()
+{
+	let mut simulation = Simulation::new( STEP );
+
+	simulation.load( added( &[ ( 0, Kind::Symbol { layer : 3, rotation : 0 }, segment( ( 0, 0 ), ( 0, 0 ) ), false ), ( 1, Kind::Wire, segment( ( 0, 0 ), ( 2, 0 ) ), false ) ] ) ).unwrap();
+
+	let mut result = simulation.proceed();
+
+	while result == Ok( true ) { result = simulation.proceed(); }
+
+	assert_eq!( ( result, simulation.progress() ), ( Err( Error::Layerless ), 1.0 ) );
+	assert!( simulation.document( 1 ).is_none() );
+}
+
 #[test]
 fn it_adds_no_layer_when_an_open_fails()
 {

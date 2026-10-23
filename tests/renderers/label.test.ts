@@ -17,6 +17,7 @@ describe( 'label renderer', () =>
 		expect( calls ).toContainEqual( [ 'set', 'textAlign', 'center' ] );
 		expect( calls ).toContainEqual( [ 'set', 'textBaseline', 'bottom' ] );
 		expect( calls ).toContainEqual( [ 'fillText', '4.7 kΩ', SPACING * 2, SPACING * 2 - 14 ] );
+		expect( calls ).toContainEqual( [ 'set', 'font', '12px ui-monospace, monospace' ] );
 	} );
 
 	it( 'writes the value beside a vertical part', () =>
