@@ -4,6 +4,7 @@ use crate::union_find::UnionFind;
 use crate::{ Element, Kind, Point };
 
 
+#[derive( Clone, Debug, Default, PartialEq )]
 pub struct Netlist
 {
 	pub points : Vec<Point>,
@@ -20,7 +21,7 @@ impl Netlist
 	pub fn build( elements : &[ Element ] ) -> Netlist
 	{
 		let mut points = Vec::new();
-		let mut indices = HashMap::new();
+		let mut indices = HashMap::with_capacity( elements.len() * 3 );
 
 		for element in elements
 		{
@@ -42,11 +43,18 @@ impl Netlist
 
 		for &ground in grounds.iter().skip( 1 ) { forest.union( grounds[ 0 ], ground ); }
 
-		let mut roots = HashMap::new();
+		let mut roots = vec![ usize::MAX; points.len() ];
+		let mut count = 0;
 
-		let nets : Vec<usize> = ( 0 .. points.len() ).map( | index | { let count = roots.len(); *roots.entry( forest.find( index ) ).or_insert( count ) } ).collect();
+		let nets : Vec<usize> = ( 0 .. points.len() ).map( | index |
+		{
+			let root = forest.find( index );
 
-		let mut count = roots.len();
+			if roots[ root ] == usize::MAX { roots[ root ] = count; count += 1; }
+
+			roots[ root ]
+		} ).collect();
+
 		let supplied = elements.iter().any( | element | matches!( element.kind, Kind::Supply { .. } ) );
 		let earth = grounds.first().map( | &ground | nets[ ground ] ).or_else( || supplied.then( || { count += 1; count - 1 } ) );
 

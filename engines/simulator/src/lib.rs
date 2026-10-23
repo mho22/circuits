@@ -37,6 +37,7 @@ mod solution;
 mod solver;
 mod stamp;
 mod stretch;
+mod topology;
 mod union_find;
 
 pub use action::Action;
@@ -75,7 +76,8 @@ pub use segment::Segment;
 pub use shape::Shape;
 pub use simulation::Simulation;
 pub use solution::Solution;
-pub use solver::solve;
+pub use solver::{ compute, solve };
 pub use stamp::Stamp;
 pub use stretch::stretch;
+pub use topology::Topology;
 pub use union_find::UnionFind;

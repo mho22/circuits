@@ -1,4 +1,4 @@
-use simulator::{ solve, Element, Error, History, Kind, Point, Reading, Segment, Solution };
+use simulator::{ compute, solve, Element, Error, History, Kind, Point, Reading, Segment, Solution, Topology };
 
 
 const STEP : f64 = 1e-3;
@@ -64,6 +64,21 @@ fn it_applies_ohms_law_to_a_battery_and_a_resistor()
 	assert!( near( battery.currents[ 0 ], 0.005 ) );
 	assert_eq!( ( resistor.potentials[ 0 ], resistor.potentials[ 1 ] ), ( 5.0, 0.0 ) );
 	assert!( near( resistor.currents[ 0 ], 0.005 ) );
+}
+
+#[test]
+fn it_solves_with_a_topology_built_before_the_values_changed()
+{
+	let topology = Topology::build( &loop_with( &[ element( Kind::Resistor { ohms : 1000.0 }, ( 4, 0 ), ( 4, 4 ) ) ] ) );
+	let mut elements = loop_with( &[ element( Kind::Resistor { ohms : 2000.0 }, ( 4, 0 ), ( 4, 4 ) ) ] );
+
+	elements[ 0 ].kind = Kind::Battery { volts : 9.0 };
+
+	let computed = compute( &elements, &topology, &History::default(), STEP ).unwrap();
+	let solved = solve( &elements, &History::default(), STEP ).unwrap();
+
+	assert_eq!( ( &computed.readings[ 0 ], &computed.readings[ 4 ], &computed.branches ), ( &solved.readings[ 0 ], &solved.readings[ 4 ], &solved.branches ) );
+	assert!( near( computed.readings[ 4 ].currents[ 0 ], 0.0045 ) );
 }
 
 #[test]

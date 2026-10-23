@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-
-use crate::{ companion, distribute, eliminate, Branch, Element, Error, History, Kind, Netlist, Reading, Segment, Solution, UnionFind };
+use crate::{ companion, distribute, eliminate, Branch, Element, Error, History, Kind, Reading, Segment, Solution, Topology };
 
 
 const ITERATIONS : usize = 100;
@@ -9,43 +7,14 @@ const TOLERANCE : f64 = 1e-6;
 
 pub fn solve( elements : &[ Element ], history : &History, step : f64 ) -> Result<Solution, Error>
 {
-	let netlist = Netlist::build( elements );
-	let terminals : Vec<Vec<usize>> = elements.iter().map( | element | match element.kind
-	{
-		Kind::Supply { .. } => vec![ netlist.earth.unwrap(), netlist.net( element.segment.from ) ],
-		_ => element.terminals().into_iter().map( | point | netlist.net( point ) ).collect(),
-	} ).collect();
-	let mut islands = UnionFind::new( netlist.count );
+	compute( elements, &Topology::build( elements ), history, step )
+}
 
-	for ( element, nets ) in elements.iter().zip( &terminals )
-	{
-		if matches!( element.kind, Kind::Wire | Kind::Ground | Kind::Input { .. } | Kind::Output | Kind::Switch { .. } ) { continue; }
-
-		for &net in &nets[ 1 .. ] { islands.union( nets[ 0 ], net ); }
-	}
-
-	let mut references = HashMap::new();
-
-	if let Some( earth ) = netlist.earth { references.insert( islands.find( earth ), earth ); }
-
-	for net in 0 .. netlist.count { references.entry( islands.find( net ) ).or_insert( net ); }
-
-	let mut unknowns = vec![ None; netlist.count ];
-	let mut size = 0;
-
-	for net in 0 .. netlist.count
-	{
-		if references[ &islands.find( net ) ] == net { continue; }
-
-		unknowns[ net ] = Some( size );
-
-		size += 1;
-	}
-
-	let nodes = size;
-	let batteries : Vec<usize> = ( 0 .. elements.len() ).filter( | &index | matches!( elements[ index ].kind, Kind::Battery { .. } | Kind::Supply { .. } ) ).collect();
-
-	size += batteries.len();
+pub fn compute( elements : &[ Element ], topology : &Topology, history : &History, step : f64 ) -> Result<Solution, Error>
+{
+	let Topology { netlist, terminals, unknowns, nodes, batteries } = topology;
+	let nodes = *nodes;
+	let size = nodes + batteries.len();
 
 	let assemble = | guesses : &[ [ f64; 2 ] ] | -> Result<Vec<f64>, Error>
 	{
@@ -106,7 +75,7 @@ pub fn solve( elements : &[ Element ], history : &History, step : f64 ) -> Resul
 
 		let voltage = | net : usize | unknowns[ net ].map_or( 0.0, | unknown : usize | solution[ unknown ] );
 
-		let next : Vec<[ f64; 2 ]> = elements.iter().zip( &terminals ).zip( &guesses ).map( | ( ( element, nets ), &guess ) |
+		let next : Vec<[ f64; 2 ]> = elements.iter().zip( terminals ).zip( &guesses ).map( | ( ( element, nets ), &guess ) |
 		{
 			let mut next = guess;
 

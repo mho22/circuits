@@ -1,5 +1,5 @@
 use crate::flatten::HIGH;
-use crate::{ solve, Action, Branch, Device, Element, Error, History, Kind, Logic, Model, Plan, Reading, Solution, Source, FLOOR, THRESHOLD };
+use crate::{ compute, Action, Branch, Device, Element, Error, History, Kind, Logic, Model, Plan, Reading, Solution, Source, FLOOR, THRESHOLD };
 
 
 const ROUNDS : usize = 100;
@@ -226,7 +226,7 @@ impl<'a> Run<'a>
 			self.analog[ position ].kind = Kind::Supply { volts : emit( self.elements[ index ].kind, time ) };
 		}
 
-		let solution = solve( &self.analog, history, step )?;
+		let solution = compute( &self.analog, &plan.topology, history, step )?;
 
 		for ( index, sources ) in plan.inputs.iter().enumerate()
 		{
@@ -249,7 +249,8 @@ impl<'a> Run<'a>
 
 	fn assemble( &self, solution : Solution ) -> Solution
 	{
-		let mut readings : Vec<Option<Reading>> = self.positions.iter().map( | position | position.map( | position | solution.readings[ position ].clone() ) ).collect();
+		let mut analog : Vec<Option<Reading>> = solution.readings.into_iter().map( Some ).collect();
+		let mut readings : Vec<Option<Reading>> = self.positions.iter().map( | position | position.and_then( | position | analog[ position ].take() ) ).collect();
 		let mut branches = solution.branches;
 
 		for ( net, &volts ) in self.plan.nets.iter().zip( &self.logic.levels )

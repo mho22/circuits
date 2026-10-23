@@ -42,7 +42,7 @@ export function describe( element : Element, branch : Branch | undefined, point 
 	{
 		const delay = element.definition?.delay ?? NaN;
 
-		return [ title, element.label, Number.isFinite( delay ) ? format( delay, 's' ) : '', ... element.potentials.map( potential => format( potential, 'V' ) ) ].filter( Boolean ).join( ' · ' );
+		return [ title, element.label, Number.isFinite( delay ) ? format( delay, 's' ) : '' ].filter( Boolean ).join( ' · ' );
 	}
 
 	if( PINS.includes( element.kind ) ) return [ title, String( bit( element.potentials[ 0 ] ) ), format( element.potentials[ 0 ], 'V' ) ].join( ' · ' );

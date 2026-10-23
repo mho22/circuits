@@ -51,14 +51,15 @@ describe( 'view', () =>
 		expect( [ view.x, view.y ] ).toEqual( [ 0, 0 ] );
 	} );
 
-	it( 'goes back to the origin', () =>
+	it( 'shows the origin at a point of the screen', () =>
 	{
 		const view = new View();
 
 		view.scroll( 30, -10, 0 );
-		view.center();
+		view.center( { x : 100, y : 50 } );
 
-		expect( [ view.x, view.y ] ).toEqual( [ 0, 0 ] );
+		expect( [ view.x, view.y ] ).toEqual( [ -100, -50 ] );
+		expect( view.toGrid( 100, 50 ) ).toEqual( { x : 0, y : 0 } );
 	} );
 
 	it( 'turns a screen position into a grid point of the moved drawing', () =>
@@ -88,6 +89,17 @@ describe( 'view', () =>
 		view.follow( 0 );
 
 		expect( [ view.x, view.y ] ).toEqual( [ 30, 10 ] );
+	} );
+
+	it( 'shows a point of the grid at a point of the screen', () =>
+	{
+		const view = new View();
+
+		view.scroll( 30, 10, 0 );
+		view.show( { x : 4, y : 8.5 }, { x : 100, y : 50 } );
+
+		expect( [ view.x, view.y ] ).toEqual( [ SPACING * 4 - 100, SPACING * 8.5 - 50 ] );
+		expect( view.toGrid( 100, 50 ) ).toEqual( { x : 4, y : 9 } );
 	} );
 
 	it( 'shows a layer under the cursor again, not where it was left', () =>

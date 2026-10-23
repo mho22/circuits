@@ -230,7 +230,7 @@ fn it_measures_one_input_combination_at_each_step()
 }
 
 #[test]
-fn it_flips_each_input_of_each_combination_after_the_combinations_of_a_layer_with_gates()
+fn it_flips_each_input_of_each_combination_of_each_merged_state_after_the_combinations_of_a_layer_with_gates()
 {
 	let layers = [ Document::default(), nand(), flip_flop() ];
 	let models = [ None, characterize( &layers, &[], 1 ) ];
@@ -239,7 +239,7 @@ fn it_flips_each_input_of_each_combination_after_the_combinations_of_a_layer_wit
 
 	while ! characterization.done() { characterization.advance( &models ).unwrap(); steps += 1; }
 
-	assert_eq!( ( steps % 3, characterization.progress() ), ( 0, 1.0 ) );
+	assert_eq!( ( steps, characterization.model().rows.len(), characterization.progress() ), ( 9 * 4 + 4 * 4 * 2, 4 * 4, 1.0 ) );
 	assert_eq!( Some( characterization.model() ), characterize( &layers, &models, 2 ) );
 }
 

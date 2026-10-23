@@ -11,10 +11,10 @@ const CEILING : f64 = 1e9;
 const STATES : usize = 64;
 
 
-fn run( elements : &[ Element ], devices : &[ Device ], models : &[ Option<Model> ], step : f64, seed : &Logic ) -> Option<( Solution, Logic )>
+fn run( elements : &[ Element ], devices : &[ Device ], plan : &Plan, models : &[ Option<Model> ], step : f64, seed : &Logic ) -> Option<( Solution, Logic )>
 {
 	let mut logic = seed.clone();
-	let solution = settle( elements, devices, &Plan::build( elements, devices ), models, &History::default(), step, &mut logic ).ok()?;
+	let solution = settle( elements, devices, plan, models, &History::default(), step, &mut logic ).ok()?;
 
 	Some( ( solution, logic ) )
 }
@@ -82,7 +82,7 @@ fn number<T : PartialEq>( keys : Vec<T> ) -> Vec<usize>
 	keys.iter().map( | key | seen.iter().position( | &other | other == key ).unwrap_or_else( || { seen.push( key ); seen.len() - 1 } ) ).collect()
 }
 
-fn minimize( entries : &[ ( Vec<Drive>, usize ) ], width : usize ) -> ( Vec<Vec<Drive>>, Vec<usize> )
+fn classify( entries : &[ ( Vec<Drive>, usize ) ], width : usize ) -> Vec<usize>
 {
 	let count = entries.len() / width;
 	let row = | state : usize | &entries[ state * width .. ( state + 1 ) * width ];
@@ -92,14 +92,22 @@ fn minimize( entries : &[ ( Vec<Drive>, usize ) ], width : usize ) -> ( Vec<Vec<
 	{
 		let refined = number( ( 0 .. count ).map( | state | ( classes[ state ], row( state ).iter().map( | &( _, next ) | classes[ next ] ).collect::<Vec<usize>>() ) ).collect() );
 
-		if refined == classes { break; }
+		if refined == classes { return classes; }
 
 		classes = refined;
 	}
+}
 
-	let representatives : Vec<usize> = ( 0 .. count ).filter( | &state | classes[ .. state ].iter().all( | &class | class != classes[ state ] ) ).collect();
+fn representatives( classes : &[ usize ] ) -> Vec<usize>
+{
+	( 0 .. classes.len() ).filter( | &state | classes[ .. state ].iter().all( | &class | class != classes[ state ] ) ).collect()
+}
 
-	representatives.iter().flat_map( | &state | row( state ) ).map( | ( drives, next ) | ( drives.clone(), classes[ *next ] ) ).unzip()
+fn minimize( entries : &[ ( Vec<Drive>, usize ) ], width : usize ) -> ( Vec<Vec<Drive>>, Vec<usize> )
+{
+	let classes = classify( entries, width );
+
+	representatives( &classes ).iter().flat_map( | &state | &entries[ state * width .. ( state + 1 ) * width ] ).map( | ( drives, next ) | ( drives.clone(), classes[ *next ] ) ).unzip()
 }
 
 
@@ -108,6 +116,8 @@ pub struct Characterization
 {
 	elements : Vec<Element>,
 	devices : Vec<Device>,
+	plan : Plan,
+	loads : Vec<Plan>,
 	drives : Vec<usize>,
 	probes : Vec<usize>,
 	sequential : bool,
@@ -131,7 +141,7 @@ impl Characterization
 		if outputs.is_empty() || inputs.len() > INPUTS { return None; }
 
 		let mut registry = Registry::default();
-		let ( elements, devices ) = flatten( layers, &mut registry, models, layer, &[] ).ok()?;
+		let ( mut elements, devices ) = flatten( layers, &mut registry, models, layer, &[] ).ok()?;
 
 		let active = ! devices.is_empty() || elements.iter().any( | element | matches!( element.kind, Kind::Npn | Kind::Pnp | Kind::Nmos | Kind::Pmos ) );
 		let timed = elements.iter().any( | element | matches!( element.kind, Kind::Capacitor { .. } | Kind::Inductor { .. } | Kind::Clock { .. } ) );
@@ -148,7 +158,12 @@ impl Characterization
 
 		if probes.iter().any( | &probe | drives.iter().any( | &drive | net( probe ) == net( drive ) ) ) { return None; }
 
-		Some( Characterization { elements, devices, drives, probes, sequential, width : 1 << inputs.len(), step, seeds : vec![ Logic::default() ], entries : Vec::new(), settled : Vec::new(), flips : 0, longest : Some( 0.0 ) } )
+		for &drive in &drives { elements[ drive ].kind = Kind::Supply { volts : 0.0 }; }
+
+		let plan = Plan::build( &elements, &devices );
+		let loads = probes.iter().map( | &probe | Plan::build( &load( &elements, elements[ probe ].segment.to, 0.0 ), &devices ) ).collect();
+
+		Some( Characterization { elements, devices, plan, loads, drives, probes, sequential, width : 1 << inputs.len(), step, seeds : vec![ Logic::default() ], entries : Vec::new(), settled : Vec::new(), flips : 0, longest : Some( 0.0 ) } )
 	}
 
 	fn bits( &self ) -> usize
@@ -168,7 +183,9 @@ impl Characterization
 
 	pub fn progress( &self ) -> f64
 	{
-		( self.entries.len() + self.flips ) as f64 / ( self.seeds.len() * self.width * ( 1 + self.bits() ) ) as f64
+		let rows = if self.tabulated() { self.settled.len() } else { self.seeds.len() * self.width };
+
+		( self.entries.len() + self.flips ) as f64 / ( self.seeds.len() * self.width + rows * self.bits() ) as f64
 	}
 
 	pub fn advance( &mut self, models : &[ Option<Model> ] ) -> Option<()>
@@ -176,12 +193,21 @@ impl Characterization
 		if ! self.tabulated() { return self.tabulate( models ); }
 
 		let bits = self.bits();
-		let duration = flip( &self.elements, &self.devices, models, &self.drives, &self.probes, &self.settled[ self.flips / bits ], self.flips % bits );
+		let ( row, _ ) = self.settled[ self.flips / bits ];
+
+		self.apply( row ^ 1 << ( self.flips % bits ) );
+
+		let duration = flip( &self.elements, &self.devices, &self.plan, models, &self.probes, &self.settled[ self.flips / bits ].1 );
 
 		self.longest = self.longest.zip( duration ).map( | ( longest, duration ) | longest.max( duration ) );
 		self.flips += 1;
 
 		Some( () )
+	}
+
+	fn apply( &mut self, row : usize )
+	{
+		for ( &drive, bit ) in self.drives.iter().zip( 0 .. ) { self.elements[ drive ].kind = Kind::Supply { volts : if row >> bit & 1 == 1 { SUPPLY } else { 0.0 } }; }
 	}
 
 	fn tabulate( &mut self, models : &[ Option<Model> ] ) -> Option<()>
@@ -191,20 +217,20 @@ impl Characterization
 		let seed = self.seeds[ self.entries.len() / self.width ].clone();
 		let row = self.entries.len() % self.width;
 
-		for ( &drive, bit ) in self.drives.iter().zip( 0 .. ) { self.elements[ drive ].kind = Kind::Supply { volts : if row >> bit & 1 == 1 { SUPPLY } else { 0.0 } }; }
+		self.apply( row );
 
-		let ( open, after ) = run( &self.elements, &self.devices, models, self.step, &seed )?;
+		let ( open, after ) = run( &self.elements, &self.devices, &self.plan, models, self.step, &seed )?;
 
 		self.settled.push( ( row, after.clone() ) );
 
-		let outputs = self.probes.iter().map( | &probe |
+		let outputs = self.probes.iter().zip( &self.loads ).map( | ( &probe, plan ) |
 		{
 			let volts = open.readings[ probe ].potentials[ 0 ];
 
 			if volts > LOW && volts < HIGH { return None; }
 
 			let target = if volts > THRESHOLD { 0.0 } else { SUPPLY };
-			let loaded = run( &load( &self.elements, self.elements[ probe ].segment.to, target ), &self.devices, models, self.step, &after )?.0.readings[ probe ].potentials[ 0 ];
+			let loaded = run( &load( &self.elements, self.elements[ probe ].segment.to, target ), &self.devices, plan, models, self.step, &after )?.0.readings[ probe ].potentials[ 0 ];
 			let ohms = ( ( volts - loaded ) / ( ( loaded - target ) / LOAD ) ).clamp( FLOOR, CEILING );
 
 			Some( Drive { volts, ohms } )
@@ -219,6 +245,8 @@ impl Characterization
 		};
 
 		self.entries.push( ( outputs, next ) );
+
+		if self.tabulated() { self.settled = representatives( &classify( &self.entries, self.width ) ).iter().flat_map( | &state | &self.settled[ state * self.width .. ( state + 1 ) * self.width ] ).cloned().collect(); }
 
 		Some( () )
 	}

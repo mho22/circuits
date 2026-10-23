@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{ Device, Element, Kind, Netlist, Segment };
+use crate::{ Device, Element, Kind, Netlist, Segment, Topology };
 
 
 #[derive( Clone, Copy, Debug, PartialEq )]
@@ -28,6 +28,7 @@ pub struct Plan
 	pub inputs : Vec<Vec<Source>>,
 	pub outputs : Vec<Vec<Option<usize>>>,
 	pub generators : Vec<( usize, Option<usize> )>,
+	pub topology : Topology,
 }
 
 impl Plan
@@ -131,8 +132,14 @@ impl Plan
 			nets[ net ].pieces.push( segment );
 		}
 
-		let analog = ( 0 .. elements.len() ).filter( | &index | ! digital[ index ] ).collect();
+		let analog : Vec<usize> = ( 0 .. elements.len() ).filter( | &index | ! digital[ index ] ).collect();
+		let circuit : Vec<Element> = analog.iter().map( | &index | match elements[ index ].kind
+		{
+			Kind::Clock { .. } | Kind::Toggle { .. } => Element { kind : Kind::Supply { volts : 0.0 }, ..elements[ index ] },
+			_ => elements[ index ],
+		} ).collect();
+		let topology = Topology::build( &circuit );
 
-		Plan { analog, nets, inputs, outputs, generators }
+		Plan { analog, nets, inputs, outputs, generators, topology }
 	}
 }

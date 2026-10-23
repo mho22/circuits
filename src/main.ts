@@ -226,6 +226,9 @@ function proceed() : void
 
 	if( pending ) return;
 
+	view.follow( circuit.layer );
+	view.center( screen() );
+
 	name = loading.name;
 	loading = null;
 }
@@ -598,6 +601,11 @@ function frame( time : number ) : void
 	requestAnimationFrame( frame );
 }
 
+function screen() : Point
+{
+	return { x : innerWidth / 2, y : innerHeight / 2 };
+}
+
 function resize() : void
 {
 	canvas.width = innerWidth * devicePixelRatio;
@@ -732,7 +740,7 @@ canvas.addEventListener( 'dblclick', ( event : MouseEvent ) =>
 	} );
 } );
 
-document.querySelector( 'button.center' )!.addEventListener( 'click', () => view.center() );
+document.querySelector( 'button.center' )!.addEventListener( 'click', () => view.center( screen() ) );
 
 
 document.querySelector( 'button.save' )!.addEventListener( 'click', save );
@@ -820,4 +828,5 @@ addEventListener( 'resize', resize );
 
 select( null );
 resize();
+view.center( screen() );
 requestAnimationFrame( frame );

@@ -45,18 +45,21 @@ export class View
 		this.grab = null;
 	}
 
-	center() : void
+	center( point : Point ) : void
 	{
-		this.x = 0;
-		this.y = 0;
+		this.show( { x : 0, y : 0 }, point );
 	}
 
 	enter( layer : number, middle : Point, cursor : Point ) : void
 	{
 		this.entries.push( { layer, x : this.x, y : this.y } );
+		this.show( middle, cursor );
+	}
 
-		this.x = toScreen( middle.x ) - cursor.x;
-		this.y = toScreen( middle.y ) - cursor.y;
+	show( middle : Point, point : Point ) : void
+	{
+		this.x = toScreen( middle.x ) - point.x;
+		this.y = toScreen( middle.y ) - point.y;
 	}
 
 	follow( layer : number ) : void

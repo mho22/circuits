@@ -2,7 +2,6 @@ use crate::union_find::UnionFind;
 use crate::{ advance, Device, Element, History, Kind, Logic, Model, Netlist, Plan, DELAY, THRESHOLD };
 
 
-const SUPPLY : f64 = 5.0;
 const RESOLUTION : f64 = 10.0;
 const STEPS : usize = 10_000;
 
@@ -92,18 +91,11 @@ pub fn stages( elements : &[ Element ], drives : &[ usize ], probes : &[ usize ]
 	drives.iter().filter_map( | &drive | graph.reach( forest.find( net( elements[ drive ].segment.to ) ), &mut visiting, &mut memo ) ).fold( 0.0, f64::max )
 }
 
-pub fn flip( elements : &[ Element ], devices : &[ Device ], models : &[ Option<Model> ], drives : &[ usize ], probes : &[ usize ], settled : &( usize, Logic ), bit : usize ) -> Option<f64>
+pub fn flip( elements : &[ Element ], devices : &[ Device ], plan : &Plan, models : &[ Option<Model> ], probes : &[ usize ], seed : &Logic ) -> Option<f64>
 {
 	let step = devices.iter().filter_map( | device | models.get( device.layer ).and_then( Option::as_ref ) ).map( | model | model.delay ).fold( f64::INFINITY, f64::min ) / RESOLUTION;
-	let ( row, seed ) = settled;
-	let flipped = row ^ 1 << bit;
-	let mut elements = elements.to_vec();
-
-	for ( &drive, index ) in drives.iter().zip( 0 .. ) { elements[ drive ].kind = Kind::Supply { volts : if flipped >> index & 1 == 1 { SUPPLY } else { 0.0 } }; }
-
 	let history = History::default();
-	let plan = Plan::build( &elements, devices );
-	let highs = | logic : &mut Logic | advance( &elements, devices, &plan, models, &history, step, logic ).ok().map( | solution | probes.iter().map( | &probe | solution.readings[ probe ].potentials[ 0 ] > THRESHOLD ).collect::<Vec<bool>>() );
+	let highs = | logic : &mut Logic | advance( elements, devices, plan, models, &history, step, logic ).ok().map( | solution | probes.iter().map( | &probe | solution.readings[ probe ].potentials[ 0 ] > THRESHOLD ).collect::<Vec<bool>>() );
 	let mut logic = seed.clone();
 	let mut last = highs( &mut logic )?;
 	let start = logic.time;

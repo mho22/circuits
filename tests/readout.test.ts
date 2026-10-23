@@ -23,9 +23,9 @@ describe( 'readout', () =>
 		expect( read( element( { kind : Kind.Resistor, value : 2200, potentials : [ 5, 0 ], currents : [ 0.00227, -0.00227 ] } ), undefined ) ).toBe( 'Resistor 2.2 kΩ · 5 V across · 2.27 mA' );
 	} );
 
-	it( 'describes a symbol with its layer and the voltage of each pin', () =>
+	it( 'describes a symbol with its layer and without the voltage of its pins', () =>
 	{
-		expect( read( element( { kind : Kind.Symbol, value : 2, potentials : [ 5, 0, 2.5 ], currents : [ 0.001, -0.001, 0 ] } ), undefined ) ).toBe( 'Symbol 2 · 5 V · 0 V · 2.5 V' );
+		expect( read( element( { kind : Kind.Symbol, value : 2, potentials : [ 5, 0, 2.5 ], currents : [ 0.001, -0.001, 0 ] } ), undefined ) ).toBe( 'Symbol 2' );
 	} );
 
 	it( 'describes an input with its bit and its voltage', () =>
@@ -47,8 +47,8 @@ describe( 'readout', () =>
 
 	it( 'describes a named symbol with its name', () =>
 	{
-		expect( read( element( { kind : Kind.Symbol, value : 2, potentials : [ 5 ], currents : [ 0 ], definition : { name : 'foo', drawing : [], labels : [], layout : [], delay : 3e-9 } } ), undefined ) ).toBe( 'foo · 3 ns · 5 V' );
-		expect( read( element( { kind : Kind.Symbol, value : 2, potentials : [ 5 ], currents : [ 0 ], definition : { name : 'foo', drawing : [], labels : [], layout : [], delay : NaN } } ), undefined ) ).toBe( 'foo · 5 V' );
+		expect( read( element( { kind : Kind.Symbol, value : 2, potentials : [ 5 ], currents : [ 0 ], definition : { name : 'foo', drawing : [], labels : [], layout : [], delay : 3e-9 } } ), undefined ) ).toBe( 'foo · 3 ns' );
+		expect( read( element( { kind : Kind.Symbol, value : 2, potentials : [ 5 ], currents : [ 0 ], definition : { name : 'foo', drawing : [], labels : [], layout : [], delay : NaN } } ), undefined ) ).toBe( 'foo' );
 	} );
 
 	it( 'describes the pin of a symbol under a point with its label, its bit and its voltage', () =>
@@ -59,7 +59,7 @@ describe( 'readout', () =>
 
 		expect( read( symbol, undefined, { x : 3, y : 5 } ) ).toBe( 'foo · bar · 1 · 5 V' );
 		expect( read( symbol, undefined, { x : 7, y : 5 } ) ).toBe( 'foo · 0 · 0 V' );
-		expect( read( symbol, undefined, { x : 5, y : 5 } ) ).toBe( 'foo · 3 ns · 5 V · 0 V' );
+		expect( read( symbol, undefined, { x : 5, y : 5 } ) ).toBe( 'foo · 3 ns' );
 	} );
 
 	it( 'puts the label of a symbol after its name and before the label of each of its pins', () =>
@@ -70,7 +70,7 @@ describe( 'readout', () =>
 
 		expect( read( symbol, undefined, { x : 3, y : 5 } ) ).toBe( 'foo · qux-bar · 1 · 5 V' );
 		expect( read( symbol, undefined, { x : 7, y : 5 } ) ).toBe( 'foo · 0 · 0 V' );
-		expect( read( symbol, undefined, { x : 5, y : 5 } ) ).toBe( 'foo · qux- · 3 ns · 5 V · 0 V' );
+		expect( read( symbol, undefined, { x : 5, y : 5 } ) ).toBe( 'foo · qux- · 3 ns' );
 	} );
 
 	it( 'describes an output with its label', () =>
