@@ -94,6 +94,14 @@ describe( 'selection', () =>
 		expect( span( [ element( { kind : Kind.Symbol, from : { x : 0, y : 0 }, to : { x : 0, y : 0 }, rotation : 1, outline, definition } ) ] ) ).toEqual( { low : { x : -3, y : -3 }, high : { x : 4, y : 2 } } );
 	} );
 
+	it( 'spans a text of a symbol by its box, turned with the symbol', () =>
+	{
+		const outline = { low : { x : -2, y : -2 }, high : { x : 2, y : 2 }, pins : [ { x : -2, y : 0 } ] };
+		const definition = { name : 'foo', drawing : [ { figure : Figure.Text as const, at : { x : 0, y : 8 }, content : 'foobarbaz' } ], labels : [], layout : [], delay : NaN };
+
+		expect( span( [ element( { kind : Kind.Symbol, from : { x : 0, y : 0 }, to : { x : 0, y : 0 }, rotation : 1, outline, definition } ) ] ) ).toEqual( { low : { x : -4, y : -3 }, high : { x : 2, y : 5 } } );
+	} );
+
 	it( 'spans a symbol without its center when its center is away from its box', () =>
 	{
 		const outline = { low : { x : -6, y : -2 }, high : { x : -2, y : 2 }, pins : [ { x : -6, y : 0 } ] };

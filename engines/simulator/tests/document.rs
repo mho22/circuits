@@ -358,6 +358,17 @@ fn it_labels_an_input_or_an_output_and_keeps_the_label_through_a_deletion()
 
 	assert_eq!( document.label( 0 ), "bar" );
 	assert_eq!( document.label( 1 ), "" );
-	assert_eq!( document.apply( Operation::Label { id : 1, label : "baz".to_string() } ), Err( Error::Pinless ) );
-	assert_eq!( document.inverse( &Operation::Label { id : 1, label : "baz".to_string() } ), Err( Error::Pinless ) );
+	assert_eq!( document.apply( Operation::Label { id : 1, label : "baz".to_string() } ), Err( Error::Labelless ) );
+	assert_eq!( document.inverse( &Operation::Label { id : 1, label : "baz".to_string() } ), Err( Error::Labelless ) );
+}
+
+#[test]
+fn it_labels_a_symbol()
+{
+	let mut document = Document::default();
+
+	document.apply( add( Kind::Symbol { layer : 1, rotation : 0 }, FOO, FOO ) ).unwrap();
+
+	assert_eq!( document.apply( Operation::Label { id : 0, label : "foo".to_string() } ), Ok( 0 ) );
+	assert_eq!( document.label( 0 ), "foo" );
 }

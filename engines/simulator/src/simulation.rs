@@ -24,6 +24,13 @@ fn centered( document : &Document, name : &str, drawing : &[ Shape ], layout : &
 	Ok( Operation::Describe { name : name.to_string(), drawing : drawing.iter().map( | shape | shape.shifted( - middle.x * FINE, - middle.y * FINE ) ).collect(), layout : outline.pins.iter().map( | pin | Point { x : pin.x - middle.x, y : pin.y - middle.y } ).collect() } )
 }
 
+fn prefixed( prefix : &str, label : &str ) -> String
+{
+	if prefix.is_empty() || label.is_empty() { return label.to_string(); }
+
+	format!( "{prefix}{label}" )
+}
+
 fn middle( segment : Segment ) -> Point
 {
 	Point { x : ( segment.from.x + segment.to.x ).div_euclid( 2 ), y : ( segment.from.y + segment.to.y ).div_euclid( 2 ) }
@@ -317,7 +324,7 @@ impl Simulation
 		{
 			let Kind::Symbol { layer, .. } = element.kind else
 			{
-				if element.kind.pin() { pins.push( ( element.segment.to, document.label( element.id ) ) ); }
+				if element.kind.pin() { pins.push( ( element.segment.to, document.label( element.id ).to_string() ) ); }
 
 				elements.push( *element );
 
@@ -325,7 +332,8 @@ impl Simulation
 			};
 
 			let inner = &self.layers[ layer as usize ];
-			let labels = inner.elements().iter().filter( | part | part.kind.pin() ).map( | part | inner.label( part.id ) );
+			let prefix = document.label( element.id );
+			let labels = inner.elements().iter().filter( | part | part.kind.pin() ).map( | part | prefixed( prefix, inner.label( part.id ) ) );
 
 			for ( end, label ) in self.terminals( element ).into_iter().zip( labels )
 			{

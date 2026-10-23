@@ -117,11 +117,19 @@ describe( 'file encoder', () =>
 			{ figure : Figure.Circle as const, center : { x : 0, y : 1 }, radius : 2 },
 			{ figure : Figure.Line as const, from : { x : -1, y : 0 }, to : { x : 1, y : 1 } },
 			{ figure : Figure.Curve as const, from : { x : 0, y : -4 }, through : { x : 4, y : 0 }, to : { x : 0, y : 4 } },
+			{ figure : Figure.Text as const, at : { x : 2, y : -2 }, content : 'q"ux' },
 		];
 		const text = encode( [], [ { number : 1, definition : { name : 'foo', drawing, labels : [], layout : [ { x : -3, y : 0 }, { x : 2, y : 1 } ], delay : 1e-9 }, parts : [ pin ] } ] );
-		const shapes = '{ "shape" : "circle", "center" : [ 0, 1 ], "radius" : 2 }, { "shape" : "line", "from" : [ -1, 0 ], "to" : [ 1, 1 ] }, { "shape" : "curve", "from" : [ 0, -4 ], "through" : [ 4, 0 ], "to" : [ 0, 4 ] }';
+		const shapes = '{ "shape" : "circle", "center" : [ 0, 1 ], "radius" : 2 }, { "shape" : "line", "from" : [ -1, 0 ], "to" : [ 1, 1 ] }, { "shape" : "curve", "from" : [ 0, -4 ], "through" : [ 4, 0 ], "to" : [ 0, 4 ] }, { "shape" : "text", "at" : [ 2, -2 ], "content" : "q\\"ux" }';
 
 		expect( text ).toContain( `\t\t\t"layer" : 1,\n\t\t\t"name" : "foo",\n\t\t\t"drawing" : [ ${ shapes } ],\n\t\t\t"layout" : [ [ -3, 0 ], [ 2, 1 ] ],\n\t\t\t"parts" : [` );
 		expect( text ).toContain( '{ "kind" : "input", "label" : "b\\"ar", "from" : [ 0, 0 ], "to" : [ 1, 0 ] }' );
+	} );
+
+	it( 'writes the label of a symbol after its rotation', () =>
+	{
+		const symbol = element( { kind : Kind.Symbol, value : 1, label : 'qux', from : { x : 5, y : 5 }, to : { x : 5, y : 5 } } );
+
+		expect( encode( [ symbol ], [] ) ).toContain( '{ "kind" : "symbol", "layer" : 1, "rotation" : 0, "label" : "qux", "from" : [ 5, 5 ], "to" : [ 5, 5 ] }' );
 	} );
 } );

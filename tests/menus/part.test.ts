@@ -33,15 +33,16 @@ describe( 'part menu', () =>
 		expect( labels( open( document.body, { x : 0, y : 0 }, element( { kind : Kind.Supply } ), () => {} ) ) ).toEqual( [ 'Move', 'Copy', 'Delete' ] );
 	} );
 
-	it( 'offers a move, a rotate, a copy and a delete for a symbol, and every action with a label for an input or an output', () =>
+	it( 'offers a move, a rotate, a label, a copy and a delete for a symbol, and every action with a label for an input or an output', () =>
 	{
-		expect( labels( open( document.body, { x : 0, y : 0 }, element( { kind : Kind.Symbol } ), () => {} ) ) ).toEqual( [ 'Move', 'Rotate', 'Copy', 'Delete' ] );
+		expect( labels( open( document.body, { x : 0, y : 0 }, element( { kind : Kind.Symbol } ), () => {} ) ) ).toEqual( [ 'Move', 'Rotate', 'Add label', 'Copy', 'Delete' ] );
 		expect( labels( open( document.body, { x : 0, y : 0 }, element( { kind : Kind.Input } ), () => {} ) ) ).toEqual( [ 'Move', 'Rotate', 'Mirror horizontally', 'Mirror vertically', 'Add label', 'Copy', 'Delete' ] );
 		expect( labels( open( document.body, { x : 0, y : 0 }, element( { kind : Kind.Output } ), () => {} ) ) ).toEqual( [ 'Move', 'Rotate', 'Mirror horizontally', 'Mirror vertically', 'Add label', 'Copy', 'Delete' ] );
 	} );
 
-	it( 'offers to edit the label of an input or an output that has one', () =>
+	it( 'offers to edit the label of an input, an output or a symbol that has one', () =>
 	{
+		expect( labels( open( document.body, { x : 0, y : 0 }, element( { kind : Kind.Symbol, label : 'foo' } ), () => {} ) )[ 2 ] ).toBe( 'Edit label' );
 		expect( labels( open( document.body, { x : 0, y : 0 }, element( { kind : Kind.Input, label : 'foo' } ), () => {} ) )[ 4 ] ).toBe( 'Edit label' );
 		expect( labels( open( document.body, { x : 0, y : 0 }, element( { kind : Kind.Output, label : '' } ), () => {} ) )[ 4 ] ).toBe( 'Add label' );
 	} );

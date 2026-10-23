@@ -64,6 +64,8 @@ function shape( value : Record<string, unknown> | null ) : Shape[]
 
 	const figure = SHAPES.find( figure => FIGURES[ figure ].toLowerCase() === value.shape ) ?? unreadable();
 
+	if( figure === Figure.Text ) return [ { figure, at : at( value.at ), content : text( value.content ) } ];
+
 	if( figure === Figure.Circle ) return [ { figure, center : at( value.center ), radius : Number.isInteger( value.radius ) ? value.radius as number : unreadable() } ];
 
 	if( figure === Figure.Curve ) return [ { figure, from : at( value.from ), through : at( value.through ), to : at( value.to ) } ];
@@ -114,7 +116,7 @@ function row( layer : number, part : Record<string, unknown> | null ) : [ number
 
 	if( kind === Kind.Symbol && ! ( Number.isInteger( value ) && value > 0 ) ) unreadable();
 
-	return [ [ layer, kind, value, turn, ... point( part.from ), ... point( part.to ) ], PINS.includes( kind ) ? text( part.label ) : '' ];
+	return [ [ layer, kind, value, turn, ... point( part.from ), ... point( part.to ) ], PINS.includes( kind ) || kind === Kind.Symbol ? text( part.label ) : '' ];
 }
 
 function definition( symbol : Record<string, unknown> | null ) : [ [ number[], string ][], number, string, number[], number[] ]

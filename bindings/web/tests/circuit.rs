@@ -596,8 +596,12 @@ fn it_encloses_a_named_symbol_with_its_drawing_and_its_layout()
 	assert!( circuit.enclose( &[ 1, -2, 7, 2 ], String::new(), &[ 2, 2, 0, 0 ], &[] ).is_err() );
 	assert!( circuit.enclose( &[ 1, -2, 7, 2 ], String::new(), &[ 2, -1, 0, 0 ], &[] ).is_err() );
 	assert!( circuit.enclose( &[ 1, -2, 7, 2 ], String::new(), &[ 1, 0, 0, 0 ], &[] ).is_err() );
+	assert!( circuit.enclose( &[ 1, -2, 7, 2 ], String::new(), &[ 4, 0, 0, 2, 102 ], &[] ).is_err() );
+	assert!( circuit.enclose( &[ 1, -2, 7, 2 ], String::new(), &[ 4, 0, 0, -1 ], &[] ).is_err() );
+	assert!( circuit.enclose( &[ 1, -2, 7, 2 ], String::new(), &[ 4, 0, 0, 1, -1 ], &[] ).is_err() );
+	assert!( circuit.enclose( &[ 1, -2, 7, 2 ], String::new(), &[ 4, 0, 0, 0 ], &[] ).is_err() );
 
-	let drawing = [ 1, 0, 0, 2, 2, -1, 0, 1, 1, 3, -4, -4, 0, 0, -4, 4 ];
+	let drawing = [ 1, 0, 0, 2, 2, -1, 0, 1, 1, 3, -4, -4, 0, 0, -4, 4, 4, 0, 4, 3, 102, 111, 111 ];
 	let symbol = circuit.enclose( &[ 1, -2, 7, 2 ], "foo".to_string(), &drawing, &[ -3, 0, 3, 0 ] ).ok().unwrap();
 
 	assert_eq!( ( circuit.name( 1 ), circuit.drawing( 1 ), circuit.layout( 1 ) ), ( "foo".to_string(), drawing.to_vec(), vec![ -3, 0, 3, 0 ] ) );
@@ -611,12 +615,13 @@ fn it_opens_the_names_the_drawings_the_layouts_and_the_labels_of_the_layers()
 	let mut circuit = Circuit::new();
 	let data = [ 0.0, 14.0, 1.0, 0.0, 5.0, 5.0, 5.0, 5.0, 1.0, 13.0, 1.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 15.0, 0.0, 0.0, 5.0, 0.0, 4.0, 0.0 ];
 
-	circuit.open( &data, vec![ String::new(), "foo".to_string(), "bar".to_string() ], &[ 1 ], vec![ "baz".to_string() ], &[ 4, 1, 0, 0, 2 ], &[ 2, -3, 0, 3, 0 ] ).ok();
+	circuit.open( &data, vec![ "qux".to_string(), "foo".to_string(), "bar".to_string() ], &[ 1 ], vec![ "baz".to_string() ], &[ 4, 1, 0, 0, 2 ], &[ 2, -3, 0, 3, 0 ] ).ok();
 
 	let values : Vec<f64> = circuit.contents( 1 ).chunks( 13 ).map( | row | row[ 6 ] ).collect();
 
 	assert_eq!( ( circuit.name( 1 ), circuit.drawing( 1 ), circuit.layout( 1 ), circuit.labels( 1 ) ), ( "baz".to_string(), vec![ 1, 0, 0, 2 ], vec![ -3, 0, 3, 0 ], vec![ "foo".to_string(), "bar".to_string() ] ) );
 	assert_eq!( values, vec![ 1.0, 0.0 ] );
+	assert_eq!( circuit.symbol_labels( 0 ), vec![ "qux".to_string() ] );
 	assert!( circuit.open( &data, Vec::new(), &[ 1 ], vec![ String::new() ], &[ 5, 1, 0, 0, 2 ], &[ 0 ] ).is_err() );
 	assert!( circuit.open( &data, Vec::new(), &[ 1 ], vec![ String::new() ], &[ 4, 1, 0, 0, 0 ], &[ 0 ] ).is_err() );
 	assert!( circuit.open( &data, Vec::new(), &[ 1 ], vec![ String::new() ], &[], &[ 0 ] ).is_err() );
@@ -626,7 +631,7 @@ fn it_opens_the_names_the_drawings_the_layouts_and_the_labels_of_the_layers()
 }
 
 #[wasm_bindgen_test]
-fn it_sets_the_label_of_a_pin_and_undoes_it()
+fn it_sets_the_label_of_a_pin_and_undoes_it_and_the_label_of_a_symbol()
 {
 	let mut circuit = Circuit::new();
 	let data = [ 0.0, 14.0, 1.0, 0.0, 5.0, 5.0, 5.0, 5.0, 1.0, 13.0, 1.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 15.0, 0.0, 0.0, 5.0, 0.0, 4.0, 0.0 ];
@@ -644,7 +649,8 @@ fn it_sets_the_label_of_a_pin_and_undoes_it()
 
 	circuit.leave();
 
-	assert!( circuit.set_label( 0, "bar".to_string() ).is_err() );
+	assert_eq!( circuit.set_label( 0, "bar".to_string() ).ok(), Some( 0 ) );
+	assert_eq!( circuit.symbol_labels( 0 ), vec![ "bar".to_string() ] );
 }
 
 #[wasm_bindgen_test]

@@ -11,6 +11,8 @@ function shift( point : Point, offset : Point ) : Point
 
 export function translate( shape : Shape, offset : Point ) : Shape
 {
+	if( shape.figure === Figure.Text ) return { ... shape, at : shift( shape.at, offset ) };
+
 	if( shape.figure === Figure.Circle ) return { ... shape, center : shift( shape.center, offset ) };
 
 	if( shape.figure === Figure.Curve ) return { ... shape, from : shift( shape.from, offset ), through : shift( shape.through, offset ), to : shift( shape.to, offset ) };

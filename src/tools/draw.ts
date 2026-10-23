@@ -56,20 +56,35 @@ export class DrawTool
 		this.cursor = snap( point );
 	}
 
-	release( point : Point ) : void
+	release( point : Point ) : Point | null
 	{
+		const { start } = this;
+
 		this.cursor = snap( point );
 
 		const shape = this.preview();
 
 		this.start = null;
 
-		if( ! shape ) return;
+		if( this.figure === Figure.Text ) return start;
 
-		if( this.figure === Figure.Curve && shape.figure === Figure.Line ) { this.bend = { from : shape.from, to : shape.to }; return; }
+		if( ! shape ) return null;
+
+		if( this.figure === Figure.Curve && shape.figure === Figure.Line ) { this.bend = { from : shape.from, to : shape.to }; return null; }
 
 		this.bend = null;
 		this.change( [ ... this.shapes, shape ], this.pins );
+
+		return null;
+	}
+
+	write( at : Point, content : string ) : void
+	{
+		const text = content.trim();
+
+		if( ! text ) return;
+
+		this.change( [ ... this.shapes, { figure : Figure.Text, at, content : text } ], this.pins );
 	}
 
 	cancel() : boolean
@@ -112,7 +127,7 @@ export class DrawTool
 
 		if( bend ) return arc( bend.from, cursor, bend.to ) ? { figure : Figure.Curve, from : bend.from, through : cursor, to : bend.to } : { figure : Figure.Line, ... bend };
 
-		if( ! start ) return null;
+		if( ! start || this.figure === Figure.Text ) return null;
 
 		if( this.figure === Figure.Circle )
 		{

@@ -177,6 +177,13 @@ fn it_tells_an_input_and_an_output_from_the_other_parts()
 }
 
 #[test]
+fn it_tells_an_input_an_output_and_a_symbol_from_the_other_parts_by_their_label()
+{
+	assert!( Kind::Input { high : true }.labeled() && Kind::Output.labeled() && Kind::Symbol { layer : 1, rotation : 0 }.labeled() );
+	assert!( ! Kind::Wire.labeled() && ! Kind::Toggle { high : true }.labeled() && ! Kind::Led { color : 0 }.labeled() );
+}
+
+#[test]
 fn it_gives_an_led_the_light_junction_of_its_color_and_every_other_part_the_silicon_junction()
 {
 	assert_eq!( [ 0, 1, 2 ].map( | color | Kind::Led { color }.junction() ), LIGHTS );

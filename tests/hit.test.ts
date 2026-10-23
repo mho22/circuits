@@ -19,6 +19,13 @@ describe( 'hit', () =>
 		expect( [ { x : 4, y : 0 }, { x : 3, y : 3 }, { x : -4, y : 0 }, { x : 1, y : 0 } ].map( point => hit( shape, point ) ) ).toEqual( [ true, true, false, false ] );
 	} );
 
+	it( 'reaches a text inside its box only', () =>
+	{
+		const shape = { figure : Figure.Text as const, at : { x : 0, y : 0 }, content : 'foo' };
+
+		expect( [ { x : 0, y : 0 }, { x : 4, y : 1 }, { x : -1, y : 0 }, { x : 2, y : -3 } ].map( point => hit( shape, point ) ) ).toEqual( [ true, true, false, false ] );
+	} );
+
 	it( 'reaches a line along its length but not past its ends', () =>
 	{
 		const shape = { figure : Figure.Line as const, from : { x : 0, y : 0 }, to : { x : 4, y : 0 } };

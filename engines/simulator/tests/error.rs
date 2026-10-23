@@ -12,11 +12,11 @@ fn it_describes_each_error()
 	assert_eq!( Error::Frequency.to_string(), "A frequency must be greater than 0 Hz." );
 	assert_eq!( Error::Inductance.to_string(), "An inductance must be greater than 0 H." );
 	assert_eq!( Error::Inputless.to_string(), "This part is not an input or a toggle." );
+	assert_eq!( Error::Labelless.to_string(), "This part is not an input, an output or a symbol." );
 	assert_eq!( Error::Layerless.to_string(), "No layer has this number." );
 	assert_eq!( Error::Misplaced.to_string(), "A ground, a VCC or a symbol sits on one point." );
 	assert_eq!( Error::Missing.to_string(), "No part has this id." );
 	assert_eq!( Error::Oscillating.to_string(), "A loop of gates switches too fast for the time step." );
-	assert_eq!( Error::Pinless.to_string(), "This part is not an input or an output." );
 	assert_eq!( Error::Recursive.to_string(), "A symbol cannot hold itself." );
 	assert_eq!( Error::Resistance.to_string(), "A resistance must be greater than 0 Ω." );
 	assert_eq!( Error::Rotation.to_string(), "A rotation is 0, 1, 2 or 3 quarter turns." );

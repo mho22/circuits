@@ -122,4 +122,9 @@ impl Kind
 	{
 		matches!( self, Kind::Input { .. } | Kind::Output )
 	}
+
+	pub fn labeled( &self ) -> bool
+	{
+		self.pin() || matches!( self, Kind::Symbol { .. } )
+	}
 }

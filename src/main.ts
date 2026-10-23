@@ -17,6 +17,7 @@ import { encode } from './encoders/file.ts';
 import { Color, NEXT } from './enums/color.ts';
 import { Figure } from './enums/figure.ts';
 import { INPUTS, Kind, NAMES, PINS, POINTS } from './enums/kind.ts';
+import { extent } from './extent.ts';
 import { FINE, snap } from './grid.ts';
 import { grab } from './grab.ts';
 import { read, shape } from './keyboard.ts';
@@ -149,9 +150,11 @@ function outlined( item : Element ) : Element
 function labelled( elements : Element[], layer : number ) : Element[]
 {
 	const labels = circuit.labels( layer );
-	let index = 0;
+	const titles = circuit.symbolLabels( layer );
+	let pin = 0;
+	let symbol = 0;
 
-	return elements.map( item => PINS.includes( item.kind ) ? { ... item, label : labels[ index++ ] } : item );
+	return elements.map( item => PINS.includes( item.kind ) ? { ... item, label : labels[ pin++ ] } : item.kind === Kind.Symbol ? { ... item, label : titles[ symbol++ ] } : item );
 }
 
 function captioned( elements : Element[] ) : Element[]
@@ -383,6 +386,15 @@ function rework( area : Area, anchor : Point, edit : Edit ) : void
 	drawer.change( drawer.shapes.filter( ( _, index ) => ! grabbed.shapes.includes( index ) ), drawer.pins );
 }
 
+function inscribe( at : Point | null ) : void
+{
+	if( ! at ) return;
+
+	const place = fit( origin, view.x, view.y );
+
+	entitle( document.body, { x : place.x + at.x * place.unit, y : place.y + at.y * place.unit }, '', '', content => drawer.write( at, content ) ).parentElement!.classList.add( 'beside' );
+}
+
 function modify( event : MouseEvent ) : void
 {
 	const point = fine( event );
@@ -437,17 +449,22 @@ function present() : void
 	const place = fit( origin, view.x, view.y );
 	const draft = drawer.preview();
 	const selection = selector.preview() ?? shifter.zone() ?? ( picked?.menu.isConnected ? picked.area : null );
+	const shapes = shifter.shapes( drawer.shapes );
+	const pins = shifter.pins( carrier.pins( drawer.pins ) );
+	const icon = extent( draft ? [ ... shapes, draft ] : shapes, pins );
 
 	context.setTransform( devicePixelRatio, 0, 0, devicePixelRatio, - view.x * devicePixelRatio, - view.y * devicePixelRatio );
 
 	grid.draw( context, view.x, view.y, innerWidth, innerHeight, true );
 
+	if( icon ) mask.draw( context, { low : { x : origin.x + icon.low.x, y : origin.y + icon.low.y }, high : { x : origin.x + icon.high.x, y : origin.y + icon.high.y } }, view.x, view.y, innerWidth, innerHeight );
+
 	if( selection ) area.draw( context, { low : { x : origin.x + selection.low.x / FINE, y : origin.y + selection.low.y / FINE }, high : { x : origin.x + selection.high.x / FINE, y : origin.y + selection.high.y / FINE } } );
 
 	context.setTransform( devicePixelRatio, 0, 0, devicePixelRatio, 0, 0 );
 
-	board.draw( context, place, shifter.pins( carrier.pins( drawer.pins ) ), aim );
-	drawing.draw( context, shifter.shapes( drawer.shapes ), place, 0, place.unit );
+	board.draw( context, place, pins, aim );
+	drawing.draw( context, shapes, place, 0, place.unit );
 
 	context.globalAlpha = 0.5;
 
@@ -618,7 +635,7 @@ canvas.addEventListener( 'pointerup', ( event : PointerEvent ) =>
 
 	if( sketching && selection && aim ) { const anchor = aim; picked = { area : selection, menu : revise( document.body, { x : event.clientX, y : event.clientY }, edit => rework( selection, anchor, edit ) ) }; return; }
 
-	if( sketching ) { if( event.button === 0 ) drawer.release( fine( event ) ); if( event.button === 2 ) modify( event ); return; }
+	if( sketching ) { if( event.button === 0 ) inscribe( drawer.release( fine( event ) ) ); if( event.button === 2 ) modify( event ); return; }
 
 	if( maker.area ) { if( clicked && toggle( circuit, point ) ) maker.record(); return; }
 

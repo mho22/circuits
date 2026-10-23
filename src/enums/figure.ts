@@ -3,6 +3,7 @@ export enum Figure
 	Circle = 1,
 	Line = 2,
 	Curve = 3,
+	Text = 4,
 }
 
 
@@ -10,4 +11,5 @@ export const NAMES : Record<Figure, string> = {
 	[ Figure.Circle ] : 'Circle',
 	[ Figure.Line ] : 'Line',
 	[ Figure.Curve ] : 'Curve',
+	[ Figure.Text ] : 'Text',
 };

@@ -62,6 +62,17 @@ describe( 'readout', () =>
 		expect( read( symbol, undefined, { x : 5, y : 5 } ) ).toBe( 'foo · 3 ns · 5 V · 0 V' );
 	} );
 
+	it( 'puts the label of a symbol after its name and before the label of each of its pins', () =>
+	{
+		const outline = { low : { x : -2, y : -2 }, high : { x : 2, y : 2 }, pins : [ { x : -2, y : 0 }, { x : 2, y : 0 } ] };
+		const definition = { name : 'foo', drawing : [], labels : [ 'bar', '' ], layout : [], delay : 3e-9 };
+		const symbol = element( { kind : Kind.Symbol, value : 2, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline, definition, label : 'qux-', potentials : [ 5, 0 ], currents : [ 0, 0 ] } );
+
+		expect( read( symbol, undefined, { x : 3, y : 5 } ) ).toBe( 'foo · qux-bar · 1 · 5 V' );
+		expect( read( symbol, undefined, { x : 7, y : 5 } ) ).toBe( 'foo · 0 · 0 V' );
+		expect( read( symbol, undefined, { x : 5, y : 5 } ) ).toBe( 'foo · qux- · 3 ns · 5 V · 0 V' );
+	} );
+
 	it( 'describes an output with its label', () =>
 	{
 		expect( read( element( { kind : Kind.Output, label : 'bar', potentials : [ 0, 0 ] } ), undefined ) ).toBe( 'Output bar · 0 · 0 V' );

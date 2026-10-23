@@ -62,6 +62,28 @@ describe( 'draw tool', () =>
 		expect( tool.preview() ).toBeNull();
 	} );
 
+	it( 'gives the half-step dot of the press for a text, draws no preview, and writes the trimmed text there', () =>
+	{
+		const tool = new DrawTool();
+
+		tool.figure = Figure.Text;
+		tool.press( { x : 5.4, y : 3.6 } );
+		tool.move( { x : 12, y : 4 } );
+
+		expect( tool.preview() ).toBeNull();
+		expect( tool.release( { x : 12, y : 4 } ) ).toEqual( { x : 6, y : 4 } );
+		expect( tool.release( { x : 12, y : 4 } ) ).toBeNull();
+
+		tool.write( { x : 6, y : 4 }, '  ' );
+		tool.write( { x : 6, y : 4 }, ' foo ' );
+
+		expect( tool.shapes ).toEqual( [ { figure : Figure.Text, at : { x : 6, y : 4 }, content : 'foo' } ] );
+
+		tool.undo();
+
+		expect( tool.shapes ).toEqual( [] );
+	} );
+
 	it( 'cancels a curve waiting for the dot it passes through', () =>
 	{
 		const tool = new DrawTool();

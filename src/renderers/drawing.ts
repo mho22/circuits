@@ -7,6 +7,7 @@ import type { Shape } from '../types/shape.ts';
 
 
 const COLOR = '#9e9e9e';
+const FONT = '12px ui-monospace, monospace';
 
 
 export function draw( context : CanvasRenderingContext2D, shapes : Shape[], center : Point, rotation : number, unit : number ) : void
@@ -41,4 +42,22 @@ export function draw( context : CanvasRenderingContext2D, shapes : Shape[], cent
 	} );
 
 	context.stroke();
+
+	const texts = shapes.flatMap( shape => shape.figure === Figure.Text ? [ shape ] : [] );
+
+	if( texts.length === 0 ) return;
+
+	context.fillStyle = COLOR;
+	context.font = FONT;
+	context.textAlign = 'left';
+	context.textBaseline = 'alphabetic';
+
+	texts.forEach( shape =>
+	{
+		context.save();
+		context.translate( ... at( shape.at ) );
+		context.rotate( rotation * Math.PI / 2 );
+		context.fillText( shape.content, context.measureText( shape.content ).actualBoundingBoxLeft, 0 );
+		context.restore();
+	} );
 }

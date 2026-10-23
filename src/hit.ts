@@ -1,4 +1,5 @@
 import { arc } from './arc.ts';
+import { bounds } from './bounds.ts';
 import { Figure } from './enums/figure.ts';
 import { path } from './path.ts';
 import { side } from './side.ts';
@@ -27,6 +28,8 @@ function ring( point : Point, center : Point, radius : number ) : boolean
 
 export function hit( shape : Shape, point : Point ) : boolean
 {
+	if( shape.figure === Figure.Text ) { const [ low, high ] = bounds( shape ); return point.x >= low.x && point.x <= high.x && point.y >= low.y && point.y <= high.y; }
+
 	if( shape.figure === Figure.Circle ) return ring( point, shape.center, shape.radius );
 
 	if( shape.figure === Figure.Curve )

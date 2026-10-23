@@ -34,13 +34,15 @@ export function describe( element : Element, branch : Branch | undefined, point 
 
 	const index = point ? socket( element, point ) : -1;
 
-	if( index >= 0 ) return [ title, element.definition?.labels[ index ], String( bit( element.potentials[ index ] ) ), format( element.potentials[ index ], 'V' ) ].filter( Boolean ).join( ' · ' );
+	const pin = element.definition?.labels[ index ];
+
+	if( index >= 0 ) return [ title, pin && element.label ? `${ element.label }${ pin }` : pin, String( bit( element.potentials[ index ] ) ), format( element.potentials[ index ], 'V' ) ].filter( Boolean ).join( ' · ' );
 
 	if( element.kind === Kind.Symbol )
 	{
 		const delay = element.definition?.delay ?? NaN;
 
-		return [ title, Number.isFinite( delay ) ? format( delay, 's' ) : '', ... element.potentials.map( potential => format( potential, 'V' ) ) ].filter( Boolean ).join( ' · ' );
+		return [ title, element.label, Number.isFinite( delay ) ? format( delay, 's' ) : '', ... element.potentials.map( potential => format( potential, 'V' ) ) ].filter( Boolean ).join( ' · ' );
 	}
 
 	if( PINS.includes( element.kind ) ) return [ title, String( bit( element.potentials[ 0 ] ) ), format( element.potentials[ 0 ], 'V' ) ].join( ' · ' );

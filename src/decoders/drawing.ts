@@ -21,6 +21,16 @@ export function decode( data : Int32Array ) : Shape[]
 			continue;
 		}
 
+		if( figure === Figure.Text )
+		{
+			const [ x, y, length ] = data.subarray( index + 1, index + 4 );
+
+			shapes.push( { figure, at : { x, y }, content : String.fromCodePoint( ... data.subarray( index + 4, index + 4 + length ) ) } );
+			index += 4 + length;
+
+			continue;
+		}
+
 		if( figure === Figure.Curve )
 		{
 			const [ fromX, fromY, throughX, throughY, toX, toY ] = data.subarray( index + 1, index + 7 );

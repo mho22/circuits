@@ -6,9 +6,10 @@ const HINTS : Record<Figure, string> = {
 	[ Figure.Circle ] : 'Press on the center and drag to the radius, or click for a dot.',
 	[ Figure.Line ] : 'Drag from one end to the other.',
 	[ Figure.Curve ] : 'Drag between the ends, then click a dot on the curve.',
+	[ Figure.Text ] : 'Click the dot at the foot of the first letter, then write the text.',
 };
 const MENU = 'Right-click a shape to delete it, or a pin to move it. Right-drag to select.';
-const FIGURES = [ Figure.Line, Figure.Circle, Figure.Curve ];
+const FIGURES = [ Figure.Line, Figure.Circle, Figure.Curve, Figure.Text ];
 
 
 export class Palette

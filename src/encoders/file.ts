@@ -13,7 +13,7 @@ function detail( element : Element ) : string
 
 	if( element.kind === Kind.Switch ) return `, "closed" : ${ element.value === 1 }`;
 
-	if( element.kind === Kind.Symbol ) return `, "layer" : ${ element.value }, "rotation" : ${ element.rotation }`;
+	if( element.kind === Kind.Symbol ) return `, "layer" : ${ element.value }, "rotation" : ${ element.rotation }${ element.label ? `, "label" : ${ JSON.stringify( element.label ) }` : '' }`;
 
 	if( element.kind === Kind.Toggle ) return element.value ? ', "level" : 1' : '';
 
@@ -46,6 +46,8 @@ function coordinates( point : Point ) : string
 
 function figure( shape : Shape ) : string
 {
+	if( shape.figure === Figure.Text ) return `"at" : ${ coordinates( shape.at ) }, "content" : ${ JSON.stringify( shape.content ) }`;
+
 	if( shape.figure === Figure.Circle ) return `"center" : ${ coordinates( shape.center ) }, "radius" : ${ shape.radius }`;
 
 	if( shape.figure === Figure.Curve ) return `"from" : ${ coordinates( shape.from ) }, "through" : ${ coordinates( shape.through ) }, "to" : ${ coordinates( shape.to ) }`;

@@ -11,7 +11,7 @@ const LABELS : Record<Exclude<Action, 'color' | 'label'>, string> = { move : 'Mo
 
 function actions( kind : Kind ) : Action[]
 {
-	if( kind === Kind.Symbol ) return [ 'move', 'rotate', 'copy', 'delete' ];
+	if( kind === Kind.Symbol ) return [ 'move', 'rotate', 'label', 'copy', 'delete' ];
 
 	if( POINTS.includes( kind ) ) return [ 'move', 'copy', 'delete' ];
 

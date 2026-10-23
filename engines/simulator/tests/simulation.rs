@@ -678,7 +678,7 @@ fn inverter( simulation : &mut Simulation ) -> u32
 }
 
 #[test]
-fn it_captions_each_toggle_with_the_label_of_a_pin_on_its_net()
+fn it_captions_each_toggle_with_the_label_of_a_pin_on_its_net_after_the_label_of_its_symbol()
 {
 	let mut simulation = Simulation::new( STEP );
 	let layer = inverter( &mut simulation ) as usize;
@@ -696,6 +696,10 @@ fn it_captions_each_toggle_with_the_label_of_a_pin_on_its_net()
 	simulation.apply( 0, Operation::Label { id : output, label : "bar".to_string() } ).unwrap();
 
 	assert_eq!( simulation.captions(), vec![ "foo".to_string(), "bar".to_string() ] );
+
+	simulation.apply( 0, Operation::Label { id : 0, label : "CTR 1-".to_string() } ).unwrap();
+
+	assert_eq!( simulation.captions(), vec![ "CTR 1-foo".to_string(), "bar".to_string() ] );
 }
 
 #[test]

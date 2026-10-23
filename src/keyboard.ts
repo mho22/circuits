@@ -6,7 +6,7 @@ import type { Command } from './types/command.ts';
 export const SHORTCUTS : Record<string, Kind> = { w : Kind.Wire, r : Kind.Resistor, b : Kind.Battery, g : Kind.Ground, c : Kind.Capacitor, l : Kind.Inductor, s : Kind.Switch, d : Kind.Diode, n : Kind.Npn, p : Kind.Pnp, m : Kind.Nmos, f : Kind.Pmos, v : Kind.Supply, i : Kind.Input, o : Kind.Output, t : Kind.Toggle, e : Kind.Led, k : Kind.Clock };
 
 
-export const FIGURES : Record<string, Figure> = { c : Figure.Circle, l : Figure.Line, u : Figure.Curve };
+export const FIGURES : Record<string, Figure> = { c : Figure.Circle, l : Figure.Line, u : Figure.Curve, t : Figure.Text };
 
 
 export function read( event : Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'metaKey' | 'shiftKey'> ) : Command | undefined

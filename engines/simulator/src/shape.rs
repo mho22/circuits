@@ -10,6 +10,7 @@ pub enum Shape
 	Circle { center : Point, radius : i32 },
 	Line { from : Point, to : Point },
 	Curve { from : Point, through : Point, to : Point },
+	Text { at : Point, content : String },
 }
 
 fn side( from : Point, to : Point, x : f64, y : f64 ) -> f64
@@ -39,6 +40,7 @@ impl Shape
 			Shape::Circle { radius, .. } => *radius > 0,
 			Shape::Line { from, to } => from != to,
 			Shape::Curve { from, through, to } => side( *from, *to, through.x as f64, through.y as f64 ) != 0.0,
+			Shape::Text { content, .. } => ! content.trim().is_empty(),
 		};
 
 		if sized { Ok( () ) } else { Err( Error::Flat ) }
@@ -48,11 +50,12 @@ impl Shape
 	{
 		let shift = | point : Point | Point { x : point.x + dx, y : point.y + dy };
 
-		match *self
+		match self
 		{
-			Shape::Circle { center, radius } => Shape::Circle { center : shift( center ), radius },
-			Shape::Line { from, to } => Shape::Line { from : shift( from ), to : shift( to ) },
-			Shape::Curve { from, through, to } => Shape::Curve { from : shift( from ), through : shift( through ), to : shift( to ) },
+			Shape::Circle { center, radius } => Shape::Circle { center : shift( *center ), radius : *radius },
+			Shape::Line { from, to } => Shape::Line { from : shift( *from ), to : shift( *to ) },
+			Shape::Curve { from, through, to } => Shape::Curve { from : shift( *from ), through : shift( *through ), to : shift( *to ) },
+			Shape::Text { at, content } => Shape::Text { at : shift( *at ), content : content.clone() },
 		}
 	}
 
@@ -63,6 +66,7 @@ impl Shape
 			Shape::Circle { center, radius } => vec![ Point { x : center.x - radius, y : center.y - radius }, Point { x : center.x + radius, y : center.y + radius } ],
 			Shape::Line { from, to } => vec![ *from, *to ],
 			Shape::Curve { from, through, to } => arc( *from, *through, *to ),
+			Shape::Text { at, content } => { let width = ( 3 * content.chars().count() as i32 + 1 ) / 2; vec![ Point { x : at.x, y : at.y - 2 }, Point { x : at.x + width, y : at.y + 1 } ] },
 		};
 
 		let low = Point { x : points.iter().map( | point | point.x ).min().unwrap_or( 0 ), y : points.iter().map( | point | point.y ).min().unwrap_or( 0 ) };

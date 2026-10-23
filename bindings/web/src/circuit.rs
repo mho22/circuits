@@ -13,6 +13,11 @@ fn points( data : &[ i32 ] ) -> Vec<Point>
 	data.chunks_exact( 2 ).map( | pair | Point { x : pair[ 0 ], y : pair[ 1 ] } ).collect()
 }
 
+fn text( codes : &[ i32 ] ) -> Option<String>
+{
+	codes.iter().map( | &code | u32::try_from( code ).ok().and_then( char::from_u32 ) ).collect()
+}
+
 fn shapes( data : &[ i32 ] ) -> Result<Vec<Shape>, JsError>
 {
 	let mut shapes = Vec::new();
@@ -25,6 +30,12 @@ fn shapes( data : &[ i32 ] ) -> Result<Vec<Shape>, JsError>
 			( 1, [ x, y, radius, .. ] ) => ( 3, Shape::Circle { center : Point { x : *x, y : *y }, radius : *radius } ),
 			( 2, [ from_x, from_y, to_x, to_y, .. ] ) => ( 4, Shape::Line { from : Point { x : *from_x, y : *from_y }, to : Point { x : *to_x, y : *to_y } } ),
 			( 3, [ from_x, from_y, through_x, through_y, to_x, to_y, .. ] ) => ( 6, Shape::Curve { from : Point { x : *from_x, y : *from_y }, through : Point { x : *through_x, y : *through_y }, to : Point { x : *to_x, y : *to_y } } ),
+			( 4, [ x, y, length, codes @ .. ] ) if ( 0 ..= codes.len() as i32 ).contains( length ) =>
+			{
+				let content = text( &codes[ .. *length as usize ] ).ok_or_else( || JsError::new( "Unknown shape." ) )?;
+
+				( 3 + *length as usize, Shape::Text { at : Point { x : *x, y : *y }, content } )
+			},
 			_ => return Err( JsError::new( "Unknown shape." ) ),
 		};
 
@@ -42,6 +53,7 @@ fn flat( shapes : &[ Shape ] ) -> Vec<i32>
 		Shape::Circle { center, radius } => vec![ 1, center.x, center.y, *radius ],
 		Shape::Line { from, to } => vec![ 2, from.x, from.y, to.x, to.y ],
 		Shape::Curve { from, through, to } => vec![ 3, from.x, from.y, through.x, through.y, to.x, to.y ],
+		Shape::Text { at, content } => [ 4, at.x, at.y, content.chars().count() as i32 ].into_iter().chain( content.chars().map( | character | character as i32 ) ).collect(),
 	} ).collect()
 }
 
@@ -99,7 +111,7 @@ impl Circuit
 			counts[ layer ] += 1;
 			edits.push( ( layer, Operation::Insert { element : Element { id, kind, segment, mirrored }, index : id as usize } ) );
 
-			if kind.pin() && ! label.is_empty() { edits.push( ( layer, Operation::Label { id, label } ) ); }
+			if kind.labeled() && ! label.is_empty() { edits.push( ( layer, Operation::Label { id, label } ) ); }
 		}
 
 		let mut rest = drawings;
@@ -171,6 +183,14 @@ impl Circuit
 		let Some( document ) = self.simulation.document( layer as usize ) else { return Vec::new(); };
 
 		document.elements().iter().filter( | element | element.kind.pin() ).map( | element | document.label( element.id ).to_string() ).collect()
+	}
+
+	#[wasm_bindgen( js_name = symbolLabels )]
+	pub fn symbol_labels( &self, layer : u32 ) -> Vec<String>
+	{
+		let Some( document ) = self.simulation.document( layer as usize ) else { return Vec::new(); };
+
+		document.elements().iter().filter( | element | matches!( element.kind, Kind::Symbol { .. } ) ).map( | element | document.label( element.id ).to_string() ).collect()
 	}
 
 	pub fn enter( &mut self, id : u32 ) -> Result<(), JsError>

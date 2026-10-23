@@ -28,7 +28,7 @@ describe( 'palette', () =>
 		const palette = new Palette( nav, document.body, () => {}, () => {} );
 
 		expect( [ group().hidden, bar().hidden ] ).toEqual( [ true, true ] );
-		expect( buttons().map( button => button.textContent ) ).toEqual( [ 'LineL', 'CircleC', 'CurveU' ] );
+		expect( buttons().map( button => button.textContent ) ).toEqual( [ 'LineL', 'CircleC', 'CurveU', 'TextT' ] );
 
 		palette.open();
 
@@ -50,7 +50,7 @@ describe( 'palette', () =>
 
 		palette.select( Figure.Circle );
 
-		expect( buttons().map( button => button.classList.contains( 'active' ) ) ).toEqual( [ false, true, false ] );
+		expect( buttons().map( button => button.classList.contains( 'active' ) ) ).toEqual( [ false, true, false, false ] );
 		expect( bar().querySelector( 'span' )!.textContent ).toBe( 'Press on the center and drag to the radius, or click for a dot. Right-click a shape to delete it, or a pin to move it. Right-drag to select.' );
 	} );
 

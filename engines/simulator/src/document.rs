@@ -71,7 +71,7 @@ impl Document
 			Operation::Describe { .. } => Ok( Operation::Describe { name : self.name.clone(), drawing : self.drawing.clone(), layout : self.layout.clone() } ),
 			Operation::Label { id, .. } =>
 			{
-				if ! self.elements[ self.index( id )? ].kind.pin() { return Err( Error::Pinless ); }
+				if ! self.elements[ self.index( id )? ].kind.labeled() { return Err( Error::Labelless ); }
 
 				Ok( Operation::Label { id, label : self.label( id ).to_string() } )
 			},
@@ -206,7 +206,7 @@ impl Document
 	{
 		let index = self.index( id )?;
 
-		if ! self.elements[ index ].kind.pin() { return Err( Error::Pinless ); }
+		if ! self.elements[ index ].kind.labeled() { return Err( Error::Labelless ); }
 
 		self.labels.insert( id, label );
 
