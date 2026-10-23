@@ -28,10 +28,9 @@ describe( 'maker', () =>
 
 	const shown = () => Array.from( bar().querySelectorAll( 'button' ) ).filter( item => ! item.hidden ).map( item => item.textContent );
 
-	it( 'shows its bar with a name, the picker, icon, done and cancel only while open', () =>
+	it( 'shows its bar with a name, icon, done and cancel only while open', () =>
 	{
-		const picker = document.createElement( 'div' );
-		const maker = new Maker( parent, picker, () => {}, () => {}, () => {}, () => {} );
+		const maker = new Maker( parent, () => {}, () => {}, () => {}, () => {} );
 
 		expect( bar().hidden ).toBe( true );
 
@@ -39,7 +38,6 @@ describe( 'maker', () =>
 
 		expect( bar().hidden ).toBe( false );
 		expect( shown() ).toEqual( [ 'Icon', 'Done', 'Cancel' ] );
-		expect( bar().children[ 1 ] ).toBe( picker );
 		expect( document.activeElement ).toBe( bar().querySelector( 'input' ) );
 		expect( bar().querySelector( 'input' )!.placeholder ).toBe( 'Category/Name' );
 
@@ -51,7 +49,7 @@ describe( 'maker', () =>
 	it( 'gives the area, the name, the drawing and the layout on done, then closes', () =>
 	{
 		const finish = vi.fn();
-		const maker = new Maker( parent, document.createElement( 'div' ), finish, () => {}, () => {}, () => {} );
+		const maker = new Maker( parent, finish, () => {}, () => {}, () => {} );
 
 		maker.open( AREA );
 
@@ -67,7 +65,7 @@ describe( 'maker', () =>
 	it( 'asks for a drawing on icon and forgets the drawing and the layout on cancel and on a new open', () =>
 	{
 		const draw = vi.fn();
-		const maker = new Maker( parent, document.createElement( 'div' ), () => {}, draw, () => {}, () => {} );
+		const maker = new Maker( parent, () => {}, draw, () => {}, () => {} );
 
 		maker.open( AREA );
 		button( 'Icon' ).click();
@@ -91,7 +89,7 @@ describe( 'maker', () =>
 	it( 'gives the count of its steps to discard on cancel, then closes, and does nothing when closed', () =>
 	{
 		const discard = vi.fn();
-		const maker = new Maker( parent, document.createElement( 'div' ), () => {}, () => {}, discard, () => {} );
+		const maker = new Maker( parent, () => {}, () => {}, discard, () => {} );
 
 		maker.cancel();
 
@@ -115,7 +113,7 @@ describe( 'maker', () =>
 
 	it( 'counts its steps back on an undo and forth on a redo, and forgets the undone steps after a new step or a close', () =>
 	{
-		const maker = new Maker( parent, document.createElement( 'div' ), () => {}, () => {}, () => {}, () => {} );
+		const maker = new Maker( parent, () => {}, () => {}, () => {}, () => {} );
 
 		maker.open( AREA );
 		maker.record();
@@ -138,7 +136,7 @@ describe( 'maker', () =>
 	it( 'edits a layer with its name, its drawing and its layout and shows delete', () =>
 	{
 		const finish = vi.fn();
-		const maker = new Maker( parent, document.createElement( 'div' ), finish, () => {}, () => {}, () => {} );
+		const maker = new Maker( parent, finish, () => {}, () => {}, () => {} );
 
 		maker.edit( 3, { name : 'foo', drawing : [ SHAPE ], labels : [], layout : LAYOUT, delay : 2.5e-9 } );
 
@@ -158,7 +156,7 @@ describe( 'maker', () =>
 	{
 		const discard = vi.fn();
 		const remove = vi.fn();
-		const maker = new Maker( parent, document.createElement( 'div' ), () => {}, () => {}, discard, remove );
+		const maker = new Maker( parent, () => {}, () => {}, discard, remove );
 
 		maker.edit( 2, { name : '', drawing : [], labels : [], layout : [], delay : 1e-9 } );
 		button( 'Delete' ).click();

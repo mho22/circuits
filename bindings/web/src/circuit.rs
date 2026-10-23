@@ -236,6 +236,14 @@ impl Circuit
 		self.current() as u32
 	}
 
+	#[wasm_bindgen( getter )]
+	pub fn trail( &self ) -> Vec<u32>
+	{
+		let path = self.simulation.path();
+
+		( 1 ..= path.len() ).filter_map( | depth | self.simulation.descend( &path[ .. depth ] ).ok() ).map( | layer | layer as u32 ).collect()
+	}
+
 	pub fn contents( &self, layer : u32 ) -> Vec<f64>
 	{
 		self.simulation.document( layer as usize ).map_or( Vec::new(), | document | self.rows( document, &[] ) )

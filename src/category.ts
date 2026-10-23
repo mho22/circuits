@@ -8,3 +8,8 @@ export function split( name : string ) : { path : string[], title : string }
 
 	return { path : parts.map( part => part.trim() ).filter( Boolean ), title };
 }
+
+export function title( name : string, layer : number ) : string
+{
+	return split( name ).title || `Symbol ${ layer }`;
+}

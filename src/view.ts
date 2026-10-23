@@ -15,8 +15,6 @@ export class View
 
 	private entries : { layer : number, x : number, y : number }[] = [];
 
-	private places = new Map<number, Point>();
-
 
 	scroll( deltaX : number, deltaY : number, deltaMode : number ) : void
 	{
@@ -53,16 +51,12 @@ export class View
 		this.y = 0;
 	}
 
-	enter( layer : number, symbol : Point, middle : Point ) : void
+	enter( layer : number, middle : Point, cursor : Point ) : void
 	{
 		this.entries.push( { layer, x : this.x, y : this.y } );
 
-		const place = this.places.get( layer );
-
-		if( place ) { this.x = place.x; this.y = place.y; return; }
-
-		this.x += toScreen( middle.x - symbol.x );
-		this.y += toScreen( middle.y - symbol.y );
+		this.x = toScreen( middle.x ) - cursor.x;
+		this.y = toScreen( middle.y ) - cursor.y;
 	}
 
 	follow( layer : number ) : void
@@ -71,16 +65,9 @@ export class View
 		{
 			const entry = this.entries.pop()!;
 
-			this.places.set( entry.layer, { x : this.x, y : this.y } );
-
 			this.x = entry.x;
 			this.y = entry.y;
 		}
-	}
-
-	forget() : void
-	{
-		this.places.clear();
 	}
 
 	toGrid( x : number, y : number ) : Point

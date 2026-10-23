@@ -1,4 +1,4 @@
-import { split } from './category.ts';
+import { split, title } from './category.ts';
 
 
 export class Library
@@ -123,6 +123,6 @@ export class Library
 
 	private title( layer : number ) : string
 	{
-		return split( this.symbols.find( ( [ other ] ) => other === layer )?.[ 1 ] ?? '' ).title || `Symbol ${ layer }`;
+		return title( this.symbols.find( ( [ other ] ) => other === layer )?.[ 1 ] ?? '', layer );
 	}
 }

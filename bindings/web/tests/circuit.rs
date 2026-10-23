@@ -511,6 +511,30 @@ fn it_enters_a_symbol_and_reads_the_parts_of_its_layer()
 }
 
 #[wasm_bindgen_test]
+fn it_gives_the_layer_of_each_symbol_it_is_in()
+{
+	let ( mut circuit, symbol ) = enclosed();
+
+	assert!( circuit.trail().is_empty() );
+
+	circuit.enter( symbol ).ok();
+
+	let inner = circuit.enclose( &[ 1, -2, 7, 2 ], String::new(), &[], &[] ).ok().unwrap();
+
+	circuit.enter( inner ).ok();
+
+	assert_eq!( circuit.trail(), vec![ 1, 2 ] );
+
+	circuit.leave();
+
+	assert_eq!( circuit.trail(), vec![ 1 ] );
+
+	circuit.leave();
+
+	assert!( circuit.trail().is_empty() );
+}
+
+#[wasm_bindgen_test]
 fn it_leaves_a_symbol_that_an_undo_removes()
 {
 	let ( mut circuit, symbol ) = enclosed();

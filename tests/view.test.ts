@@ -70,69 +70,35 @@ describe( 'view', () =>
 		expect( view.toGrid( SPACING * 3, SPACING * 2 ) ).toEqual( { x : 13, y : -2 } );
 	} );
 
-	it( 'shows the middle of a layer on its symbol and comes back when the layer is left', () =>
+	it( 'shows the middle of a layer under the cursor and comes back when the layer is left', () =>
 	{
 		const view = new View();
 
 		view.scroll( 30, 10, 0 );
-		view.enter( 2, { x : 10, y : 5 }, { x : 4, y : 8 } );
+		view.enter( 2, { x : 4, y : 8.5 }, { x : 100, y : 50 } );
 
-		expect( [ view.x, view.y ] ).toEqual( [ 30 - SPACING * 6, 10 + SPACING * 3 ] );
+		expect( [ view.x, view.y ] ).toEqual( [ SPACING * 4 - 100, SPACING * 8.5 - 50 ] );
+		expect( view.toGrid( 100, 50 ) ).toEqual( { x : 4, y : 9 } );
 
 		view.follow( 2 );
 
-		expect( [ view.x, view.y ] ).toEqual( [ 30 - SPACING * 6, 10 + SPACING * 3 ] );
+		expect( [ view.x, view.y ] ).toEqual( [ SPACING * 4 - 100, SPACING * 8.5 - 50 ] );
 
-		view.enter( 3, { x : 0, y : 0 }, { x : 1, y : 1 } );
+		view.enter( 3, { x : 1, y : 1 }, { x : 0, y : 0 } );
 		view.follow( 0 );
 
 		expect( [ view.x, view.y ] ).toEqual( [ 30, 10 ] );
 	} );
 
-	it( 'shows a layer again where it was left, wherever its symbol is', () =>
+	it( 'shows a layer under the cursor again, not where it was left', () =>
 	{
 		const view = new View();
 
-		view.enter( 2, { x : 10, y : 5 }, { x : 4, y : 8 } );
-		view.scroll( 30, 10, 0 );
-
-		const left = [ view.x, view.y ];
-
-		view.follow( 0 );
-		view.enter( 2, { x : 20, y : 0 }, { x : 9, y : 9 } );
-
-		expect( [ view.x, view.y ] ).toEqual( left );
-	} );
-
-	it( 'keeps the place of each layer that a move to the top leaves at once', () =>
-	{
-		const view = new View();
-
-		view.enter( 2, { x : 0, y : 0 }, { x : 0, y : 0 } );
-		view.scroll( 30, 0, 0 );
-		view.enter( 3, { x : 0, y : 0 }, { x : 0, y : 0 } );
-		view.scroll( 0, 10, 0 );
-		view.follow( 0 );
-		view.enter( 3, { x : 5, y : 5 }, { x : 0, y : 0 } );
-
-		expect( [ view.x, view.y ] ).toEqual( [ 30, 10 ] );
-
-		view.follow( 0 );
-		view.enter( 2, { x : 5, y : 5 }, { x : 0, y : 0 } );
-
-		expect( [ view.x, view.y ] ).toEqual( [ 30, 0 ] );
-	} );
-
-	it( 'shows the middle of a layer again after it forgets the places', () =>
-	{
-		const view = new View();
-
-		view.enter( 2, { x : 10, y : 5 }, { x : 4, y : 8 } );
+		view.enter( 2, { x : 4, y : 8 }, { x : 100, y : 50 } );
 		view.scroll( 30, 10, 0 );
 		view.follow( 0 );
-		view.forget();
-		view.enter( 2, { x : 10, y : 5 }, { x : 4, y : 8 } );
+		view.enter( 2, { x : 4, y : 8 }, { x : 200, y : 60 } );
 
-		expect( [ view.x, view.y ] ).toEqual( [ - SPACING * 6, SPACING * 3 ] );
+		expect( [ view.x, view.y ] ).toEqual( [ SPACING * 4 - 200, SPACING * 8 - 60 ] );
 	} );
 } );

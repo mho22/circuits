@@ -25,7 +25,7 @@ export class Maker
 	private delete = document.createElement( 'button' );
 
 
-	constructor( parent : HTMLElement, picker : HTMLElement, finish : ( target : Area | number, name : string, drawing : Shape[], layout : Point[] ) => void, draw : () => void, private discard : ( steps : number, layer : number | null ) => void, remove : ( layer : number ) => void )
+	constructor( parent : HTMLElement, finish : ( target : Area | number, name : string, drawing : Shape[], layout : Point[] ) => void, draw : () => void, private discard : ( steps : number, layer : number | null ) => void, remove : ( layer : number ) => void )
 	{
 		const icon = document.createElement( 'button' );
 		const done = document.createElement( 'button' );
@@ -60,7 +60,7 @@ export class Maker
 		cancel.textContent = 'Cancel';
 		cancel.addEventListener( 'click', () => this.cancel() );
 
-		this.bar.append( this.name, picker, icon, this.delete, done, cancel );
+		this.bar.append( this.name, icon, this.delete, done, cancel );
 
 		parent.append( this.bar );
 	}

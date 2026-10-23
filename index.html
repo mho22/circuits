@@ -26,6 +26,8 @@
 			button.active { border-color : #5c5c5c; color : #e6e6e6; }
 			button:focus, input:focus { outline : none; }
 			kbd { margin-left : 6px; color : #5c5c5c; font : inherit; }
+			.trail { flex : 1; align-self : center; overflow-x : auto; white-space : nowrap; scrollbar-width : none; pointer-events : auto; }
+			.trail span { color : #5c5c5c; }
 			.files { display : flex; order : 1; gap : 6px; margin-left : auto; }
 			button.center { position : fixed; right : 12px; bottom : 12px; display : flex; width : 32px; height : 32px; padding : 0; align-items : center; justify-content : center; }
 			button.center:hover { color : #e6e6e6; }
@@ -44,8 +46,6 @@
 			.maker span { padding-left : 6px; }
 			.maker input { width : 240px; padding : 5px 8px; border : 1px solid #2a2a2a; border-radius : 4px; background : #000000; color : #e6e6e6; font : inherit; }
 			.maker input:focus { border-color : #5c5c5c; }
-			.maker > div { display : flex; }
-			.maker .menu { top : auto; bottom : 100%; margin : 0 0 4px; }
 			.palette { display : flex; gap : 6px; }
 			.palette[ hidden ] { display : none; }
 			body.sketching nav > :not( .palette ), body.sketching .maker:not( .sketch ) { display : none; }

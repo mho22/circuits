@@ -1,6 +1,6 @@
 import init, { Circuit } from '../bindings/web/pkg/web.js';
 import { fit, locate } from './board.ts';
-import { split } from './category.ts';
+import { split, title } from './category.ts';
 import { Clock } from './clock.ts';
 import { parse, SEPARATOR, write } from './decimal.ts';
 import { decode as decodeBranches } from './decoders/branch.ts';
@@ -48,6 +48,7 @@ import { cover, inside, span } from './selection.ts';
 import { socket } from './socket.ts';
 import { target } from './target.ts';
 import { PART_GROUPS, PIN_GROUPS, Toolbar } from './toolbar.ts';
+import { Trail } from './trail.ts';
 import { CarryTool } from './tools/carry.ts';
 import { DrawTool } from './tools/draw.ts';
 import { MoveTool } from './tools/move.ts';
@@ -88,11 +89,11 @@ const selector = new SelectTool();
 const drawer = new DrawTool();
 const carrier = new CarryTool();
 const shifter = new ShiftTool();
-const slot = document.createElement( 'div' );
-const toolbar = new Toolbar( document.querySelector( 'nav' )!, [ ... PART_GROUPS, ... PIN_GROUPS ], pick );
-const pinbar = new Toolbar( slot, PIN_GROUPS, pick );
+const toolbar = new Toolbar( document.querySelector( 'nav' )!, PART_GROUPS, pick );
 const library = new Library( document.querySelector( 'nav' )!, place );
-const maker = new Maker( document.body, slot, make, sketch, discard, purge );
+const pinbar = new Toolbar( document.querySelector( 'nav' )!, PIN_GROUPS, pick );
+const trail = new Trail( document.querySelector( 'nav' )! );
+const maker = new Maker( document.body, make, sketch, discard, purge );
 const palette = new Palette( document.querySelector( 'nav' )!, document.body, figure, unsketch );
 const clock = new Clock( STEPS_PER_FRAME );
 const drift = new Drift();
@@ -225,8 +226,6 @@ function proceed() : void
 
 	if( pending ) return;
 
-	view.forget();
-
 	name = loading.name;
 	loading = null;
 }
@@ -326,14 +325,14 @@ function purge( layer : number ) : void
 	attempt( () => circuit.purge() );
 }
 
-function enter( symbol : Element ) : void
+function enter( symbol : Element, cursor : Point ) : void
 {
 	circuit.enter( symbol.id );
 
 	const area = span( parts() );
-	const middle = area ? { x : Math.floor( ( area.low.x + area.high.x ) / 2 ), y : Math.floor( ( area.low.y + area.high.y ) / 2 ) } : symbol.from;
+	const middle = area ? { x : ( area.low.x + area.high.x ) / 2, y : ( area.low.y + area.high.y ) / 2 } : symbol.from;
 
-	view.enter( circuit.layer, symbol.from, middle );
+	view.enter( circuit.layer, middle, cursor );
 }
 
 function follow() : void
@@ -573,10 +572,12 @@ function frame( time : number ) : void
 	indicate();
 
 	library.update( Array.from( circuit.symbols(), layer => [ layer, circuit.name( layer ) ] ) );
+	trail.update( Array.from( circuit.trail, layer => title( circuit.name( layer ), layer ) ) );
 
 	const kinds = allowed();
 
-	toolbar.limit( maker.area ? [] : kinds );
+	toolbar.limit( kinds );
+	pinbar.limit( kinds );
 
 	if( tool.kind !== null && ! kinds.includes( tool.kind ) ) select( kinds[ 0 ] );
 
@@ -713,7 +714,7 @@ canvas.addEventListener( 'dblclick', ( event : MouseEvent ) =>
 
 	if( maker.area ) return;
 
-	if( symbol ) { enter( symbol ); return; }
+	if( symbol ) { enter( symbol, { x : event.clientX, y : event.clientY } ); return; }
 
 	if( ! target ) return;
 
