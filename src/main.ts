@@ -81,6 +81,7 @@ const KINDS = Object.keys( NAMES ).map( Number ) as Kind[];
 const canvas = document.querySelector( 'canvas' )!;
 const context = canvas.getContext( '2d' )!;
 const status = document.querySelector( 'output' )!;
+const locator = document.querySelector( '.position' )!;
 const mode = document.querySelector( '.mode' )!;
 const picker = document.querySelector( 'input[type=file]' ) as HTMLInputElement;
 const zoomer = document.querySelector( 'button.zoom' ) as HTMLButtonElement;
@@ -616,6 +617,10 @@ function frame( time : number ) : void
 	const engine = circuit.mode;
 
 	if( mode.textContent !== engine ) mode.textContent = engine;
+
+	const coordinates = hover ? `${ hover.x } ${ hover.y }` : '';
+
+	if( locator.textContent !== coordinates ) locator.textContent = coordinates;
 
 	const error = circuit.error();
 	const ids = hover ? Array.from( circuit.elementsAt( hover.x, hover.y ) ) : [];
