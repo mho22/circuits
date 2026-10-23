@@ -317,7 +317,7 @@ fn it_lists_a_mosfet_with_its_drain_current()
 
 	assert_eq!( transistor[ 1 ], 10.0 );
 	assert_eq!( elements[ 107 ], 11.0 );
-	assert!( ( transistor[ 13 ] - 0.0025 ).abs() < 1e-9 );
+	assert!( ( transistor[ 13 ] - 0.0025 * 1.05 / 1.025 ).abs() < 1e-9 );
 	assert!( transistor[ 12 ].abs() < 1e-9 );
 }
 

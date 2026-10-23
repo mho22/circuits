@@ -477,8 +477,8 @@ fn it_follows_the_square_law_in_a_saturated_nmos_transistor()
 	let transistor = &solution.readings[ 4 ];
 	let [ gate, drain, source ] = transistor.currents[ .. ] else { panic!() };
 
-	assert!( ( drain - 0.02 / 2.0 * 0.5_f64.powi( 2 ) ).abs() < 1e-9 );
-	assert!( ( transistor.potentials[ 1 ] - 2.5 ).abs() < 1e-6 );
+	assert!( ( drain - 0.02 / 2.0 * 0.5_f64.powi( 2 ) * ( 1.0 + 0.01 * transistor.potentials[ 1 ] ) ).abs() < 1e-9 );
+	assert!( ( transistor.potentials[ 1 ] - ( 5.0 - 1000.0 * drain ) ).abs() < 1e-6 );
 	assert!( gate.abs() < 1e-9 );
 	assert!( ( gate + drain + source ).abs() < 1e-15 );
 }
@@ -521,7 +521,7 @@ fn it_inverts_the_input_of_a_cmos_inverter()
 fn it_turns_on_both_halves_of_a_cmos_inverter_at_half_the_supply()
 {
 	let solution = solve( &inverter( 2.5 ), &History::default(), STEP ).unwrap();
-	let current = 0.02 / 2.0 * 1.0_f64.powi( 2 );
+	let current = 0.02 / 2.0 * 1.0_f64.powi( 2 ) * ( 1.0 + 0.01 * 2.5 );
 
 	assert!( ( solution.readings[ 5 ].currents[ 1 ] - current ).abs() < 1e-6 );
 	assert!( ( solution.readings[ 3 ].currents[ 1 ] + current ).abs() < 1e-6 );

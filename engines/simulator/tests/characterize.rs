@@ -66,6 +66,64 @@ fn nand() -> Document
 	] )
 }
 
+fn nand_4() -> Document
+{
+	let parts : [ Part; 47 ] = [
+		( Kind::Pmos, ( 26, 10 ), ( 27, 10 ) ),
+		( Kind::Pmos, ( 29, 10 ), ( 30, 10 ) ),
+		( Kind::Nmos, ( 29, 14 ), ( 30, 14 ) ),
+		( Kind::Nmos, ( 29, 17 ), ( 30, 17 ) ),
+		( Kind::Wire, ( 28, 9 ), ( 28, 8 ) ),
+		( Kind::Wire, ( 31, 8 ), ( 31, 9 ) ),
+		( Kind::Wire, ( 31, 11 ), ( 31, 12 ) ),
+		( Kind::Wire, ( 28, 11 ), ( 28, 12 ) ),
+		( Kind::Wire, ( 31, 15 ), ( 31, 16 ) ),
+		( Kind::Wire, ( 31, 18 ), ( 31, 19 ) ),
+		( Kind::Pmos, ( 23, 10 ), ( 24, 10 ) ),
+		( Kind::Wire, ( 25, 9 ), ( 25, 8 ) ),
+		( Kind::Wire, ( 25, 11 ), ( 25, 12 ) ),
+		( Kind::Wire, ( 25, 8 ), ( 28, 8 ) ),
+		( Kind::Wire, ( 25, 12 ), ( 28, 12 ) ),
+		( Kind::Wire, ( 28, 8 ), ( 31, 8 ) ),
+		( Kind::Wire, ( 31, 12 ), ( 28, 12 ) ),
+		( Kind::Wire, ( 30, 12 ), ( 31, 12 ) ),
+		( Kind::Wire, ( 31, 12 ), ( 31, 13 ) ),
+		( Kind::Wire, ( 29, 10 ), ( 29, 14 ) ),
+		( Kind::Wire, ( 26, 10 ), ( 26, 17 ) ),
+		( Kind::Wire, ( 29, 17 ), ( 26, 17 ) ),
+		( Kind::Wire, ( 23, 10 ), ( 23, 20 ) ),
+		( Kind::Wire, ( 23, 20 ), ( 29, 20 ) ),
+		( Kind::Ground, ( 31, 25 ), ( 31, 25 ) ),
+		( Kind::Nmos, ( 29, 20 ), ( 30, 20 ) ),
+		( Kind::Input { high : false }, ( 18, 17 ), ( 19, 17 ) ),
+		( Kind::Input { high : false }, ( 18, 20 ), ( 19, 20 ) ),
+		( Kind::Supply { volts : 5.0 }, ( 28, 8 ), ( 28, 8 ) ),
+		( Kind::Input { high : false }, ( 18, 14 ), ( 19, 14 ) ),
+		( Kind::Wire, ( 31, 12 ), ( 32, 12 ) ),
+		( Kind::Output, ( 33, 12 ), ( 32, 12 ) ),
+		( Kind::Wire, ( 25, 8 ), ( 22, 8 ) ),
+		( Kind::Wire, ( 22, 9 ), ( 22, 8 ) ),
+		( Kind::Wire, ( 22, 11 ), ( 22, 12 ) ),
+		( Kind::Wire, ( 22, 12 ), ( 25, 12 ) ),
+		( Kind::Wire, ( 29, 14 ), ( 19, 14 ) ),
+		( Kind::Wire, ( 26, 17 ), ( 19, 17 ) ),
+		( Kind::Wire, ( 23, 20 ), ( 19, 20 ) ),
+		( Kind::Nmos, ( 29, 23 ), ( 30, 23 ) ),
+		( Kind::Pmos, ( 20, 10 ), ( 21, 10 ) ),
+		( Kind::Wire, ( 20, 10 ), ( 20, 23 ) ),
+		( Kind::Wire, ( 19, 23 ), ( 20, 23 ) ),
+		( Kind::Wire, ( 20, 23 ), ( 29, 23 ) ),
+		( Kind::Wire, ( 31, 21 ), ( 31, 22 ) ),
+		( Kind::Wire, ( 31, 24 ), ( 31, 25 ) ),
+		( Kind::Input { high : false }, ( 18, 23 ), ( 19, 23 ) ),
+	];
+	let mut document = Document::default();
+
+	for ( kind, from, to ) in parts { document.apply( Operation::Add { kind, segment : Segment { from : Point { x : from.0, y : from.1 }, to : Point { x : to.0, y : to.1 } }, mirrored : kind == Kind::Pmos } ).unwrap(); }
+
+	document
+}
+
 fn flip_flop() -> Document
 {
 	let input = | gate : i32, side : i32 | ( 10 * gate - 2, side );
@@ -148,6 +206,15 @@ fn it_measures_the_truth_table_of_an_inverter()
 	assert!( model.rows.iter().all( | row | row[ 0 ].ohms > FLOOR && row[ 0 ].ohms < 1e6 ) );
 	assert_eq!( model.next, vec![ 0; 2 ] );
 	assert_eq!( model.delay, DELAY );
+}
+
+#[test]
+fn it_measures_the_truth_table_of_a_four_input_nand_with_stacked_transistors()
+{
+	let model = characterize( &[ Document::default(), nand_4() ], &[], 1 ).unwrap();
+
+	assert_eq!( model.rows.len(), 16 );
+	assert_eq!( model.rows.iter().map( | row | row[ 0 ].high() ).collect::<Vec<_>>(), ( 0 .. 16 ).map( | row | row != 15 ).collect::<Vec<_>>() );
 }
 
 #[test]

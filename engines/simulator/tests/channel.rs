@@ -3,6 +3,7 @@ use simulator::conduct;
 
 const THRESHOLD : f64 = 1.5;
 const GAIN : f64 = 0.02;
+const MODULATION : f64 = 0.01;
 
 
 fn current( gate : f64, drain : f64 ) -> f64
@@ -23,15 +24,15 @@ fn it_follows_the_square_law_in_saturation()
 {
 	for ( gate, drain ) in [ ( 2.0, 3.0 ), ( 3.5, 2.0 ), ( 5.0, 5.0 ) ]
 	{
-		assert!( ( current( gate, drain ) - GAIN / 2.0 * ( gate - THRESHOLD ).powi( 2 ) ).abs() < 1e-15 );
-		assert_eq!( conduct( gate, drain ).2, 0.0 );
+		assert!( ( current( gate, drain ) - GAIN / 2.0 * ( gate - THRESHOLD ).powi( 2 ) * ( 1.0 + MODULATION * drain ) ).abs() < 1e-15 );
+		assert!( ( conduct( gate, drain ).2 - GAIN / 2.0 * ( gate - THRESHOLD ).powi( 2 ) * MODULATION ).abs() < 1e-15 );
 	}
 }
 
 #[test]
 fn it_acts_as_a_resistor_in_the_linear_region()
 {
-	assert!( ( current( 5.0, 0.5 ) - GAIN * ( 3.5 * 0.5 - 0.125 ) ).abs() < 1e-15 );
+	assert!( ( current( 5.0, 0.5 ) - GAIN * ( 3.5 * 0.5 - 0.125 ) * ( 1.0 + MODULATION * 0.5 ) ).abs() < 1e-15 );
 }
 
 #[test]
