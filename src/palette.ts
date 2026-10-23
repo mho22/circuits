@@ -66,11 +66,11 @@ export class Palette
 		this.show( false );
 	}
 
-	select( figure : Figure ) : void
+	select( figure : Figure | null ) : void
 	{
 		this.buttons.forEach( ( button, index ) => button.classList.toggle( 'active', FIGURES[ index ] === figure ) );
 
-		this.hint.textContent = `${ HINTS[ figure ] } ${ MENU }`;
+		this.hint.textContent = figure === null ? MENU : `${ HINTS[ figure ] } ${ MENU }`;
 	}
 
 	private show( shown : boolean ) : void

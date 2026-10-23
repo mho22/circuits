@@ -12,7 +12,7 @@ const DOT = 1;
 
 export class DrawTool
 {
-	figure = Figure.Line;
+	figure : Figure | null = null;
 
 	shapes : Shape[] = [];
 
@@ -127,7 +127,7 @@ export class DrawTool
 
 		if( bend ) return arc( bend.from, cursor, bend.to ) ? { figure : Figure.Curve, from : bend.from, through : cursor, to : bend.to } : { figure : Figure.Line, ... bend };
 
-		if( ! start || this.figure === Figure.Text ) return null;
+		if( ! start || this.figure === null || this.figure === Figure.Text ) return null;
 
 		if( this.figure === Figure.Circle )
 		{

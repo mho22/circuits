@@ -97,7 +97,7 @@ const library = new Library( document.querySelector( 'nav' )!, place );
 const pinbar = new Toolbar( document.querySelector( 'nav' )!, PIN_GROUPS, pick );
 const trail = new Trail( document.querySelector( 'nav' )! );
 const maker = new Maker( document.body, make, sketch, discard, purge );
-const palette = new Palette( document.querySelector( 'nav' )!, document.body, figure, unsketch );
+const palette = new Palette( document.querySelector( 'nav' )!, document.body, choose, unsketch );
 const clock = new Clock( STEPS_PER_FRAME );
 const drift = new Drift();
 const view = new View();
@@ -382,7 +382,7 @@ function sketch() : void
 
 	drawer.load( [ ... maker.drawing ], ends.map( ( item, index ) => ( { point : maker.layout[ index ] ?? fixed[ index ] ?? { x : item.from.x - origin.x, y : item.from.y - origin.y }, output : item.kind === Kind.Output, label : item.label ?? '' } ) ) );
 
-	figure( drawer.figure );
+	figure( null );
 	palette.open();
 }
 
@@ -400,12 +400,17 @@ function unsketch() : void
 	palette.close();
 }
 
-function figure( choice : Figure ) : void
+function figure( choice : Figure | null ) : void
 {
 	drawer.cancel();
 	drawer.figure = choice;
 
 	palette.select( choice );
+}
+
+function choose( choice : Figure ) : void
+{
+	figure( choice === drawer.figure ? null : choice );
 }
 
 function sheet() : Board
@@ -606,7 +611,7 @@ function frame( time : number ) : void
 
 	if( tool.kind !== null && ! kinds.includes( tool.kind ) ) select( kinds[ 0 ] );
 
-	canvas.classList.toggle( 'idle', tool.kind === null && ! sketching );
+	canvas.classList.toggle( 'idle', sketching ? drawer.figure === null : tool.kind === null );
 
 	const engine = circuit.mode;
 
@@ -678,16 +683,6 @@ canvas.addEventListener( 'pointerdown', ( event : PointerEvent ) =>
 
 	notice = null;
 
-	if( sketching && event.button === 0 && carrier.index !== null ) { drop(); return; }
-
-	if( sketching && event.button === 0 && shifter.grab ) { land(); return; }
-
-	if( sketching && event.button === 2 && aim ) { canvas.setPointerCapture( event.pointerId ); selector.press( aim ); return; }
-
-	if( sketching && event.button === 0 ) { canvas.setPointerCapture( event.pointerId ); drawer.press( fine( event ) ); }
-
-	if( sketching ) return;
-
 	if( event.button === 1 || ( event.button === 0 && spaced ) )
 	{
 		event.preventDefault();
@@ -698,6 +693,16 @@ canvas.addEventListener( 'pointerdown', ( event : PointerEvent ) =>
 
 		return;
 	}
+
+	if( sketching && event.button === 0 && carrier.index !== null ) { drop(); return; }
+
+	if( sketching && event.button === 0 && shifter.grab ) { land(); return; }
+
+	if( sketching && event.button === 2 && aim ) { canvas.setPointerCapture( event.pointerId ); selector.press( aim ); return; }
+
+	if( sketching && event.button === 0 ) { canvas.setPointerCapture( event.pointerId ); drawer.press( fine( event ) ); }
+
+	if( sketching ) return;
 
 	if( maker.area && event.button !== 0 ) return;
 
@@ -719,9 +724,7 @@ canvas.addEventListener( 'pointermove', ( event : PointerEvent ) =>
 {
 	pointer = { x : event.clientX, y : event.clientY };
 
-	if( sketching ) { track(); return; }
-
-	hover = view.toGrid( pointer.x, pointer.y );
+	if( ! sketching ) hover = view.toGrid( pointer.x, pointer.y );
 
 	if( view.move( pointer ) ) return;
 
@@ -821,6 +824,8 @@ addEventListener( 'keydown', ( event : KeyboardEvent ) =>
 {
 	if( event.target instanceof HTMLInputElement ) return;
 
+	if( event.key === ' ' ) { event.preventDefault(); spaced = true; canvas.classList.add( 'grab' ); return; }
+
 	if( sketching )
 	{
 		if( event.key === 'Escape' && carrier.index !== null ) { carrier.cancel(); return; }
@@ -831,7 +836,7 @@ addEventListener( 'keydown', ( event : KeyboardEvent ) =>
 
 		const choice = shape( event );
 
-		if( choice !== undefined ) figure( choice );
+		if( choice !== undefined ) choose( choice );
 
 		if( read( event ) === 'undo' ) { event.preventDefault(); drawer.undo(); }
 
@@ -843,8 +848,6 @@ addEventListener( 'keydown', ( event : KeyboardEvent ) =>
 
 		return;
 	}
-
-	if( event.key === ' ' ) { event.preventDefault(); spaced = true; canvas.classList.add( 'grab' ); return; }
 
 	if( event.key === 'Escape' && mover.elements.length > 0 ) { mover.cancel(); return; }
 

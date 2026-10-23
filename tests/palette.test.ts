@@ -54,6 +54,17 @@ describe( 'palette', () =>
 		expect( bar().querySelector( 'span' )!.textContent ).toBe( 'Press on the center and drag to the radius, or click for a dot. Right-click a shape to delete it, or a pin to move it. Right-drag to select.' );
 	} );
 
+	it( 'marks no figure and gives only the menu hint when no figure is selected', () =>
+	{
+		const palette = new Palette( nav, document.body, () => {}, () => {} );
+
+		palette.select( Figure.Line );
+		palette.select( null );
+
+		expect( buttons().some( button => button.classList.contains( 'active' ) ) ).toBe( false );
+		expect( bar().querySelector( 'span' )!.textContent ).toBe( 'Right-click a shape to delete it, or a pin to move it. Right-drag to select.' );
+	} );
+
 	it( 'calls done from its bar', () =>
 	{
 		const done = vi.fn();

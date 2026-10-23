@@ -18,10 +18,21 @@ describe( 'draw tool', () =>
 		expect( tool.shapes ).toEqual( [ { figure : Figure.Circle, center : { x : 6, y : 4 }, radius : 6 }, { figure : Figure.Circle, center : { x : 4, y : 4 }, radius : 1 } ] );
 	} );
 
+	it( 'draws nothing without a figure', () =>
+	{
+		const tool = new DrawTool();
+
+		tool.press( { x : 0, y : 0 } );
+		tool.move( { x : 8, y : 4 } );
+
+		expect( [ tool.figure, tool.preview(), tool.release( { x : 8, y : 4 } ), tool.shapes ] ).toEqual( [ null, null, null, [] ] );
+	} );
+
 	it( 'draws a line between the half-step dots nearest the press and the release, in any direction, and skips a click', () =>
 	{
 		const tool = new DrawTool();
 
+		tool.figure = Figure.Line;
 		tool.press( { x : 0.8, y : 0.6 } );
 		tool.move( { x : 11.2, y : 5.4 } );
 
@@ -103,6 +114,8 @@ describe( 'draw tool', () =>
 	{
 		const tool = new DrawTool();
 
+		tool.figure = Figure.Line;
+
 		expect( tool.cancel() ).toBe( false );
 
 		tool.press( { x : 0, y : 0 } );
@@ -155,6 +168,7 @@ describe( 'draw tool', () =>
 		const foo = { figure : Figure.Line as const, from : { x : 0, y : 0 }, to : { x : 4, y : 0 } };
 		const bar = { figure : Figure.Line as const, from : { x : 0, y : 4 }, to : { x : 4, y : 4 } };
 
+		tool.figure = Figure.Line;
 		tool.load( [ foo, bar ], [] );
 		tool.undo();
 		tool.undo();
