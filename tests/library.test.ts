@@ -107,4 +107,79 @@ describe( 'library', () =>
 
 		expect( pick().textContent ).toBe( 'bar' );
 	} );
+
+	it( 'lists the categories with an arrow before the symbols, each in order', () =>
+	{
+		const library = new Library( parent, () => {} );
+
+		library.update( [ [ 1, 'qux' ], [ 2, 'foo/baz' ], [ 3, 'bar/corge' ], [ 4, '' ], [ 5, 'foo/bar/garply' ] ] );
+
+		expect( Array.from( menu().querySelectorAll( ':scope > .folder > button, :scope > button' ) ).map( item => item.textContent ) ).toEqual( [ 'bar▸', 'foo▸', 'qux', 'Symbol 4' ] );
+		expect( Array.from( menu().querySelectorAll( '.folder > .menu' ) ).map( item => item.textContent ) ).toEqual( [ 'corge', 'bar▸garplybaz', 'garply' ] );
+		expect( Array.from( menu().querySelectorAll<HTMLElement>( '.menu' ) ).every( item => item.hidden ) ).toBe( true );
+		expect( pick().textContent ).toBe( 'qux' );
+	} );
+
+	it( 'sorts the symbols by their numbers', () =>
+	{
+		const library = new Library( parent, () => {} );
+
+		library.update( [ [ 10, '' ], [ 9, '' ] ] );
+
+		expect( Array.from( menu().children ).map( item => item.textContent ) ).toEqual( [ 'Symbol 9', 'Symbol 10' ] );
+	} );
+
+	it( 'picks a symbol inside a category and closes the categories when the menu opens again', () =>
+	{
+		const picked = vi.fn();
+		const library = new Library( parent, picked );
+
+		library.update( [ [ 1, 'foo/bar' ], [ 2, 'foo/qux' ] ] );
+		open().click();
+
+		const inside = menu().querySelector<HTMLElement>( '.folder > .menu' )!;
+		const button = ( text : string ) => Array.from( menu().querySelectorAll( 'button' ) ).find( item => item.textContent === text )!;
+
+		button( 'foo▸' ).dispatchEvent( new PointerEvent( 'pointerenter' ) );
+		button( 'qux' ).click();
+
+		expect( picked ).toHaveBeenLastCalledWith( 2 );
+		expect( menu().hidden ).toBe( true );
+
+		open().click();
+
+		expect( inside.hidden ).toBe( true );
+	} );
+
+	it( 'opens a category on a hover, keeps its open categories when the hover comes back, and closes them on a hover of another item', () =>
+	{
+		const library = new Library( parent, () => {} );
+
+		library.update( [ [ 1, 'foo/bar/baz' ], [ 2, 'foo/qux' ], [ 3, 'corge/garply' ], [ 4, 'waldo' ] ] );
+		open().click();
+
+		const inside = ( text : string ) => Array.from( menu().querySelectorAll<HTMLElement>( '.folder' ) ).find( item => item.firstElementChild!.textContent === `${ text }▸` )!.querySelector<HTMLElement>( ':scope > .menu' )!;
+		const hover = ( text : string ) => Array.from( menu().querySelectorAll( 'button' ) ).find( item => item.textContent === text )!.dispatchEvent( new PointerEvent( 'pointerenter' ) );
+
+		hover( 'foo▸' );
+		hover( 'bar▸' );
+
+		expect( [ inside( 'foo' ).hidden, inside( 'bar' ).hidden, inside( 'corge' ).hidden ] ).toEqual( [ false, false, true ] );
+
+		hover( 'foo▸' );
+
+		expect( [ inside( 'foo' ).hidden, inside( 'bar' ).hidden ] ).toEqual( [ false, false ] );
+
+		hover( 'qux' );
+
+		expect( [ inside( 'foo' ).hidden, inside( 'bar' ).hidden ] ).toEqual( [ false, true ] );
+
+		hover( 'corge▸' );
+
+		expect( [ inside( 'foo' ).hidden, inside( 'corge' ).hidden ] ).toEqual( [ true, false ] );
+
+		hover( 'waldo' );
+
+		expect( inside( 'corge' ).hidden ).toBe( true );
+	} );
 } );

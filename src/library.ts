@@ -1,3 +1,6 @@
+import { split } from './category.ts';
+
+
 export class Library
 {
 	private group = document.createElement( 'div' );
@@ -23,7 +26,11 @@ export class Library
 		open.className = 'open';
 		open.textContent = '▾';
 		open.setAttribute( 'aria-label', 'Symbols' );
-		open.addEventListener( 'click', () => this.menu.hidden = ! this.menu.hidden );
+		open.addEventListener( 'click', () =>
+		{
+			this.menu.querySelectorAll<HTMLElement>( '.menu' ).forEach( menu => menu.hidden = true );
+			this.menu.hidden = ! this.menu.hidden;
+		} );
 
 		this.menu.className = 'menu';
 		this.menu.hidden = true;
@@ -49,15 +56,7 @@ export class Library
 
 		this.show( this.shown !== null && layers.includes( this.shown ) ? this.shown : layers[ 0 ] ?? null );
 
-		this.menu.replaceChildren( ... layers.map( layer =>
-		{
-			const item = document.createElement( 'button' );
-
-			item.textContent = this.title( layer );
-			item.addEventListener( 'click', () => { this.menu.hidden = true; this.pick( layer ); } );
-
-			return item;
-		} ) );
+		this.menu.replaceChildren( ... this.list( symbols.map( ( [ layer, name ] ) => [ layer, split( name ).path ] ), 0 ) );
 	}
 
 	select( layer : number | null ) : void
@@ -65,6 +64,55 @@ export class Library
 		if( layer !== null ) this.show( layer );
 
 		this.main.classList.toggle( 'active', layer !== null );
+	}
+
+	private list( entries : [ number, string[] ][], depth : number ) : HTMLElement[]
+	{
+		const order = ( a : string, b : string ) => a.localeCompare( b, undefined, { numeric : true } );
+		const names = [ ... new Set( entries.filter( ( [ , path ] ) => path.length > depth ).map( ( [ , path ] ) => path[ depth ] ) ) ].sort( order );
+		const layers = entries.filter( ( [ , path ] ) => path.length === depth ).map( ( [ layer ] ) => layer ).sort( ( a, b ) => order( this.title( a ), this.title( b ) ) );
+		const collapse = ( item : HTMLElement ) => item.parentElement!.querySelectorAll<HTMLElement>( '.menu' ).forEach( menu => menu.hidden = true );
+
+		const folders = names.map( name =>
+		{
+			const folder = document.createElement( 'div' );
+			const button = document.createElement( 'button' );
+			const arrow = document.createElement( 'span' );
+			const menu = document.createElement( 'div' );
+
+			arrow.textContent = '▸';
+
+			button.append( name, arrow );
+			button.addEventListener( 'pointerenter', () =>
+			{
+				if( ! menu.hidden ) return;
+
+				collapse( folder );
+				menu.hidden = false;
+			} );
+
+			menu.className = 'menu';
+			menu.hidden = true;
+			menu.append( ... this.list( entries.filter( ( [ , path ] ) => path[ depth ] === name ), depth + 1 ) );
+
+			folder.className = 'folder';
+			folder.append( button, menu );
+
+			return folder;
+		} );
+
+		const items = layers.map( layer =>
+		{
+			const item = document.createElement( 'button' );
+
+			item.textContent = this.title( layer );
+			item.addEventListener( 'pointerenter', () => collapse( item ) );
+			item.addEventListener( 'click', () => { this.menu.hidden = true; this.pick( layer ); } );
+
+			return item;
+		} );
+
+		return [ ... folders, ... items ];
 	}
 
 	private show( layer : number | null ) : void
@@ -75,6 +123,6 @@ export class Library
 
 	private title( layer : number ) : string
 	{
-		return this.symbols.find( ( [ other ] ) => other === layer )?.[ 1 ] || `Symbol ${ layer }`;
+		return split( this.symbols.find( ( [ other ] ) => other === layer )?.[ 1 ] ?? '' ).title || `Symbol ${ layer }`;
 	}
 }

@@ -41,6 +41,7 @@ describe( 'maker', () =>
 		expect( shown() ).toEqual( [ 'Icon', 'Done', 'Cancel' ] );
 		expect( bar().children[ 1 ] ).toBe( picker );
 		expect( document.activeElement ).toBe( bar().querySelector( 'input' ) );
+		expect( bar().querySelector( 'input' )!.placeholder ).toBe( 'Category/Name' );
 
 		button( 'Cancel' ).click();
 

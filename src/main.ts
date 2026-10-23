@@ -1,5 +1,6 @@
 import init, { Circuit } from '../bindings/web/pkg/web.js';
 import { fit, locate } from './board.ts';
+import { split } from './category.ts';
 import { Clock } from './clock.ts';
 import { parse, SEPARATOR, write } from './decimal.ts';
 import { decode as decodeBranches } from './decoders/branch.ts';
@@ -317,7 +318,7 @@ function discard( steps : number, layer : number | null ) : void
 
 function purge( layer : number ) : void
 {
-	const name = circuit.name( layer ) || 'this symbol';
+	const name = split( circuit.name( layer ) ).title || 'this symbol';
 	const copies = Array.from( circuit.symbols() ).flatMap( inner => layered( inner ) ).concat( layered( 0 ) ).filter( item => item.kind === Kind.Symbol && item.value === layer ).length;
 
 	if( ! confirm( `Delete ${ name } and its ${ copies } ${ copies === 1 ? 'copy' : 'copies' }?` ) ) return;

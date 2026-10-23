@@ -34,7 +34,7 @@ export class Maker
 		this.bar.className = 'maker';
 		this.bar.hidden = true;
 
-		this.name.placeholder = 'Name';
+		this.name.placeholder = 'Category/Name';
 
 		icon.textContent = 'Icon';
 		icon.addEventListener( 'click', draw );
