@@ -1,4 +1,4 @@
-use simulator::{ Element, Error, Kind, Mode, Operation, Outline, Point, Segment, Shape, Simulation, DELAY };
+use simulator::{ Element, Error, Kind, Mode, Operation, Outline, Point, Segment, Shape, Simulation, Solution, DELAY };
 
 
 const STEP : f64 = 1e-6;
@@ -38,6 +38,11 @@ fn series( kind : Kind ) -> Simulation
 	add( &mut simulation, Kind::Ground, ( 0, 4 ), ( 0, 4 ) );
 
 	simulation
+}
+
+fn measure( simulation : &mut Simulation )
+{
+	while simulation.proceed().unwrap() {}
 }
 
 fn near( a : f64, b : f64, tolerance : f64 ) -> bool
@@ -597,6 +602,8 @@ fn define( simulation : &mut Simulation, parts : &[ Part ] ) -> u32
 
 	for &( kind, from, to ) in parts { simulation.apply( layer, Operation::Add { kind, segment : segment( from, to ), mirrored : false } ).unwrap(); }
 
+	measure( simulation );
+
 	layer as u32
 }
 
@@ -643,10 +650,14 @@ fn it_changes_every_instance_with_its_layer()
 
 	simulation.apply( layer as usize, Operation::SetValue { id : 1, value : 500.0 } ).unwrap();
 
+	measure( &mut simulation );
+
 	assert!( near( simulation.solution().unwrap().readings[ 1 ].currents[ 0 ], 0.005, 1e-12 ) );
 	assert!( near( simulation.solution().unwrap().readings[ 2 ].potentials[ 0 ], 2.5, 1e-9 ) );
 
 	simulation.undo().unwrap();
+
+	measure( &mut simulation );
 
 	assert_eq!( simulation.document( layer as usize ).unwrap().elements()[ 1 ].kind, Kind::Resistor { ohms : 1000.0 } );
 	assert!( near( simulation.solution().unwrap().readings[ 1 ].currents[ 0 ], 0.0025, 1e-12 ) );
@@ -781,6 +792,90 @@ fn it_gives_the_delay_of_a_layer_that_runs_as_a_gate_and_none_for_an_analog_laye
 	add( &mut simulation, Kind::Symbol { layer : analog, rotation : 0 }, ( 30, 10 ), ( 30, 10 ) );
 
 	assert_eq!( [ layer, analog, 9 ].map( | layer | simulation.delay( layer as usize ) ), [ Some( DELAY ), None, None ] );
+}
+
+#[test]
+fn it_freezes_the_view_while_a_symbol_is_measured_and_solves_it_at_the_last_step()
+{
+	let mut simulation = Simulation::new( STEP );
+	let layer = inverter( &mut simulation ) as usize;
+
+	simulation.apply( layer, Operation::Add { kind : Kind::Wire, segment : segment( ( 20, 20 ), ( 22, 20 ) ), mirrored : false } ).unwrap();
+	simulation.advance( 10 );
+
+	assert!( simulation.frozen() );
+	assert_eq!( simulation.solution(), Ok( &Solution::default() ) );
+
+	measure( &mut simulation );
+
+	assert!( ! simulation.frozen() );
+	assert_eq!( simulation.progress(), 1.0 );
+	assert_eq!( simulation.solution().unwrap().readings.len(), 1 );
+}
+
+#[test]
+fn it_keeps_the_measure_of_a_symbol_through_an_edit_of_the_drawing()
+{
+	let mut simulation = Simulation::new( STEP );
+	let layer = inverter( &mut simulation ) as usize;
+
+	simulation.apply( layer, Operation::Add { kind : Kind::Wire, segment : segment( ( 20, 20 ), ( 22, 20 ) ), mirrored : false } ).unwrap();
+
+	for _ in 0 .. 2 { simulation.proceed().unwrap(); }
+
+	let progress = simulation.progress();
+
+	add( &mut simulation, Kind::Wire, ( 0, 20 ), ( 4, 20 ) );
+
+	assert!( simulation.frozen() && progress > 0.0 );
+	assert_eq!( simulation.progress(), progress );
+}
+
+#[test]
+fn it_keeps_the_model_of_a_symbol_whose_edit_is_undone_before_its_measure_ends()
+{
+	let mut simulation = Simulation::new( STEP );
+	let layer = inverter( &mut simulation ) as usize;
+
+	simulation.apply( layer, Operation::Add { kind : Kind::Wire, segment : segment( ( 20, 20 ), ( 22, 20 ) ), mirrored : false } ).unwrap();
+	simulation.undo().unwrap();
+
+	assert_eq!( ( simulation.frozen(), simulation.progress() ), ( false, 1.0 ) );
+	assert_eq!( simulation.delay( layer ), Some( DELAY ) );
+}
+
+#[test]
+fn it_solves_at_once_a_symbol_entered_while_it_is_measured()
+{
+	let mut simulation = Simulation::new( STEP );
+	let layer = inverter( &mut simulation ) as usize;
+
+	simulation.apply( layer, Operation::Add { kind : Kind::Wire, segment : segment( ( 20, 20 ), ( 22, 20 ) ), mirrored : false } ).unwrap();
+	simulation.focus( &[ 0 ] ).unwrap();
+
+	assert!( ! simulation.frozen() && simulation.progress() < 1.0 );
+	assert_eq!( simulation.solution().unwrap().readings.len(), simulation.document( layer ).unwrap().elements().len() );
+}
+
+#[test]
+fn it_solves_a_symbol_again_once_the_symbols_inside_it_are_measured()
+{
+	let mut simulation = Simulation::new( STEP );
+	let layer = inverter( &mut simulation );
+	let outer = define( &mut simulation, &[ ( Kind::Input { high : false }, ( -3, 0 ), ( -2, 0 ) ), ( Kind::Symbol { layer, rotation : 0 }, ( 0, 0 ), ( 0, 0 ) ), ( Kind::Output, ( 7, 0 ), ( 6, 0 ) ) ] );
+	let symbol = add( &mut simulation, Kind::Symbol { layer : outer, rotation : 0 }, ( 30, 10 ), ( 30, 10 ) );
+
+	measure( &mut simulation );
+
+	simulation.apply( layer as usize, Operation::Add { kind : Kind::Wire, segment : segment( ( 20, 20 ), ( 22, 20 ) ), mirrored : false } ).unwrap();
+	simulation.focus( &[ symbol ] ).unwrap();
+
+	assert!( simulation.frozen() );
+
+	while simulation.frozen() { simulation.proceed().unwrap(); }
+
+	assert!( simulation.progress() < 1.0 );
+	assert_eq!( simulation.solution().unwrap().readings.len(), 3 );
 }
 
 #[test]
@@ -1031,6 +1126,9 @@ fn it_encloses_a_selection_into_a_symbol_that_solves_the_same()
 
 	let before = simulation.document( 0 ).unwrap().elements().to_vec();
 	let symbol = simulation.enclose( 0, Point { x : 1, y : -2 }, Point { x : 7, y : 2 }, "", &[], &[] ).unwrap();
+
+	measure( &mut simulation );
+
 	let drawing = simulation.document( 0 ).unwrap().elements();
 	let wires : Vec<Segment> = drawing.iter().filter( | element | element.kind == Kind::Wire ).map( | element | element.segment ).collect();
 	let index = drawing.iter().position( | element | element.id == symbol ).unwrap();
@@ -1060,6 +1158,9 @@ fn it_keeps_a_vcc_inside_an_enclosed_selection()
 	add( &mut simulation, Kind::Ground, ( 10, 4 ), ( 10, 4 ) );
 
 	let symbol = simulation.enclose( 0, Point { x : 1, y : -2 }, Point { x : 7, y : 2 }, "", &[], &[] ).unwrap();
+
+	measure( &mut simulation );
+
 	let drawing = simulation.document( 0 ).unwrap().elements();
 	let index = drawing.iter().position( | element | element.id == symbol ).unwrap();
 
@@ -1201,6 +1302,9 @@ fn it_turns_an_enclosed_symbol_and_routes_its_wires_around_its_box()
 	add( &mut simulation, Kind::Ground, ( 10, 16 ), ( 10, 16 ) );
 
 	let symbol = simulation.enclose( 0, Point { x : 11, y : 8 }, Point { x : 17, y : 12 }, "", &[], &[] ).unwrap();
+
+	measure( &mut simulation );
+
 	let layer = 1;
 
 	simulation.transform( 0, symbol, Kind::Symbol { layer, rotation : 1 }, segment( ( 14, 10 ), ( 14, 10 ) ), false ).unwrap();
@@ -1240,6 +1344,9 @@ fn it_encloses_a_named_and_drawn_symbol_with_the_labels_and_the_layout_of_its_pi
 	let drawing = [ Shape::Circle { center : Point { x : 0, y : 0 }, radius : 2 } ];
 	let layout = [ Point { x : -3, y : 0 }, Point { x : 3, y : 0 } ];
 	let symbol = simulation.enclose( 0, low, high, "qux", &drawing, &layout ).unwrap();
+
+	measure( &mut simulation );
+
 	let layer = simulation.document( 1 ).unwrap();
 	let labels : Vec<&str> = layer.elements().iter().filter( | element | element.kind.pin() ).map( | element | layer.label( element.id ) ).collect();
 	let wires : Vec<Segment> = simulation.document( 0 ).unwrap().elements().iter().filter( | element | element.kind == Kind::Wire ).map( | element | element.segment ).collect();
@@ -1430,6 +1537,8 @@ fn counter() -> Simulation
 	let additions = layers.iter().enumerate().flat_map( | ( layer, parts ) | parts.iter().map( move | &( kind, from, to ) | ( layer, Operation::Add { kind, segment : segment( from, to ), mirrored : false } ) ) ).collect();
 
 	simulation.open( additions ).unwrap();
+
+	measure( &mut simulation );
 
 	simulation
 }

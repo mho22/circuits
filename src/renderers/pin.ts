@@ -42,7 +42,7 @@ export function draw( context : CanvasRenderingContext2D, element : Element, sca
 	context.textAlign = 'center';
 	context.textBaseline = 'middle';
 
-	const text = String( bit( element.potentials[ 0 ] ) );
+	const text = Number.isNaN( scale.voltage ) ? '' : String( bit( element.potentials[ 0 ] ) );
 	const metrics = context.measureText( text );
 
 	context.fillText( text, x + ( metrics.actualBoundingBoxLeft - metrics.actualBoundingBoxRight ) / 2, y + ( metrics.actualBoundingBoxAscent - metrics.actualBoundingBoxDescent ) / 2 );

@@ -3,6 +3,7 @@ import { color } from '../../src/colors/voltage.ts';
 import { Kind } from '../../src/enums/kind.ts';
 import { SPACING } from '../../src/grid.ts';
 import { draw } from '../../src/renderers/toggle.ts';
+import { FROZEN } from '../../src/scale.ts';
 import { record } from '../stubs/context.ts';
 import { element } from '../stubs/element.ts';
 
@@ -12,11 +13,11 @@ describe( 'toggle renderer', () =>
 	const x = SPACING;
 	const y = SPACING;
 
-	function drawn( value : number, potential : number, to = { x : 3, y : 1 }, listening = false, label = '' ) : unknown[][]
+	function drawn( value : number, potential : number, to = { x : 3, y : 1 }, listening = false, label = '', scale = { voltage : 5, current : 0 } ) : unknown[][]
 	{
 		const { context, calls } = record();
 
-		draw( context, element( { kind : Kind.Toggle, value, from : { x : 1, y : 1 }, to, potentials : [ 0, potential ], listening, label } ), { voltage : 5, current : 0 } );
+		draw( context, element( { kind : Kind.Toggle, value, from : { x : 1, y : 1 }, to, potentials : [ 0, potential ], listening, label } ), scale );
 
 		return calls;
 	}
@@ -40,6 +41,12 @@ describe( 'toggle renderer', () =>
 	{
 		expect( drawn( 1, 5 ).filter( call => call[ 0 ] === 'arc' ) ).toEqual( [ [ 'arc', x + 5, y, 3, 0, 2 * Math.PI ] ] );
 		expect( drawn( 0, 0 ).filter( call => call[ 0 ] === 'arc' ) ).toEqual( [ [ 'arc', x - 5, y, 3, 0, 2 * Math.PI ] ] );
+	} );
+
+	it( 'draws no knob on a toggle that reads its wire while the view is frozen, and keeps the knob of a toggle that drives its wire', () =>
+	{
+		expect( drawn( 0, 0, undefined, true, '', FROZEN ).filter( call => call[ 0 ] === 'arc' ) ).toEqual( [] );
+		expect( drawn( 1, 0, undefined, false, '', FROZEN ).filter( call => call[ 0 ] === 'arc' ) ).toEqual( [ [ 'arc', x + 5, y, 3, 0, 2 * Math.PI ] ] );
 	} );
 
 	it( 'puts the knob of a toggle that reads its wire by the level of the wire', () =>

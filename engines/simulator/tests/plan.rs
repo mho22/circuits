@@ -1,4 +1,4 @@
-use simulator::{ catalog, flatten, Document, Kind, Operation, Plan, Point, Registry, Segment, Source };
+use simulator::{ flatten, Catalog, Document, Kind, Operation, Plan, Point, Registry, Segment, Source };
 
 
 const STEP : f64 = 1e-6;
@@ -37,7 +37,11 @@ fn inverter() -> Document
 fn plan( drawing : Document ) -> Plan
 {
 	let layers = [ drawing, inverter() ];
-	let ( models, _ ) = catalog( &layers, &[], &[], STEP );
+	let mut catalog = Catalog::new( &layers, &[], &[], STEP );
+
+	while catalog.advance( &layers ) {}
+
+	let ( models, _ ) = catalog.finish();
 	let ( elements, devices ) = flatten( &layers, &mut Registry::default(), &models, 0, &[] ).unwrap();
 
 	Plan::build( &elements, &devices )

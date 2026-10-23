@@ -17,13 +17,13 @@ import { encode as encodeDrawing } from './encoders/drawing.ts';
 import { encode } from './encoders/file.ts';
 import { Color, NEXT } from './enums/color.ts';
 import { Figure } from './enums/figure.ts';
-import { INPUTS, Kind, NAMES, PINS, POINTS } from './enums/kind.ts';
+import { INPUTS, Kind, NAMES, PINS } from './enums/kind.ts';
 import { extent } from './extent.ts';
+import { flows } from './flows.ts';
 import { FINE, snap } from './grid.ts';
 import { grab } from './grab.ts';
 import { read, shape } from './keyboard.ts';
 import { junctions } from './junctions.ts';
-import { leads } from './leads.ts';
 import { Library } from './library.ts';
 import { Maker } from './maker.ts';
 import { open as fill } from './menus/blank.ts';
@@ -43,7 +43,7 @@ import * as grid from './renderers/grid.ts';
 import * as junction from './renderers/junction.ts';
 import * as mask from './renderers/mask.ts';
 import * as progress from './renderers/progress.ts';
-import { measure } from './scale.ts';
+import { FROZEN, measure } from './scale.ts';
 import { cover, inside, span } from './selection.ts';
 import { socket } from './socket.ts';
 import { target } from './target.ts';
@@ -216,9 +216,19 @@ async function load() : Promise<void>
 	catch( error ) { notice = ( error as Error ).message; }
 }
 
+function characterize() : void
+{
+	const start = performance.now();
+	let pending = true;
+
+	try { while( pending && performance.now() - start < LOAD_BUDGET ) pending = circuit.proceed(); }
+
+	catch( error ) { notice = ( error as Error ).message; }
+}
+
 function proceed() : void
 {
-	if( ! loading ) return;
+	if( ! loading ) { characterize(); return; }
 
 	const start = performance.now();
 	let pending = true;
@@ -542,11 +552,11 @@ function paint( elements : Element[], branches : Branch[], seconds : number ) : 
 {
 	if( sketching ) { present(); return; }
 
-	const scale = measure( elements, branches );
+	const scale = circuit.frozen ? FROZEN : measure( elements, branches );
 	const draft = selector.preview() ? null : tool.preview();
 	const previews = draft ? [ ... mover.preview(), draft ] : mover.preview();
 	const selection = selector.preview() ?? mover.zone() ?? ( marked?.menu.isConnected ? marked.area : null );
-	const paths = [ ... branches, ... elements.filter( item => item.kind !== Kind.Wire && ! POINTS.includes( item.kind ) && ! PINS.includes( item.kind ) ).flatMap( leads ) ];
+	const paths = flows( elements, branches, circuit.frozen );
 	const distances = drift.advance( paths, scale.current, seconds );
 
 	project();
@@ -559,7 +569,7 @@ function paint( elements : Element[], branches : Branch[], seconds : number ) : 
 
 	junctions( elements ).forEach( item => junction.draw( context, item, scale ) );
 
-	paths.forEach( ( path, index ) => current.draw( context, path.from, path.to, path.current, scale.current, distances[ index ], current.COLOR ) );
+	paths.forEach( ( path, index ) => current.draw( context, path.from, path.to, path.current, scale.current, distances[ index ], circuit.frozen ? current.FROZEN : current.COLOR ) );
 
 	context.globalAlpha = 0.5;
 
@@ -614,7 +624,7 @@ function frame( time : number ) : void
 
 	canvas.classList.toggle( 'idle', sketching ? drawer.figure === null : tool.kind === null );
 
-	const engine = circuit.mode;
+	const engine = circuit.frozen ? 'Measuring' : circuit.mode;
 
 	if( mode.textContent !== engine ) mode.textContent = engine;
 
@@ -628,7 +638,7 @@ function frame( time : number ) : void
 	const hovered = plugged ?? elements.find( item => item.id === ids[ 0 ] );
 	const branch = hover ? circuit.branchAt( hover.x, hover.y ) : undefined;
 
-	report( error ?? notice ?? ( hovered ? describe( hovered, branch === undefined ? undefined : branches[ branch ], hover ) : '' ), error !== undefined || notice !== null );
+	report( error ?? notice ?? ( hovered && ! circuit.frozen ? describe( hovered, branch === undefined ? undefined : branches[ branch ], hover ) : '' ), error !== undefined || notice !== null );
 
 	requestAnimationFrame( frame );
 }

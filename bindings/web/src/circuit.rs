@@ -144,6 +144,12 @@ impl Circuit
 		self.simulation.progress()
 	}
 
+	#[wasm_bindgen( getter )]
+	pub fn frozen( &self ) -> bool
+	{
+		self.simulation.frozen()
+	}
+
 	pub fn enclose( &mut self, area : &[ i32 ], name : String, drawing : &[ i32 ], layout : &[ i32 ] ) -> Result<u32, JsError>
 	{
 		let &[ low_x, low_y, high_x, high_y ] = area else { return Err( JsError::new( "Unknown area." ) ); };

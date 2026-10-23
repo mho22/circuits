@@ -4,6 +4,7 @@ import type { Element } from './types/element.ts';
 import type { Scale } from './types/scale.ts';
 
 
+export const FROZEN : Scale = { voltage : NaN, current : 12 };
 const LEAK = 1e-6;
 
 

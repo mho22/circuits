@@ -3,6 +3,7 @@ import type { Point } from '../types/point.ts';
 
 
 export const COLOR = '#ffd400';
+export const FROZEN = '#3c78ff';
 const SPACING = 16;
 const SIZE = 3;
 const LEAK = 1e-9;

@@ -1,4 +1,4 @@
-use simulator::{ catalog, Document, Kind, Operation, Point, Segment, DELAY };
+use simulator::{ Catalog, Document, Kind, Operation, Point, Segment, DELAY };
 
 
 const STEP : f64 = 1e-6;
@@ -87,7 +87,11 @@ fn and() -> Document
 
 fn delay( layers : &[ Document ], layer : usize ) -> f64
 {
-	catalog( layers, &[], &[], STEP ).0[ layer ].as_ref().unwrap().delay
+	let mut catalog = Catalog::new( layers, &[], &[], STEP );
+
+	while catalog.advance( layers ) {}
+
+	catalog.finish().0[ layer ].as_ref().unwrap().delay
 }
 
 

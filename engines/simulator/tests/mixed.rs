@@ -1,4 +1,4 @@
-use simulator::{ advance, catalog, flatten, settle, Device, Document, Element, Error, History, Kind, Logic, Model, Operation, Plan, Point, Registry, Segment, Solution };
+use simulator::{ advance, flatten, settle, Catalog, Device, Document, Element, Error, History, Kind, Logic, Model, Operation, Plan, Point, Registry, Segment, Solution };
 
 
 const STEP : f64 = 1e-6;
@@ -92,7 +92,11 @@ fn symbol( x : i32 ) -> Part
 fn circuit( parts : &[ Part ] ) -> Circuit
 {
 	let layers = [ layer( parts ), inverter() ];
-	let ( models, _ ) = catalog( &layers, &[], &[], STEP );
+	let mut catalog = Catalog::new( &layers, &[], &[], STEP );
+
+	while catalog.advance( &layers ) {}
+
+	let ( models, _ ) = catalog.finish();
 	let ( elements, devices ) = flatten( &layers, &mut Registry::default(), &models, 0, &[] ).unwrap();
 	let plan = Plan::build( &elements, &devices );
 

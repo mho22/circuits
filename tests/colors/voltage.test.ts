@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { color } from '../../src/colors/voltage.ts';
+import { FROZEN } from '../../src/scale.ts';
 
 
 describe( 'voltage color', () =>
@@ -27,6 +28,11 @@ describe( 'voltage color', () =>
 	it( 'clamps a voltage beyond the scale', () =>
 	{
 		expect( color( 50, 5 ) ).toBe( 'rgb(0, 255, 0)' );
+	} );
+
+	it( 'is blue on a frozen scale', () =>
+	{
+		expect( color( 5, FROZEN.voltage ) ).toBe( 'rgb(24, 48, 128)' );
 	} );
 
 	it( 'is gray without a scale or a finite voltage', () =>

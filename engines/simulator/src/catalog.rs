@@ -77,6 +77,21 @@ impl Catalog
 		self.order.get( self.index ).copied()
 	}
 
+	pub fn done( &self ) -> bool
+	{
+		self.layer().is_none()
+	}
+
+	pub fn waits( &self, layer : usize ) -> bool
+	{
+		self.order[ self.index .. ].contains( &layer )
+	}
+
+	pub fn ready( &self ) -> Vec<Option<Model>>
+	{
+		self.models.iter().enumerate().map( | ( layer, model ) | if self.waits( layer ) { None } else { model.clone() } ).collect()
+	}
+
 	pub fn progress( &self ) -> f64
 	{
 		let total : f64 = self.weights.iter().sum();
@@ -119,14 +134,4 @@ impl Catalog
 	{
 		( self.models, self.sources )
 	}
-}
-
-
-pub fn catalog( layers : &[ Document ], models : &[ Option<Model> ], sources : &[ Vec<Element> ], step : f64 ) -> ( Vec<Option<Model>>, Vec<Vec<Element>> )
-{
-	let mut catalog = Catalog::new( layers, models, sources, step );
-
-	while catalog.advance( layers ) {}
-
-	catalog.finish()
 }

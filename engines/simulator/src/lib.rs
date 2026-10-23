@@ -42,7 +42,7 @@ mod union_find;
 
 pub use action::Action;
 pub use branch::Branch;
-pub use catalog::{ catalog, Catalog };
+pub use catalog::Catalog;
 pub use channel::conduct;
 pub use characterize::Characterization;
 pub use delay::{ flip, stages };

@@ -3,6 +3,7 @@ import { color } from '../../src/colors/voltage.ts';
 import { Kind } from '../../src/enums/kind.ts';
 import { SPACING } from '../../src/grid.ts';
 import { draw } from '../../src/renderers/pin.ts';
+import { FROZEN } from '../../src/scale.ts';
 import { record } from '../stubs/context.ts';
 import { element } from '../stubs/element.ts';
 
@@ -43,6 +44,15 @@ describe( 'pin renderer', () =>
 
 		expect( calls.filter( call => call[ 0 ] === 'fillText' ).map( call => call[ 1 ] ) ).toEqual( [ '1', '0' ] );
 		expect( calls ).toContainEqual( [ 'set', 'font', '12px ui-monospace, monospace' ] );
+	} );
+
+	it( 'writes no bit while the view is frozen', () =>
+	{
+		const { context, calls } = record();
+
+		draw( context, input, FROZEN );
+
+		expect( calls.filter( call => call[ 0 ] === 'fillText' ).map( call => call[ 1 ] ) ).toEqual( [ '' ] );
 	} );
 
 	it( 'centers the drawn glyph of its bit on the square', () =>

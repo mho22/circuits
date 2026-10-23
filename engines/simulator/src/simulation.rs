@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::flatten::STRIDE;
 use crate::shape::FINE;
-use crate::{ advance, catalog, enclose, flatten, place, settle, stretch, Catalog, Device, Document, Element, Enclosure, Error, History, Kind, Logic, Mode, Model, Netlist, Operation, Outline, Plan, Point, Reading, Registry, Segment, Shape, Solution };
+use crate::{ advance, enclose, flatten, place, settle, stretch, Catalog, Device, Document, Element, Enclosure, Error, History, Kind, Logic, Mode, Model, Netlist, Operation, Outline, Plan, Point, Reading, Registry, Segment, Shape, Solution };
 
 
 const DIVISIONS : f64 = 20.0;
@@ -59,13 +59,14 @@ pub struct Simulation
 	undos : Vec<Vec<( usize, Operation )>>,
 	redos : Vec<Vec<( usize, Operation )>>,
 	loading : Option<Loading>,
+	measuring : Option<Catalog>,
 }
 
 impl Simulation
 {
 	pub fn new( step : f64 ) -> Simulation
 	{
-		Simulation { layers : vec![ Document::default() ], registry : Registry::default(), elements : Vec::new(), devices : Vec::new(), plan : Plan::default(), models : Vec::new(), sources : Vec::new(), focus : Vec::new(), history : History::default(), logic : Logic::default(), solution : Ok( Solution::default() ), base : step, step, undos : Vec::new(), redos : Vec::new(), loading : None }
+		Simulation { layers : vec![ Document::default() ], registry : Registry::default(), elements : Vec::new(), devices : Vec::new(), plan : Plan::default(), models : Vec::new(), sources : Vec::new(), focus : Vec::new(), history : History::default(), logic : Logic::default(), solution : Ok( Solution::default() ), base : step, step, undos : Vec::new(), redos : Vec::new(), loading : None, measuring : None }
 	}
 
 	pub fn create( &mut self ) -> usize
@@ -286,7 +287,7 @@ impl Simulation
 
 	pub fn proceed( &mut self ) -> Result<bool, Error>
 	{
-		let Some( ( layers, _, catalog ) ) = &mut self.loading else { return Ok( false ); };
+		let Some( ( layers, _, catalog ) ) = &mut self.loading else { return self.measure(); };
 
 		if catalog.advance( layers ) { return Ok( true ); }
 
@@ -299,7 +300,14 @@ impl Simulation
 
 	pub fn progress( &self ) -> f64
 	{
-		self.loading.as_ref().map_or( 1.0, | ( _, _, catalog ) | catalog.progress() )
+		self.loading.as_ref().map( | ( _, _, catalog ) | catalog ).or( self.measuring.as_ref() ).map_or( 1.0, Catalog::progress )
+	}
+
+	pub fn frozen( &self ) -> bool
+	{
+		let Some( catalog ) = &self.measuring else { return false; };
+
+		self.inside( self.descend( &self.focus ).unwrap_or( 0 ) ).into_iter().any( | layer | catalog.waits( layer ) )
 	}
 
 	pub fn undo( &mut self ) -> Result<Option<u32>, Error>
@@ -326,6 +334,8 @@ impl Simulation
 
 	pub fn advance( &mut self, count : u32 )
 	{
+		if self.frozen() { return; }
+
 		for _ in 0 .. count
 		{
 			let solution = advance( &self.elements, &self.devices, &self.plan, &self.models, &self.history, self.step, &mut self.logic );
@@ -420,14 +430,12 @@ impl Simulation
 	{
 		let layer = self.descend( path )?;
 
-		let ( elements, devices ) = flatten( &self.layers, &mut self.registry, &self.models, layer, path )?;
+		let models = self.available();
+		let ( elements, devices ) = flatten( &self.layers, &mut self.registry, &models, layer, path )?;
 
-		self.plan = Plan::build( &elements, &devices );
-		self.elements = elements;
-		self.devices = devices;
 		self.focus = path.to_vec();
 
-		self.start();
+		self.rebuild( elements, devices );
 
 		Ok( () )
 	}
@@ -526,7 +534,9 @@ impl Simulation
 		while self.descend( &focus ).is_err() { focus.pop(); }
 
 		let layer = self.descend( &focus )?;
-		let ( models, sources ) = catalog( &self.layers, &self.models, &self.sources, self.base );
+		let catalog = Catalog::new( &self.layers, &self.models, &self.sources, self.base );
+		let symbolic = edits.iter().any( | ( layer, _ ) | *layer > 0 );
+		let models = match &self.measuring { Some( running ) if ! symbolic => running.ready(), _ => catalog.ready() };
 		let result = result.and_then( | id | flatten( &self.layers, &mut self.registry, &models, layer, &focus ).map( | flat | ( id, flat ) ) );
 
 		let ( id, ( elements, devices ) ) = match result
@@ -542,16 +552,67 @@ impl Simulation
 
 		inverses.reverse();
 
-		self.plan = Plan::build( &elements, &devices );
-		self.elements = elements;
-		self.devices = devices;
-		self.models = models;
-		self.sources = sources;
 		self.focus = focus;
 
-		self.start();
+		if symbolic { self.measuring = Some( catalog ).filter( | catalog | ! catalog.done() ); }
+
+		self.rebuild( elements, devices );
 
 		Ok( ( id, inverses ) )
+	}
+
+	fn measure( &mut self ) -> Result<bool, Error>
+	{
+		let frozen = self.frozen();
+		let Some( catalog ) = &mut self.measuring else { return Ok( false ); };
+		let pending = catalog.advance( &self.layers );
+
+		if let Some( catalog ) = self.measuring.take_if( | catalog | catalog.done() ) { ( self.models, self.sources ) = catalog.finish(); }
+
+		if ! frozen || self.frozen() { return Ok( pending ); }
+
+		let layer = self.descend( &self.focus )?;
+		let models = self.available();
+		let ( elements, devices ) = flatten( &self.layers, &mut self.registry, &models, layer, &self.focus )?;
+
+		self.rebuild( elements, devices );
+
+		Ok( pending )
+	}
+
+	fn available( &self ) -> Vec<Option<Model>>
+	{
+		self.measuring.as_ref().map_or_else( || self.models.clone(), Catalog::ready )
+	}
+
+	fn inside( &self, layer : usize ) -> Vec<usize>
+	{
+		let mut found : Vec<usize> = Vec::new();
+		let mut open = vec![ layer ];
+
+		while let Some( next ) = open.pop()
+		{
+			for element in self.layers.get( next ).map_or( &[][ .. ], Document::elements )
+			{
+				let Kind::Symbol { layer : inner, .. } = element.kind else { continue; };
+
+				if found.contains( &( inner as usize ) ) { continue; }
+
+				found.push( inner as usize );
+				open.push( inner as usize );
+			}
+		}
+
+		found
+	}
+
+	fn rebuild( &mut self, elements : Vec<Element>, devices : Vec<Device> )
+	{
+		self.plan = if self.frozen() { Plan::default() } else { Plan::build( &elements, &devices ) };
+		self.elements = elements;
+		self.devices = devices;
+
+		self.start();
 	}
 
 	fn edit( &mut self, layer : usize, operation : Operation ) -> Result<( u32, Operation ), Error>
@@ -564,6 +625,8 @@ impl Simulation
 
 	fn start( &mut self )
 	{
+		if self.frozen() { self.solution = Ok( Solution::default() ); return; }
+
 		self.step = self.period().map_or( self.base, | period | period / DIVISIONS );
 
 		let solution = settle( &self.elements, &self.devices, &self.plan, &self.models, &self.history, self.step, &mut self.logic );

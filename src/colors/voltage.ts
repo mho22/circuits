@@ -1,5 +1,10 @@
+const FROZEN = 'rgb(24, 48, 128)';
+
+
 export function color( voltage : number, scale : number ) : string
 {
+	if( Number.isNaN( scale ) ) return FROZEN;
+
 	const ratio = scale > 0 && Number.isFinite( voltage ) ? Math.max( -1, Math.min( 1, voltage / scale ) ) : 0;
 
 	const red = ratio < 0 ? 128 - 127 * ratio : 128 - 128 * ratio;

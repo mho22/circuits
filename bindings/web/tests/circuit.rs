@@ -47,6 +47,8 @@ fn enclosed() -> ( Circuit, u32 )
 	let mut circuit = laddered();
 	let symbol = circuit.enclose( &[ 1, -2, 7, 2 ], String::new(), &[], &[] ).ok().unwrap();
 
+	while circuit.proceed().ok().unwrap() {}
+
 	( circuit, symbol )
 }
 
@@ -469,6 +471,25 @@ fn it_encloses_a_selection_into_a_symbol_with_one_reading_per_pin()
 	assert_eq!( circuit.outline( 1 ), vec![ -2, -2, 2, 2, -2, 0, 2, 0 ] );
 	assert!( circuit.outline( 2 ).is_empty() );
 	assert_eq!( circuit.elements_at( 5, 1 ), vec![ symbol ] );
+}
+
+#[wasm_bindgen_test]
+fn it_freezes_the_drawing_of_a_symbol_while_its_edited_layer_is_measured()
+{
+	let ( mut circuit, symbol ) = enclosed();
+
+	circuit.enter( symbol ).ok();
+	circuit.set_value( 1, 500.0 ).ok();
+
+	assert!( ! circuit.frozen() );
+
+	circuit.leave();
+
+	assert!( circuit.frozen() );
+
+	while circuit.proceed().ok().unwrap() {}
+
+	assert!( ! circuit.frozen() );
 }
 
 #[wasm_bindgen_test]
