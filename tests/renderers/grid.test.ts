@@ -10,7 +10,7 @@ describe( 'grid renderer', () =>
 	{
 		const { context, calls } = record();
 
-		draw( context, 5, 7, SPACING, SPACING, false );
+		draw( context, 5, 7, SPACING, SPACING, false, 1 );
 
 		expect( calls.slice( 0, 2 ) ).toEqual( [ [ 'set', 'fillStyle', '#000000' ], [ 'fillRect', 5, 7, SPACING, SPACING ] ] );
 	} );
@@ -19,9 +19,9 @@ describe( 'grid renderer', () =>
 	{
 		const { context, calls } = record();
 
-		draw( context, 0, 0, SPACING, SPACING * 2, false );
+		draw( context, 0, 0, SPACING, SPACING * 2, false, 1 );
 
-		const dots = calls.slice( 3 );
+		const dots = calls.slice( 4, -1 );
 
 		expect( dots ).toEqual( [
 			[ 'fillRect', -1, -1, 2, 2 ],
@@ -37,9 +37,9 @@ describe( 'grid renderer', () =>
 	{
 		const { context, calls } = record();
 
-		draw( context, - SPACING * 3 - 5, SPACING * 2 + 5, SPACING, SPACING, false );
+		draw( context, - SPACING * 3 - 5, SPACING * 2 + 5, SPACING, SPACING, false, 1 );
 
-		expect( calls.slice( 3 ) ).toEqual( [ [ 'fillRect', - SPACING * 3 - 1, SPACING * 3 - 1, 2, 2 ] ] );
+		expect( calls.slice( 4, -1 ) ).toEqual( [ [ 'fillRect', - SPACING * 3 - 1, SPACING * 3 - 1, 2, 2 ] ] );
 	} );
 
 	it( 'draws faint dots on the half steps between the grid points', () =>
@@ -47,9 +47,9 @@ describe( 'grid renderer', () =>
 		const { context, calls } = record();
 		const half = SPACING / 2;
 
-		draw( context, 0, 0, SPACING, SPACING, true );
+		draw( context, 0, 0, SPACING, SPACING, true, 1 );
 
-		expect( calls.slice( 7 ) ).toEqual( [
+		expect( calls.slice( 9 ) ).toEqual( [
 			[ 'set', 'globalAlpha', 0.5 ],
 			[ 'fillRect', -1, half - 1, 2, 2 ],
 			[ 'fillRect', half - 1, -1, 2, 2 ],
@@ -58,5 +58,29 @@ describe( 'grid renderer', () =>
 			[ 'fillRect', SPACING - 1, half - 1, 2, 2 ],
 			[ 'set', 'globalAlpha', 1 ],
 		] );
+	} );
+
+	it( 'draws one larger and fainter dot on every second or fourth grid point when the view is zoomed out', () =>
+	{
+		const { context, calls } = record();
+
+		draw( context, 0, 0, SPACING * 4, SPACING, false, 4 );
+
+		expect( calls.slice( 3 ) ).toEqual( [ [ 'set', 'globalAlpha', 0.25 ], [ 'fillRect', -4, -4, 8, 8 ], [ 'fillRect', SPACING * 4 - 4, -4, 8, 8 ], [ 'set', 'globalAlpha', 1 ] ] );
+
+		calls.length = 0;
+
+		draw( context, 0, 0, 0, 0, false, 2 );
+
+		expect( calls[ 3 ] ).toEqual( [ 'set', 'globalAlpha', 0.5 ] );
+	} );
+
+	it( 'draws fainter half steps between the larger dots when the view is zoomed out', () =>
+	{
+		const { context, calls } = record();
+
+		draw( context, 0, 0, SPACING * 2, 0, true, 2 );
+
+		expect( calls.slice( 7 ) ).toEqual( [ [ 'set', 'globalAlpha', 0.25 ], [ 'fillRect', SPACING - 2, -2, 4, 4 ], [ 'set', 'globalAlpha', 1 ] ] );
 	} );
 } );

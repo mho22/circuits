@@ -58,6 +58,7 @@ import { ShiftTool } from './tools/shift.ts';
 import { toggle } from './tools/toggle.ts';
 import type { Action } from './types/action.ts';
 import type { Area } from './types/area.ts';
+import type { Board } from './types/board.ts';
 import type { Branch } from './types/branch.ts';
 import type { Choice } from './types/choice.ts';
 import type { Definition } from './types/definition.ts';
@@ -65,7 +66,7 @@ import type { Edit } from './types/edit.ts';
 import type { Element } from './types/element.ts';
 import type { Point } from './types/point.ts';
 import type { Shape } from './types/shape.ts';
-import { View } from './view.ts';
+import { STRIDES, View } from './view.ts';
 
 
 await init();
@@ -82,6 +83,8 @@ const context = canvas.getContext( '2d' )!;
 const status = document.querySelector( 'output' )!;
 const mode = document.querySelector( '.mode' )!;
 const picker = document.querySelector( 'input[type=file]' ) as HTMLInputElement;
+const zoomer = document.querySelector( 'button.zoom' ) as HTMLButtonElement;
+const dezoomer = document.querySelector( 'button.dezoom' ) as HTMLButtonElement;
 const circuit = new Circuit();
 const tool = new PlaceTool( circuit );
 const mover = new MoveTool( circuit );
@@ -101,6 +104,7 @@ const view = new View();
 
 let name = 'untitled.circuit';
 let hover : Point | null = null;
+let pointer : Point | null = null;
 let notice : string | null = null;
 let previous : number | null = null;
 let spaced = false;
@@ -241,7 +245,7 @@ function indicate() : void
 	const from = { x : middle.x - Math.floor( ( LOAD_DOTS - 1 ) / 2 ), y : middle.y };
 	const to = { x : from.x + LOAD_DOTS - 1, y : middle.y };
 
-	context.setTransform( devicePixelRatio, 0, 0, devicePixelRatio, - view.x * devicePixelRatio, - view.y * devicePixelRatio );
+	project();
 
 	progress.draw( context, from, to, loading.progress );
 }
@@ -351,6 +355,12 @@ function follow() : void
 	maker.edit( layer, define( layer ) );
 }
 
+function scope() : void
+{
+	zoomer.disabled = view.level === 0;
+	dezoomer.disabled = view.level === STRIDES.length - 1;
+}
+
 function zone( elements : Element[] ) : Area | null
 {
 	return maker.area ?? ( maker.layer === null ? null : span( elements ) );
@@ -369,6 +379,7 @@ function sketch() : void
 
 	origin = { x : Math.floor( ( area.low.x + area.high.x ) / 2 ), y : Math.floor( ( area.low.y + area.high.y ) / 2 ) };
 	sketching = true;
+
 	drawer.load( [ ... maker.drawing ], ends.map( ( item, index ) => ( { point : maker.layout[ index ] ?? fixed[ index ] ?? { x : item.from.x - origin.x, y : item.from.y - origin.y }, output : item.kind === Kind.Output, label : item.label ?? '' } ) ) );
 
 	figure( drawer.figure );
@@ -397,9 +408,14 @@ function figure( choice : Figure ) : void
 	palette.select( choice );
 }
 
-function fine( event : MouseEvent ) : Point
+function sheet() : Board
 {
-	return locate( fit( origin, view.x, view.y ), event.clientX, event.clientY );
+	return fit( origin, view.x * view.stride, view.y * view.stride );
+}
+
+function fine( event : Pick<MouseEvent, 'clientX' | 'clientY'> ) : Point
+{
+	return locate( sheet(), event.clientX * view.stride, event.clientY * view.stride );
 }
 
 function drop() : void
@@ -431,9 +447,9 @@ function inscribe( at : Point | null ) : void
 {
 	if( ! at ) return;
 
-	const place = fit( origin, view.x, view.y );
+	const place = sheet();
 
-	entitle( document.body, { x : place.x + at.x * place.unit, y : place.y + at.y * place.unit }, '', '', content => drawer.write( at, content ) ).parentElement!.classList.add( 'beside' );
+	entitle( document.body, { x : ( place.x + at.x * place.unit ) / view.stride, y : ( place.y + at.y * place.unit ) / view.stride }, '', '', content => drawer.write( at, content ) ).parentElement!.classList.add( 'beside' );
 }
 
 function modify( event : MouseEvent ) : void
@@ -487,22 +503,24 @@ function report( text : string, error : boolean ) : void
 
 function present() : void
 {
-	const place = fit( origin, view.x, view.y );
+	const place = sheet();
+	const stride = view.stride;
+	const scale = devicePixelRatio / stride;
 	const draft = drawer.preview();
 	const selection = selector.preview() ?? shifter.zone() ?? ( picked?.menu.isConnected ? picked.area : null );
 	const shapes = shifter.shapes( drawer.shapes );
 	const pins = shifter.pins( carrier.pins( drawer.pins ) );
 	const icon = extent( draft ? [ ... shapes, draft ] : shapes, pins );
 
-	context.setTransform( devicePixelRatio, 0, 0, devicePixelRatio, - view.x * devicePixelRatio, - view.y * devicePixelRatio );
+	project();
 
-	grid.draw( context, view.x, view.y, innerWidth, innerHeight, true );
+	grid.draw( context, view.x * stride, view.y * stride, innerWidth * stride, innerHeight * stride, true, stride );
 
-	if( icon ) mask.draw( context, { low : { x : origin.x + icon.low.x, y : origin.y + icon.low.y }, high : { x : origin.x + icon.high.x, y : origin.y + icon.high.y } }, view.x, view.y, innerWidth, innerHeight );
+	if( icon ) mask.draw( context, { low : { x : origin.x + icon.low.x, y : origin.y + icon.low.y }, high : { x : origin.x + icon.high.x, y : origin.y + icon.high.y } }, view.x * stride, view.y * stride, innerWidth * stride, innerHeight * stride );
 
 	if( selection ) area.draw( context, { low : { x : origin.x + selection.low.x / FINE, y : origin.y + selection.low.y / FINE }, high : { x : origin.x + selection.high.x / FINE, y : origin.y + selection.high.y / FINE } } );
 
-	context.setTransform( devicePixelRatio, 0, 0, devicePixelRatio, 0, 0 );
+	context.setTransform( scale, 0, 0, scale, 0, 0 );
 
 	board.draw( context, place, pins, aim );
 	drawing.draw( context, shapes, place, 0, place.unit );
@@ -525,9 +543,11 @@ function paint( elements : Element[], branches : Branch[], seconds : number ) : 
 	const paths = [ ... branches, ... elements.filter( item => item.kind !== Kind.Wire && ! POINTS.includes( item.kind ) && ! PINS.includes( item.kind ) ).flatMap( leads ) ];
 	const distances = drift.advance( paths, scale.current, seconds );
 
-	context.setTransform( devicePixelRatio, 0, 0, devicePixelRatio, - view.x * devicePixelRatio, - view.y * devicePixelRatio );
+	project();
 
-	grid.draw( context, view.x, view.y, innerWidth, innerHeight, false );
+	const stride = view.stride;
+
+	grid.draw( context, view.x * stride, view.y * stride, innerWidth * stride, innerHeight * stride, false, stride );
 
 	elements.forEach( item => element.draw( context, item, scale ) );
 
@@ -547,7 +567,7 @@ function paint( elements : Element[], branches : Branch[], seconds : number ) : 
 
 	if( zoned )
 	{
-		mask.draw( context, zoned, view.x, view.y, innerWidth, innerHeight );
+		mask.draw( context, zoned, view.x * stride, view.y * stride, innerWidth * stride, innerHeight * stride );
 
 		if( maker.area ) area.draw( context, zoned );
 	}
@@ -566,6 +586,8 @@ function frame( time : number ) : void
 	circuit.advance( clock.tick( seconds, circuit.rate ) );
 
 	follow();
+
+	scope();
 
 	const elements = parts();
 	const branches = decodeBranches( circuit.branches() );
@@ -599,6 +621,43 @@ function frame( time : number ) : void
 	report( error ?? notice ?? ( hovered ? describe( hovered, branch === undefined ? undefined : branches[ branch ], hover ) : '' ), error !== undefined || notice !== null );
 
 	requestAnimationFrame( frame );
+}
+
+function project() : void
+{
+	const scale = devicePixelRatio / view.stride;
+
+	context.setTransform( scale, 0, 0, scale, - view.x * devicePixelRatio, - view.y * devicePixelRatio );
+}
+
+function zoom( level : number ) : void
+{
+	if( view.zoom( level, pivot( screen() ) ) ) zoomed();
+}
+
+function pivot( point : Point ) : Point
+{
+	return sketching ? view.toScreen( origin ) : point;
+}
+
+function zoomed() : void
+{
+	document.dispatchEvent( new Event( 'zoom' ) );
+
+	track();
+}
+
+function track() : void
+{
+	if( ! pointer ) return;
+
+	if( sketching ) { aim = snap( fine( { clientX : pointer.x, clientY : pointer.y } ) ); carrier.move( aim ); shifter.move( aim ); selector.move( aim ); drawer.move( aim ); return; }
+
+	hover = view.toGrid( pointer.x, pointer.y );
+
+	mover.move( hover );
+	selector.move( hover );
+	tool.move( hover );
 }
 
 function screen() : Point
@@ -658,15 +717,15 @@ canvas.addEventListener( 'pointerdown', ( event : PointerEvent ) =>
 
 canvas.addEventListener( 'pointermove', ( event : PointerEvent ) =>
 {
-	if( sketching ) { aim = snap( fine( event ) ); carrier.move( aim ); shifter.move( aim ); selector.move( aim ); drawer.move( aim ); return; }
+	pointer = { x : event.clientX, y : event.clientY };
 
-	hover = view.toGrid( event.clientX, event.clientY );
+	if( sketching ) { track(); return; }
 
-	if( view.move( { x : event.clientX, y : event.clientY } ) ) return;
+	hover = view.toGrid( pointer.x, pointer.y );
 
-	mover.move( hover );
-	selector.move( hover );
-	tool.move( hover );
+	if( view.move( pointer ) ) return;
+
+	track();
 } );
 
 canvas.addEventListener( 'pointerup', ( event : PointerEvent ) =>
@@ -702,14 +761,12 @@ canvas.addEventListener( 'wheel', ( event : WheelEvent ) =>
 {
 	event.preventDefault();
 
-	if( event.ctrlKey || sketching ) return;
+	pointer = { x : event.clientX, y : event.clientY };
 
-	view.scroll( event.deltaX, event.deltaY, event.deltaMode );
-
-	hover = view.toGrid( event.clientX, event.clientY );
+	if( view.spin( event.deltaY, event.deltaMode, event.timeStamp, pivot( pointer ) ) ) zoomed();
 }, { passive : false } );
 
-canvas.addEventListener( 'pointerleave', () => hover = null );
+canvas.addEventListener( 'pointerleave', () => { hover = null; pointer = null; } );
 
 canvas.addEventListener( 'dblclick', ( event : MouseEvent ) =>
 {
@@ -741,6 +798,10 @@ canvas.addEventListener( 'dblclick', ( event : MouseEvent ) =>
 } );
 
 document.querySelector( 'button.center' )!.addEventListener( 'click', () => view.center( screen() ) );
+
+zoomer.addEventListener( 'click', () => zoom( view.level - 1 ) );
+
+dezoomer.addEventListener( 'click', () => zoom( view.level + 1 ) );
 
 
 document.querySelector( 'button.save' )!.addEventListener( 'click', save );
@@ -776,6 +837,10 @@ addEventListener( 'keydown', ( event : KeyboardEvent ) =>
 
 		if( read( event ) === 'redo' ) { event.preventDefault(); drawer.redo(); }
 
+		if( read( event ) === 'zoom' ) { event.preventDefault(); zoom( view.level - 1 ); }
+
+		if( read( event ) === 'dezoom' ) { event.preventDefault(); zoom( view.level + 1 ); }
+
 		return;
 	}
 
@@ -810,6 +875,10 @@ addEventListener( 'keydown', ( event : KeyboardEvent ) =>
 	if( command === 'save' ) { save(); return; }
 
 	if( command === 'open' ) { picker.click(); return; }
+
+	if( command === 'zoom' ) { zoom( view.level - 1 ); return; }
+
+	if( command === 'dezoom' ) { zoom( view.level + 1 ); return; }
 
 	if( allowed().includes( command ) ) pick( command );
 } );

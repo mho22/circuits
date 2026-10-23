@@ -28,6 +28,10 @@ export function read( event : Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'metaKey' 
 
 	if( modified && key === 'o' ) return 'open';
 
+	if( modified && ( key === '+' || key === '=' ) ) return 'zoom';
+
+	if( modified && key === '-' ) return 'dezoom';
+
 	if( modified ) return undefined;
 
 	return SHORTCUTS[ key ];

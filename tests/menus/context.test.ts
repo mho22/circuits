@@ -47,4 +47,13 @@ describe( 'context menu', () =>
 
 		expect( second.isConnected ).toBe( false );
 	} );
+
+	it( 'closes when the view zooms', () =>
+	{
+		const menu = open( document.body, { x : 0, y : 0 }, LABELS, [ 'foo' ], () => {} );
+
+		document.dispatchEvent( new Event( 'zoom' ) );
+
+		expect( menu.isConnected ).toBe( false );
+	} );
 } );

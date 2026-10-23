@@ -45,6 +45,14 @@ describe( 'keyboard', () =>
 		expect( press( 'v', { ctrlKey : true } ) ).toBe( 'paste' );
 	} );
 
+	it( 'zooms in with control or command and plus or equal, and zooms out with minus', () =>
+	{
+		expect( press( '+', { metaKey : true, shiftKey : true } ) ).toBe( 'zoom' );
+		expect( press( '=', { ctrlKey : true } ) ).toBe( 'zoom' );
+		expect( press( '-', { metaKey : true } ) ).toBe( 'dezoom' );
+		expect( press( '-' ) ).toBeUndefined();
+	} );
+
 	it( 'leaves other shortcuts of the browser alone', () =>
 	{
 		expect( press( 'a', { metaKey : true } ) ).toBeUndefined();

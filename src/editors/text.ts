@@ -16,6 +16,8 @@ export function edit( parent : HTMLElement, position : Point, text : string, uni
 		closed = true;
 
 		field.remove();
+
+		document.removeEventListener( 'zoom', close );
 	};
 
 	field.className = 'editor';
@@ -34,6 +36,8 @@ export function edit( parent : HTMLElement, position : Point, text : string, uni
 	} );
 
 	input.addEventListener( 'blur', close );
+
+	document.addEventListener( 'zoom', close );
 
 	field.append( input, suffix );
 	parent.append( field );

@@ -11,6 +11,7 @@ export function open<Action extends string>( parent : HTMLElement, position : Po
 
 		document.removeEventListener( 'pointerdown', outside );
 		document.removeEventListener( 'keydown', escape );
+		document.removeEventListener( 'zoom', close );
 	};
 
 	const outside = ( event : PointerEvent ) => { if( ! menu.contains( event.target as Node ) ) close(); };
@@ -32,6 +33,7 @@ export function open<Action extends string>( parent : HTMLElement, position : Po
 
 	document.addEventListener( 'pointerdown', outside );
 	document.addEventListener( 'keydown', escape );
+	document.addEventListener( 'zoom', close );
 
 	parent.append( menu );
 

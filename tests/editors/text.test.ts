@@ -66,6 +66,17 @@ describe( 'text editor', () =>
 		expect( input.parentElement!.isConnected ).toBe( false );
 	} );
 
+	it( 'closes without a commit when the view zooms', () =>
+	{
+		const commit = vi.fn();
+		const input = edit( document.body, { x : 0, y : 0 }, '5', 'V', commit );
+
+		document.dispatchEvent( new Event( 'zoom' ) );
+
+		expect( commit ).not.toHaveBeenCalled();
+		expect( input.parentElement!.isConnected ).toBe( false );
+	} );
+
 	it( 'closes without a commit when it loses focus', () =>
 	{
 		const commit = vi.fn();
