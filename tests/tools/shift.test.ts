@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { Color } from '../../src/enums/color.ts';
 import { Figure } from '../../src/enums/figure.ts';
 import { ShiftTool } from '../../src/tools/shift.ts';
 
@@ -48,6 +49,20 @@ describe( 'shift tool', () =>
 		tool.move( { x : -16, y : 0 } );
 
 		expect( tool.pins( pins ) ).toBe( pins );
+	} );
+
+	it( 'moves a light onto other lights, up to three on a point', () =>
+	{
+		const tool = new ShiftTool();
+		const at = ( x : number, light : Color ) => ( { point : { x, y : 0 }, output : false, label : '', light } );
+		const full = [ at( 1, Color.Red ), at( 1, Color.Green ), at( 1, Color.Blue ), at( 0, Color.Red ) ];
+		const room = [ at( 1, Color.Red ), at( 1, Color.Green ), at( 2, Color.Blue ), at( 0, Color.Red ) ];
+
+		tool.start( { shapes : [], pins : [ 3 ] }, area, { x : 0, y : 0 } );
+		tool.move( { x : 4, y : 0 } );
+
+		expect( tool.pins( full ) ).toBe( full );
+		expect( tool.pins( room ).map( pin => pin.point.x ) ).toEqual( [ 1, 1, 2, 1 ] );
 	} );
 
 	it( 'holds nothing after a cancel', () =>

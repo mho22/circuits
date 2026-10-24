@@ -45,6 +45,24 @@ describe( 'symbol renderer', () =>
 		expect( calls.filter( call => call[ 1 ] === 'fillStyle' ).map( call => call[ 2 ] ).slice( 0, 2 ) ).toEqual( [ 'rgb(48, 220, 96)', '#1a1a1a' ] );
 	} );
 
+	it( 'fills the square of lights that share a point with the mix of the colors of their conducting leds', () =>
+	{
+		const { context, calls } = record();
+		const lights = [ Color.Red, Color.Green, Color.Blue ].map( color => ( { point : { x : 0, y : 0 }, color } ) );
+		const fills = ( currents : number[] ) =>
+		{
+			const { context, calls } = record();
+
+			draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline : { ... outline, lights }, lights : currents } ), { voltage : 5, current : 0 } );
+
+			return calls.filter( call => call[ 1 ] === 'fillStyle' ).map( call => call[ 2 ] ).slice( 0, 3 );
+		};
+
+		expect( fills( [ 0.005, 0.005, 0.005 ] ) ).toEqual( [ 'rgb(255, 255, 255)', 'rgb(255, 255, 255)', 'rgb(255, 255, 255)' ] );
+		expect( fills( [ 0.005, 0.005, 0 ] ) ).toEqual( [ 'rgb(255, 255, 144)', 'rgb(255, 255, 144)', 'rgb(255, 255, 144)' ] );
+		expect( fills( [ 0, 0, 0 ] ) ).toEqual( [ '#1a1a1a', '#1a1a1a', '#1a1a1a' ] );
+	} );
+
 	it( 'turns its lights with the box', () =>
 	{
 		const { context, calls } = record();

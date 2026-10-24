@@ -1,3 +1,4 @@
+import { crowded } from '../crowd.ts';
 import { FINE } from '../grid.ts';
 import { translate } from '../translate.ts';
 import type { Area } from '../types/area.ts';
@@ -56,7 +57,7 @@ export class ShiftTool
 
 		const step = { x : this.offset.x / FINE, y : this.offset.y / FINE };
 		const moved = pins.map( ( pin, index ) => grab.pins.includes( index ) ? { ... pin, point : { x : pin.point.x + step.x, y : pin.point.y + step.y } } : pin );
-		const taken = moved.some( ( pin, index ) => moved.some( ( other, before ) => before < index && other.point.x === pin.point.x && other.point.y === pin.point.y ) );
+		const taken = grab.pins.some( index => crowded( moved, moved[ index ].point ) );
 
 		return taken ? pins : moved;
 	}

@@ -1,3 +1,4 @@
+import { crowded } from '../crowd.ts';
 import { FINE } from '../grid.ts';
 import type { Pin } from '../types/pin.ts';
 import type { Point } from '../types/point.ts';
@@ -38,8 +39,8 @@ export class CarryTool
 		const held = pins[ index ].point;
 		const point = { x : held.x + Math.round( this.offset.x / FINE ), y : held.y + Math.round( this.offset.y / FINE ) };
 
-		if( pins.some( ( pin, other ) => other !== index && pin.point.x === point.x && pin.point.y === point.y ) ) return pins;
+		const moved = pins.map( ( pin, other ) => other === index ? { ... pin, point } : pin );
 
-		return pins.map( ( pin, other ) => other === index ? { ... pin, point } : pin );
+		return crowded( moved, point ) ? pins : moved;
 	}
 }

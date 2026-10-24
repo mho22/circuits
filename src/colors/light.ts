@@ -14,3 +14,10 @@ export function brightness( current : number ) : number
 {
 	return current >= THRESHOLD ? Math.min( 1, current / FULL ) : 0;
 }
+
+export function mix( colors : Color[] ) : string
+{
+	const channels = colors.map( color => LIT[ color ].split( ', ' ).map( Number ) );
+
+	return [ 0, 1, 2 ].map( channel => Math.min( 255, channels.reduce( ( sum, rgb ) => sum + rgb[ channel ], 0 ) ) ).join( ', ' );
+}

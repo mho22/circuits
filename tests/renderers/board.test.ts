@@ -39,6 +39,16 @@ describe( 'board renderer', () =>
 		expect( calls.some( call => call[ 0 ] === 'roundRect' || call[ 0 ] === 'fillText' ) ).toBe( false );
 	} );
 
+	it( 'fills the square of lights that share a point with the mix of their colors', () =>
+	{
+		const { context, calls } = record();
+		const lights = [ Color.Red, Color.Green, Color.Blue ].map( light => ( { point : { x : 1, y : -1 }, output : false, label : '', light } ) );
+
+		draw( context, board, lights, null );
+
+		expect( calls.filter( call => call[ 1 ] === 'fillStyle' && call[ 2 ] !== '#9e9e9e' ).map( call => call[ 2 ] ) ).toEqual( [ 'rgb(255, 255, 255)', 'rgb(255, 255, 255)', 'rgb(255, 255, 255)' ] );
+	} );
+
 	it( 'rings the fine point under the cursor', () =>
 	{
 		const { context, calls } = record();
