@@ -24,7 +24,7 @@ fn centered( document : &Document, name : &str, drawing : &[ Shape ], layout : &
 	let outline = Outline::of( &draft );
 	let middle = outline.middle();
 
-	Ok( Operation::Describe { name : name.to_string(), drawing : drawing.iter().map( | shape | shape.shifted( - middle.x * FINE, - middle.y * FINE ) ).collect(), layout : outline.pins.iter().map( | pin | Point { x : pin.x - middle.x, y : pin.y - middle.y } ).collect() } )
+	Ok( Operation::Describe { name : name.to_string(), drawing : drawing.iter().map( | shape | shape.shifted( - middle.x * FINE, - middle.y * FINE ) ).collect(), layout : outline.pins.iter().chain( &outline.lights ).map( | pin | Point { x : pin.x - middle.x, y : pin.y - middle.y } ).collect() } )
 }
 
 fn prefixed( prefix : &str, label : &str ) -> String
@@ -54,6 +54,7 @@ pub struct Simulation
 	history : History,
 	logic : Logic,
 	solution : Result<Solution, Error>,
+	lights : Vec<f64>,
 	base : f64,
 	step : f64,
 	undos : Vec<Vec<( usize, Operation )>>,
@@ -66,7 +67,7 @@ impl Simulation
 {
 	pub fn new( step : f64 ) -> Simulation
 	{
-		Simulation { layers : vec![ Document::default() ], registry : Registry::default(), elements : Vec::new(), devices : Vec::new(), plan : Plan::default(), models : Vec::new(), sources : Vec::new(), focus : Vec::new(), history : History::default(), logic : Logic::default(), solution : Ok( Solution::default() ), base : step, step, undos : Vec::new(), redos : Vec::new(), loading : None, measuring : None }
+		Simulation { layers : vec![ Document::default() ], registry : Registry::default(), elements : Vec::new(), devices : Vec::new(), plan : Plan::default(), models : Vec::new(), sources : Vec::new(), focus : Vec::new(), history : History::default(), logic : Logic::default(), solution : Ok( Solution::default() ), lights : Vec::new(), base : step, step, undos : Vec::new(), redos : Vec::new(), loading : None, measuring : None }
 	}
 
 	pub fn create( &mut self ) -> usize
@@ -406,6 +407,11 @@ impl Simulation
 		self.solution.as_ref().map_err( | error | *error )
 	}
 
+	pub fn lights( &self ) -> &[ f64 ]
+	{
+		&self.lights
+	}
+
 	pub fn step( &self ) -> f64
 	{
 		self.step
@@ -625,7 +631,7 @@ impl Simulation
 
 	fn start( &mut self )
 	{
-		if self.frozen() { self.solution = Ok( Solution::default() ); return; }
+		if self.frozen() { self.solution = Ok( Solution::default() ); self.lights = Vec::new(); return; }
 
 		self.step = self.period().map_or( self.base, | period | period / DIVISIONS );
 
@@ -636,7 +642,21 @@ impl Simulation
 
 	fn show( &mut self, raw : Result<Solution, Error> )
 	{
+		self.lights = raw.as_ref().map_or_else( | _ | Vec::new(), | solution | self.glow( solution ) );
 		self.solution = raw.map( | solution | self.view( &solution ) );
+	}
+
+	fn glow( &self, solution : &Solution ) -> Vec<f64>
+	{
+		let path = self.focus.as_slice();
+		let layer = self.descend( path ).unwrap_or( 0 );
+		let positions : HashMap<u32, usize> = self.elements.iter().enumerate().map( | ( index, element ) | ( element.id, index ) ).collect();
+		let current = | key : &[ u32 ] | self.registry.find( key ).and_then( | id | positions.get( &id ) ).and_then( | &index | solution.readings.get( index ) ).map_or( 0.0, | reading | reading.currents[ 0 ] );
+
+		self.layers[ layer ].elements().iter().filter_map( | element | match element.kind { Kind::Symbol { layer : inner, .. } => Some( ( element.id, inner as usize ) ), _ => None } ).flat_map( | ( id, inner ) |
+		{
+			self.layers[ inner ].elements().iter().filter( | part | matches!( part.kind, Kind::Led { .. } ) ).map( move | led | current( &[ path, &[ id, led.id ] ].concat() ) )
+		} ).collect()
 	}
 
 	fn view( &self, solution : &Solution ) -> Solution

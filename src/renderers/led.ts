@@ -1,4 +1,5 @@
-import { Color } from '../enums/color.ts';
+import { brightness, DARK, LIT } from '../colors/light.ts';
+import type { Color } from '../enums/color.ts';
 import { toScreen } from '../grid.ts';
 import type { Element } from '../types/element.ts';
 import type { Scale } from '../types/scale.ts';
@@ -6,14 +7,10 @@ import * as diode from './diode.ts';
 import * as line from './line.ts';
 
 
-const THRESHOLD = 1e-4;
-const FULL = 0.005;
 const HALO = 14;
 const GAP = 10;
 const RAY = 5;
 const SPREAD = 3;
-const LIT : Record<Color, string> = { [ Color.Red ] : '255, 48, 48', [ Color.Green ] : '48, 220, 96', [ Color.Blue ] : '48, 128, 255' };
-const DARK = '#5c5c5c';
 
 
 export function draw( context : CanvasRenderingContext2D, element : Element, scale : Scale ) : void
@@ -28,7 +25,7 @@ export function draw( context : CanvasRenderingContext2D, element : Element, sca
 	const middleX = ( fromX + toX ) / 2;
 	const middleY = ( fromY + toY ) / 2;
 	const current = element.currents[ 0 ];
-	const glow = current >= THRESHOLD ? Math.min( 1, current / FULL ) : 0;
+	const glow = brightness( current );
 	const lit = LIT[ element.value as Color ];
 
 	if( glow > 0 )

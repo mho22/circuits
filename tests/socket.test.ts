@@ -6,7 +6,7 @@ import { element } from './stubs/element.ts';
 
 describe( 'socket', () =>
 {
-	const outline = { low : { x : -2, y : -2 }, high : { x : 2, y : 2 }, pins : [ { x : -2, y : 0 }, { x : 2, y : 0 } ] };
+	const outline = { low : { x : -2, y : -2 }, high : { x : 2, y : 2 }, pins : [ { x : -2, y : 0 }, { x : 2, y : 0 } ], lights : [] };
 
 	it( 'finds the pin of a symbol at a point after the turn', () =>
 	{

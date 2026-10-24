@@ -264,7 +264,11 @@ impl Circuit
 	{
 		let Some( document ) = self.simulation.document( layer as usize ) else { return vec![]; };
 
-		Circuit::sides( &Outline::of( document ) )
+		let colors = document.elements().iter().filter_map( | element | match element.kind { Kind::Led { color } => Some( color as i32 ), _ => None } );
+		let outline = Outline::of( document );
+		let lights = outline.lights.iter().zip( colors ).flat_map( | ( point, color ) | [ point.x, point.y, color ] );
+
+		[ outline.low, outline.high ].iter().flat_map( | point | [ point.x, point.y ] ).chain( [ outline.pins.len() as i32 ] ).chain( outline.pins.iter().flat_map( | point | [ point.x, point.y ] ) ).chain( lights ).collect()
 	}
 
 	pub fn copy( &mut self, ids : &[ u32 ] ) -> usize
@@ -392,6 +396,11 @@ impl Circuit
 		self.simulation.listening()
 	}
 
+	pub fn lights( &self ) -> Vec<f64>
+	{
+		self.simulation.lights().to_vec()
+	}
+
 	pub fn captions( &self ) -> Vec<String>
 	{
 		self.simulation.captions()
@@ -438,11 +447,6 @@ impl Circuit
 
 			head.into_iter().chain( potentials ).chain( currents ).collect::<Vec<f64>>()
 		} ).collect()
-	}
-
-	fn sides( outline : &Outline ) -> Vec<i32>
-	{
-		[ outline.low, outline.high ].iter().chain( &outline.pins ).flat_map( | point | [ point.x, point.y ] ).collect()
 	}
 
 	fn current( &self ) -> usize

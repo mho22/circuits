@@ -177,11 +177,19 @@ function captioned( elements : Element[] ) : Element[]
 	return elements.map( item => item.kind === Kind.Toggle ? { ... item, label : captions[ index++ ] } : item );
 }
 
+function lit( elements : Element[] ) : Element[]
+{
+	const lights = Array.from( circuit.lights() );
+	let index = 0;
+
+	return elements.map( item => item.outline ? { ... item, lights : lights.slice( index, index += item.outline.lights.length ) } : item );
+}
+
 function parts() : Element[]
 {
 	const listening = Array.from( circuit.listening() );
 
-	return captioned( labelled( decodeElements( circuit.elements() ), circuit.layer ) ).map( outlined ).map( item => listening.includes( item.id ) ? { ... item, listening : true } : item );
+	return lit( captioned( labelled( decodeElements( circuit.elements() ), circuit.layer ) ).map( outlined ) ).map( item => listening.includes( item.id ) ? { ... item, listening : true } : item );
 }
 
 function layered( layer : number ) : Element[]
@@ -386,12 +394,15 @@ function sketch() : void
 
 	const ids = inside( elements, area );
 	const ends = elements.filter( item => PINS.includes( item.kind ) && ids.includes( item.id ) );
-	const fixed = maker.layer === null ? [] : decodeOutline( circuit.outline( maker.layer ) ).pins;
+	const leds = elements.filter( item => item.kind === Kind.Led && ids.includes( item.id ) );
+	const outline = maker.layer === null ? null : decodeOutline( circuit.outline( maker.layer ) );
+	const fixed = outline ? [ ... outline.pins, ... outline.lights.map( light => light.point ) ] : [];
+	const at = ( item : Element, index : number ) : Point => maker.layout[ index ] ?? fixed[ index ] ?? { x : item.from.x - origin.x, y : item.from.y - origin.y };
 
 	origin = { x : Math.floor( ( area.low.x + area.high.x ) / 2 ), y : Math.floor( ( area.low.y + area.high.y ) / 2 ) };
 	sketching = true;
 
-	drawer.load( [ ... maker.drawing ], ends.map( ( item, index ) => ( { point : maker.layout[ index ] ?? fixed[ index ] ?? { x : item.from.x - origin.x, y : item.from.y - origin.y }, output : item.kind === Kind.Output, label : item.label ?? '' } ) ) );
+	drawer.load( [ ... maker.drawing ], [ ... ends.map( ( item, index ) => ( { point : at( item, index ), output : item.kind === Kind.Output, label : item.label ?? '' } ) ), ... leds.map( ( item, index ) => ( { point : at( item, ends.length + index ), output : false, label : '', light : item.value as Color } ) ) ] );
 
 	figure( null );
 	palette.open();

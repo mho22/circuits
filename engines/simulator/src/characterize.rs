@@ -145,12 +145,13 @@ impl Characterization
 
 		let active = ! devices.is_empty() || elements.iter().any( | element | matches!( element.kind, Kind::Npn | Kind::Pnp | Kind::Nmos | Kind::Pmos ) );
 		let timed = elements.iter().any( | element | matches!( element.kind, Kind::Capacitor { .. } | Kind::Inductor { .. } | Kind::Clock { .. } ) );
+		let lit = elements.iter().any( | element | matches!( element.kind, Kind::Led { .. } ) );
 
 		let find = | key : &[ u32 ] | registry.find( key ).and_then( | id | elements.iter().position( | element | element.id == id ) );
 		let drives : Vec<usize> = inputs.iter().map( | &id | find( &[ id, 0 ] ) ).collect::<Option<_>>()?;
 		let probes : Vec<usize> = outputs.iter().map( | &id | find( &[ id ] ) ).collect::<Option<_>>()?;
 
-		if ! active || timed || looped( &elements, &[], &drives ) { return None; }
+		if ! active || timed || lit || looped( &elements, &[], &drives ) { return None; }
 
 		let sequential = looped( &elements, &devices, &drives );
 		let netlist = Netlist::build( &elements );

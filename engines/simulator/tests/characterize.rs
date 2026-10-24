@@ -240,15 +240,17 @@ fn it_leaves_a_layer_without_a_transistor_or_a_gate_analog()
 }
 
 #[test]
-fn it_leaves_a_layer_with_a_capacitor_an_inductor_or_a_clock_analog()
+fn it_leaves_a_layer_with_a_capacitor_an_inductor_a_clock_or_an_led_analog()
 {
 	let capacitor = inverter( &[ ( Kind::Capacitor { farads : 1e-6 }, ( 5, 1 ), ( 5, 3 ) ), ( Kind::Ground, ( 5, 3 ), ( 5, 3 ) ) ] );
 	let inductor = inverter( &[ ( Kind::Inductor { henries : 1.0 }, ( 5, 1 ), ( 5, 3 ) ) ] );
 	let clock = inverter( &[ ( Kind::Clock { hertz : 1.0 }, ( 8, 4 ), ( 8, 6 ) ) ] );
+	let led = inverter( &[ ( Kind::Led { color : 0 }, ( 5, 1 ), ( 5, 3 ) ), ( Kind::Ground, ( 5, 3 ), ( 5, 3 ) ) ] );
 
 	assert_eq!( characterize( &[ Document::default(), capacitor ], &[], 1 ), None );
 	assert_eq!( characterize( &[ Document::default(), inductor ], &[], 1 ), None );
 	assert_eq!( characterize( &[ Document::default(), clock ], &[], 1 ), None );
+	assert_eq!( characterize( &[ Document::default(), led ], &[], 1 ), None );
 }
 
 #[test]

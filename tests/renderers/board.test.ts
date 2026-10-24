@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { Color } from '../../src/enums/color.ts';
 import { draw } from '../../src/renderers/board.ts';
 import { record } from '../stubs/context.ts';
 
@@ -25,6 +26,17 @@ describe( 'board renderer', () =>
 
 		expect( calls.filter( call => call[ 0 ] === 'roundRect' ) ).toEqual( [ [ 'roundRect', 14, 94, 12, 12, 0 ], [ 'roundRect', 174, 134, 12, 12, 3 ] ] );
 		expect( calls.filter( call => call[ 0 ] === 'fillText' ) ).toEqual( [ [ 'fillText', 'foo', 8, 100 ], [ 'fillText', 'bar', 192, 140 ] ] );
+	} );
+
+	it( 'draws a light as a filled square of the size of a pin in its color without a border and without a label', () =>
+	{
+		const { context, calls } = record();
+
+		draw( context, board, [ { point : { x : 1, y : -1 }, output : false, label : '', light : Color.Blue } ], null );
+
+		expect( calls ).toContainEqual( [ 'set', 'fillStyle', 'rgb(48, 128, 255)' ] );
+		expect( calls ).toContainEqual( [ 'fillRect', 134, 54, 12, 12 ] );
+		expect( calls.some( call => call[ 0 ] === 'roundRect' || call[ 0 ] === 'fillText' ) ).toBe( false );
 	} );
 
 	it( 'rings the fine point under the cursor', () =>

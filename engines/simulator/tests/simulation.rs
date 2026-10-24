@@ -735,6 +735,45 @@ fn it_reads_each_pin_of_a_symbol_in_the_order_of_its_layer()
 	assert!( near( symbol.currents[ 2 ], 0.0, 1e-12 ) );
 }
 
+#[test]
+fn it_gives_the_current_of_each_led_inside_each_symbol_of_the_page_in_the_order_of_its_layer()
+{
+	let mut simulation = Simulation::new( STEP );
+	let layer = define( &mut simulation, &[
+		( Kind::Input { high : true }, ( -1, 0 ), ( 0, 0 ) ),
+		( Kind::Resistor { ohms : 1000.0 }, ( 0, 0 ), ( 4, 0 ) ),
+		( Kind::Led { color : 0 }, ( 4, 0 ), ( 4, 4 ) ),
+		( Kind::Ground, ( 4, 4 ), ( 4, 4 ) ),
+		( Kind::Led { color : 1 }, ( 0, 0 ), ( 0, 4 ) ),
+	] );
+
+	add( &mut simulation, Kind::Symbol { layer, rotation : 0 }, ( 10, 10 ), ( 10, 10 ) );
+	add( &mut simulation, Kind::Led { color : 2 }, ( 20, 0 ), ( 20, 4 ) );
+	add( &mut simulation, Kind::Symbol { layer, rotation : 0 }, ( 30, 10 ), ( 30, 10 ) );
+
+	let lights = simulation.lights();
+
+	assert_eq!( lights.len(), 4 );
+	assert!( lights[ 0 ] > 1e-3 && lights[ 1 ].abs() < 1e-4 && lights[ 2 ] > 1e-3 && lights[ 3 ].abs() < 1e-4 );
+}
+
+#[test]
+fn it_gives_no_current_of_an_led_while_its_symbol_is_measured()
+{
+	let mut simulation = Simulation::new( STEP );
+	let layer = define( &mut simulation, &[ ( Kind::Input { high : true }, ( -1, 0 ), ( 0, 0 ) ), ( Kind::Resistor { ohms : 1000.0 }, ( 0, 0 ), ( 4, 0 ) ), ( Kind::Led { color : 0 }, ( 4, 0 ), ( 4, 4 ) ), ( Kind::Ground, ( 4, 4 ), ( 4, 4 ) ) ] ) as usize;
+
+	add( &mut simulation, Kind::Symbol { layer : layer as u32, rotation : 0 }, ( 10, 10 ), ( 10, 10 ) );
+	simulation.apply( layer, Operation::Add { kind : Kind::Wire, segment : segment( ( 20, 20 ), ( 22, 20 ) ), mirrored : false } ).unwrap();
+
+	assert!( simulation.frozen() );
+	assert!( simulation.lights().is_empty() );
+
+	measure( &mut simulation );
+
+	assert!( simulation.lights()[ 0 ] > 1e-3 );
+}
+
 fn inverter( simulation : &mut Simulation ) -> u32
 {
 	let layer = define( simulation, &[

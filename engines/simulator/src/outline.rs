@@ -23,6 +23,7 @@ pub struct Outline
 	pub low : Point,
 	pub high : Point,
 	pub pins : Vec<Point>,
+	pub lights : Vec<Point>,
 }
 
 impl Outline
@@ -41,6 +42,9 @@ impl Outline
 			pins.push( document.layout().get( index ).copied().unwrap_or( column ) );
 		}
 
+		let count = document.elements().iter().filter( | element | matches!( element.kind, Kind::Led { .. } ) ).count();
+		let lights : Vec<Point> = ( 0 .. count ).map( | rank | document.layout().get( pins.len() + rank ).copied().unwrap_or( Point { x : 0, y : 2 * rank as i32 - ( count as i32 - 1 ) } ) ).collect();
+
 		let shapes = document.drawing().iter().flat_map( | shape |
 		{
 			let ( low, high ) = shape.bounds();
@@ -48,11 +52,11 @@ impl Outline
 			[ Point { x : low.x.div_euclid( FINE ), y : low.y.div_euclid( FINE ) }, Point { x : ceil( high.x ), y : ceil( high.y ) } ]
 		} );
 		let margin = if document.drawing().is_empty() { vec![ Point { x : - MARGIN, y : - MARGIN }, Point { x : MARGIN, y : MARGIN } ] } else { Vec::new() };
-		let points : Vec<Point> = pins.iter().copied().chain( shapes ).chain( margin ).collect();
+		let points : Vec<Point> = pins.iter().chain( &lights ).copied().chain( shapes ).chain( margin ).collect();
 		let low = Point { x : points.iter().map( | point | point.x ).min().unwrap(), y : points.iter().map( | point | point.y ).min().unwrap() };
 		let high = Point { x : points.iter().map( | point | point.x ).max().unwrap(), y : points.iter().map( | point | point.y ).max().unwrap() };
 
-		Outline { low, high, pins }
+		Outline { low, high, pins, lights }
 	}
 
 	pub fn middle( &self ) -> Point

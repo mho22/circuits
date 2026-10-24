@@ -468,7 +468,7 @@ fn it_encloses_a_selection_into_a_symbol_with_one_reading_per_pin()
 	assert_eq!( &row[ 1 .. 9 ], &[ 14.0, 4.0, 0.0, 4.0, 0.0, 1.0, 0.0, 2.0 ] );
 	assert!( ( row[ 11 ] - 0.0025 ).abs() < 1e-12 );
 	assert_eq!( circuit.symbols(), vec![ 1 ] );
-	assert_eq!( circuit.outline( 1 ), vec![ -2, -2, 2, 2, -2, 0, 2, 0 ] );
+	assert_eq!( circuit.outline( 1 ), vec![ -2, -2, 2, 2, 2, -2, 0, 2, 0 ] );
 	assert!( circuit.outline( 2 ).is_empty() );
 	assert_eq!( circuit.elements_at( 5, 1 ), vec![ symbol ] );
 }
@@ -630,6 +630,19 @@ fn it_opens_a_symbol_with_four_pins_and_its_layer()
 	assert_eq!( elements.len(), 17 );
 	assert_eq!( &elements[ 1 .. 9 ], &[ 14.0, 5.0, 5.0, 5.0, 5.0, 1.0, 1.0, 4.0 ] );
 	assert_eq!( circuit.symbols(), vec![ 1 ] );
+}
+
+#[wasm_bindgen_test]
+fn it_gives_the_place_and_the_color_of_each_led_of_a_symbol_and_its_current()
+{
+	let mut circuit = Circuit::new();
+	let data = [ 0.0, 14.0, 1.0, 0.0, 5.0, 5.0, 5.0, 5.0, 1.0, 13.0, 1.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1000.0, 0.0, 0.0, 0.0, 4.0, 0.0, 1.0, 17.0, 1.0, 0.0, 4.0, 0.0, 4.0, 4.0, 1.0, 3.0, 0.0, 0.0, 4.0, 4.0, 4.0, 4.0 ];
+
+	open( &mut circuit, &data, Vec::new(), &[ 1 ], vec![ "foo".to_string() ], &[ 0 ], &[ 2, -2, 0, 0, 2 ] ).ok();
+
+	assert_eq!( circuit.outline( 1 ), vec![ -2, -2, 2, 2, 1, -2, 0, 0, 2, 1 ] );
+	assert_eq!( circuit.lights().len(), 1 );
+	assert!( circuit.lights()[ 0 ] > 1e-3 );
 }
 
 #[wasm_bindgen_test]

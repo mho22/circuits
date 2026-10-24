@@ -53,7 +53,7 @@ describe( 'readout', () =>
 
 	it( 'describes the pin of a symbol under a point with its label, its bit and its voltage', () =>
 	{
-		const outline = { low : { x : -2, y : -2 }, high : { x : 2, y : 2 }, pins : [ { x : -2, y : 0 }, { x : 2, y : 0 } ] };
+		const outline = { low : { x : -2, y : -2 }, high : { x : 2, y : 2 }, pins : [ { x : -2, y : 0 }, { x : 2, y : 0 } ], lights : [] };
 		const definition = { name : 'foo', drawing : [], labels : [ 'bar', '' ], layout : [], delay : 3e-9 };
 		const symbol = element( { kind : Kind.Symbol, value : 2, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline, definition, potentials : [ 5, 0 ], currents : [ 0, 0 ] } );
 
@@ -64,7 +64,7 @@ describe( 'readout', () =>
 
 	it( 'puts the label of a symbol after its name and before the label of each of its pins', () =>
 	{
-		const outline = { low : { x : -2, y : -2 }, high : { x : 2, y : 2 }, pins : [ { x : -2, y : 0 }, { x : 2, y : 0 } ] };
+		const outline = { low : { x : -2, y : -2 }, high : { x : 2, y : 2 }, pins : [ { x : -2, y : 0 }, { x : 2, y : 0 } ], lights : [] };
 		const definition = { name : 'foo', drawing : [], labels : [ 'bar', '' ], layout : [], delay : 3e-9 };
 		const symbol = element( { kind : Kind.Symbol, value : 2, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline, definition, label : 'qux-', potentials : [ 5, 0 ], currents : [ 0, 0 ] } );
 

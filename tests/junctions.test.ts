@@ -37,6 +37,6 @@ describe( 'junctions', () =>
 
 		expect( junctions( [ wire, resistor, element( { kind : Kind.Diode, from : { x : 2, y : 0 }, to : { x : 2, y : 2 } } ) ] ) ).toHaveLength( 1 );
 		expect( junctions( [ wire, element( { kind : Kind.Input, from : { x : 3, y : 0 }, to : { x : 2, y : 0 } } ) ] ) ).toEqual( [] );
-		expect( junctions( [ wire, resistor, element( { kind : Kind.Symbol, from : { x : 4, y : 0 }, to : { x : 4, y : 0 }, outline : { low : { x : -2, y : -2 }, high : { x : 2, y : 2 }, pins : [ { x : -2, y : 0 } ] } } ) ] ) ).toHaveLength( 1 );
+		expect( junctions( [ wire, resistor, element( { kind : Kind.Symbol, from : { x : 4, y : 0 }, to : { x : 4, y : 0 }, outline : { low : { x : -2, y : -2 }, high : { x : 2, y : 2 }, pins : [ { x : -2, y : 0 } ], lights : [] } } ) ] ) ).toHaveLength( 1 );
 	} );
 } );

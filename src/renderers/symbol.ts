@@ -1,3 +1,4 @@
+import { brightness, DARK, LIT } from '../colors/light.ts';
 import { color } from '../colors/voltage.ts';
 import { FINE, SPACING, toScreen } from '../grid.ts';
 import { pins } from '../pins.ts';
@@ -10,6 +11,7 @@ import * as drawing from './drawing.ts';
 const COLOR = '#9e9e9e';
 const RADIUS = 4;
 const DOT = 3;
+const SQUARE = 6;
 
 
 export function draw( context : CanvasRenderingContext2D, element : Element, scale : Scale ) : void
@@ -36,6 +38,17 @@ export function draw( context : CanvasRenderingContext2D, element : Element, sca
 		context.roundRect( toScreen( left ), toScreen( top ), toScreen( right - left ), toScreen( bottom - top ), RADIUS );
 		context.stroke();
 	}
+
+	outline.lights.forEach( ( light, index ) =>
+	{
+		const point = turn( light.point, element.rotation );
+		const x = toScreen( element.from.x + point.x );
+		const y = toScreen( element.from.y + point.y );
+		const lit = brightness( element.lights?.[ index ] ?? 0 ) > 0;
+
+		context.fillStyle = lit ? `rgb(${ LIT[ light.color ] })` : DARK;
+		context.fillRect( x - SQUARE, y - SQUARE, 2 * SQUARE, 2 * SQUARE );
+	} );
 
 	ends.forEach( ( pin, index ) =>
 	{

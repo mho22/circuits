@@ -19,4 +19,5 @@ export interface Element
 	definition? : Definition;
 	label? : string;
 	listening? : boolean;
+	lights? : number[];
 }

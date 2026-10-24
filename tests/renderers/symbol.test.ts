@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { color } from '../../src/colors/voltage.ts';
+import { Color } from '../../src/enums/color.ts';
 import { Figure } from '../../src/enums/figure.ts';
 import { Kind } from '../../src/enums/kind.ts';
 import { FINE, SPACING } from '../../src/grid.ts';
@@ -10,7 +11,7 @@ import { element } from '../stubs/element.ts';
 
 describe( 'symbol renderer', () =>
 {
-	const outline = { low : { x : -2, y : -3 }, high : { x : 2, y : 3 }, pins : [ { x : -2, y : 1 }, { x : 2, y : 0 } ] };
+	const outline = { low : { x : -2, y : -3 }, high : { x : 2, y : 3 }, pins : [ { x : -2, y : 1 }, { x : 2, y : 0 } ], lights : [] };
 
 	it( 'draws a rounded box around its outline without a drawing and one dot per pin in the color of its voltage', () =>
 	{
@@ -31,6 +32,26 @@ describe( 'symbol renderer', () =>
 
 		expect( calls ).toContainEqual( [ 'roundRect', 2 * SPACING, 3 * SPACING, 6 * SPACING, 4 * SPACING, 4 ] );
 		expect( calls.filter( call => call[ 0 ] === 'arc' ).map( call => call.slice( 1, 3 ) ) ).toEqual( [ [ 4 * SPACING, 3 * SPACING ], [ 5 * SPACING, 7 * SPACING ] ] );
+	} );
+
+	it( 'draws each light as a filled square without a border, in its color while its led conducts and dark otherwise', () =>
+	{
+		const { context, calls } = record();
+		const lights = [ { point : { x : 0, y : -1 }, color : Color.Green }, { point : { x : 1, y : 0 }, color : Color.Red } ];
+
+		draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline : { ... outline, lights }, potentials : [ 5, 0 ], lights : [ 0.0025, 0 ] } ), { voltage : 5, current : 0 } );
+
+		expect( calls.filter( call => call[ 0 ] === 'fillRect' ) ).toEqual( [ [ 'fillRect', 94, 74, 12, 12 ], [ 'fillRect', 114, 94, 12, 12 ] ] );
+		expect( calls.filter( call => call[ 1 ] === 'fillStyle' ).map( call => call[ 2 ] ).slice( 0, 2 ) ).toEqual( [ 'rgb(48, 220, 96)', '#5c5c5c' ] );
+	} );
+
+	it( 'turns its lights with the box', () =>
+	{
+		const { context, calls } = record();
+
+		draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline : { ... outline, lights : [ { point : { x : 1, y : 0 }, color : Color.Red } ] }, rotation : 1 } ), { voltage : 5, current : 0 } );
+
+		expect( calls.filter( call => call[ 0 ] === 'fillRect' ) ).toEqual( [ [ 'fillRect', 94, 114, 12, 12 ] ] );
 	} );
 
 	it( 'draws nothing before its outline is known', () =>
