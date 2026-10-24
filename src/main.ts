@@ -803,7 +803,7 @@ canvas.addEventListener( 'dblclick', ( event : MouseEvent ) =>
 	const ids = Array.from( circuit.elementsAt( point.x, point.y ) );
 	const elements = parts();
 	const items = ids.map( id => elements.find( item => item.id === id )! );
-	const symbol = items.find( item => item.kind === Kind.Symbol );
+	const symbol = items.every( item => item.kind === Kind.Symbol ) ? items[ 0 ] : undefined;
 	const target = items.find( item => INPUTS[ item.kind ] );
 
 	if( maker.area ) return;
