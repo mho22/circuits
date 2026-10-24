@@ -8,6 +8,7 @@ import type { Point } from '../types/point.ts';
 const COLOR = '#9e9e9e';
 const CURSOR = '#ffff00';
 const HALF = 6;
+const LIGHT = 9;
 const RADIUS = 3;
 const RING = 5;
 const GAP = 6;
@@ -31,7 +32,7 @@ export function draw( context : CanvasRenderingContext2D, board : Board, pins : 
 		if( pin.light !== undefined )
 		{
 			context.fillStyle = `rgb(${ LIT[ pin.light ] })`;
-			context.fillRect( px - HALF, py - HALF, 2 * HALF, 2 * HALF );
+			context.fillRect( px - LIGHT, py - LIGHT, 2 * LIGHT, 2 * LIGHT );
 			context.fillStyle = COLOR;
 
 			return;

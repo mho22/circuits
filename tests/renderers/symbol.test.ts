@@ -41,8 +41,8 @@ describe( 'symbol renderer', () =>
 
 		draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline : { ... outline, lights }, potentials : [ 5, 0 ], lights : [ 0.0025, 0 ] } ), { voltage : 5, current : 0 } );
 
-		expect( calls.filter( call => call[ 0 ] === 'fillRect' ) ).toEqual( [ [ 'fillRect', 94, 74, 12, 12 ], [ 'fillRect', 114, 94, 12, 12 ] ] );
-		expect( calls.filter( call => call[ 1 ] === 'fillStyle' ).map( call => call[ 2 ] ).slice( 0, 2 ) ).toEqual( [ 'rgb(48, 220, 96)', '#5c5c5c' ] );
+		expect( calls.filter( call => call[ 0 ] === 'fillRect' ) ).toEqual( [ [ 'fillRect', 91, 71, 18, 18 ], [ 'fillRect', 111, 91, 18, 18 ] ] );
+		expect( calls.filter( call => call[ 1 ] === 'fillStyle' ).map( call => call[ 2 ] ).slice( 0, 2 ) ).toEqual( [ 'rgb(48, 220, 96)', '#1a1a1a' ] );
 	} );
 
 	it( 'turns its lights with the box', () =>
@@ -51,7 +51,7 @@ describe( 'symbol renderer', () =>
 
 		draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline : { ... outline, lights : [ { point : { x : 1, y : 0 }, color : Color.Red } ] }, rotation : 1 } ), { voltage : 5, current : 0 } );
 
-		expect( calls.filter( call => call[ 0 ] === 'fillRect' ) ).toEqual( [ [ 'fillRect', 94, 114, 12, 12 ] ] );
+		expect( calls.filter( call => call[ 0 ] === 'fillRect' ) ).toEqual( [ [ 'fillRect', 91, 111, 18, 18 ] ] );
 	} );
 
 	it( 'draws nothing before its outline is known', () =>

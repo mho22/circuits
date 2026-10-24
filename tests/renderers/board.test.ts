@@ -35,7 +35,7 @@ describe( 'board renderer', () =>
 		draw( context, board, [ { point : { x : 1, y : -1 }, output : false, label : '', light : Color.Blue } ], null );
 
 		expect( calls ).toContainEqual( [ 'set', 'fillStyle', 'rgb(48, 128, 255)' ] );
-		expect( calls ).toContainEqual( [ 'fillRect', 134, 54, 12, 12 ] );
+		expect( calls ).toContainEqual( [ 'fillRect', 131, 51, 18, 18 ] );
 		expect( calls.some( call => call[ 0 ] === 'roundRect' || call[ 0 ] === 'fillText' ) ).toBe( false );
 	} );
 

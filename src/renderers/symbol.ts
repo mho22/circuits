@@ -11,7 +11,7 @@ import * as drawing from './drawing.ts';
 const COLOR = '#9e9e9e';
 const RADIUS = 4;
 const DOT = 3;
-const SQUARE = 6;
+const SQUARE = 9;
 
 
 export function draw( context : CanvasRenderingContext2D, element : Element, scale : Scale ) : void

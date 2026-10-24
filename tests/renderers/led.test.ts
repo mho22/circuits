@@ -23,7 +23,7 @@ describe( 'led renderer', () =>
 			const calls = drawn( current );
 
 			expect( calls.filter( call => call[ 0 ] === 'arc' ) ).toEqual( [] );
-			expect( calls.filter( call => call[ 1 ] === 'strokeStyle' ).slice( -2 ).map( call => call[ 2 ] ) ).toEqual( [ '#5c5c5c', '#5c5c5c' ] );
+			expect( calls.filter( call => call[ 1 ] === 'strokeStyle' ).slice( -2 ).map( call => call[ 2 ] ) ).toEqual( [ '#1a1a1a', '#1a1a1a' ] );
 		}
 	} );
 
