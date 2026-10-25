@@ -82,6 +82,15 @@ impl Simulation
 		self.commit( &[ ( layer, operation ) ] )
 	}
 
+	pub fn amend( &mut self, layer : usize, operation : Operation ) -> Result<u32, Error>
+	{
+		let ( id, _ ) = self.perform( &[ ( layer, operation ) ] )?;
+
+		self.redos.clear();
+
+		Ok( id )
+	}
+
 	pub fn place( &mut self, layer : usize, kind : Kind, segment : Segment ) -> Result<u32, Error>
 	{
 		let operations = place( self.document( layer ).ok_or( Error::Layerless )?.elements(), kind, segment );
@@ -366,7 +375,7 @@ impl Simulation
 		let layer = self.descend( path ).unwrap_or( 0 );
 		let probe = | element : &&Element | self.registry.find( &[ path, &[ element.id ] ].concat() ).is_some_and( | id | self.elements.iter().any( | flat | flat.id == id && flat.kind == Kind::Output ) );
 
-		self.layers[ layer ].elements().iter().filter( | element | matches!( element.kind, Kind::Toggle { .. } ) ).filter( probe ).map( | element | element.id ).collect()
+		self.layers[ layer ].elements().iter().filter( | element | matches!( element.kind, Kind::Toggle { .. } | Kind::Slider { .. } ) ).filter( probe ).map( | element | element.id ).collect()
 	}
 
 	pub fn captions( &self ) -> Vec<String>
@@ -400,7 +409,7 @@ impl Simulation
 		let netlist = Netlist::build( &elements );
 		let caption = | toggle : &Element | pins.iter().find( | ( point, label ) | ! label.is_empty() && netlist.net( *point ) == netlist.net( toggle.segment.to ) ).map_or( String::new(), | ( _, label ) | label.to_string() );
 
-		document.elements().iter().filter( | element | matches!( element.kind, Kind::Toggle { .. } ) ).map( caption ).collect()
+		document.elements().iter().filter( | element | matches!( element.kind, Kind::Toggle { .. } | Kind::Slider { .. } ) ).map( caption ).collect()
 	}
 
 	pub fn delay( &self, layer : usize ) -> Option<f64>

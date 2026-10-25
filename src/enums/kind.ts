@@ -19,6 +19,7 @@ export enum Kind
 	Toggle = 16,
 	Led = 17,
 	Clock = 18,
+	Slider = 19,
 }
 
 
@@ -42,6 +43,7 @@ export const NAMES : Record<Kind, string> = {
 	[ Kind.Toggle ] : 'Toggle',
 	[ Kind.Led ] : 'LED',
 	[ Kind.Clock ] : 'Clock',
+	[ Kind.Slider ] : 'Slider',
 };
 
 export const POINTS = [ Kind.Ground, Kind.Supply, Kind.Symbol ];
@@ -52,8 +54,8 @@ export const LEVELS = [ Kind.Input, Kind.Toggle ];
 
 export const TRANSISTORS = [ Kind.Npn, Kind.Pnp, Kind.Nmos, Kind.Pmos ];
 
-export const FIELDS : Partial<Record<Kind, string>> = { [ Kind.Resistor ] : 'ohms', [ Kind.Battery ] : 'volts', [ Kind.Capacitor ] : 'farads', [ Kind.Inductor ] : 'henries', [ Kind.Supply ] : 'volts', [ Kind.Symbol ] : 'layer', [ Kind.Clock ] : 'hertz' };
+export const FIELDS : Partial<Record<Kind, string>> = { [ Kind.Resistor ] : 'ohms', [ Kind.Battery ] : 'volts', [ Kind.Capacitor ] : 'farads', [ Kind.Inductor ] : 'henries', [ Kind.Supply ] : 'volts', [ Kind.Symbol ] : 'layer', [ Kind.Clock ] : 'hertz', [ Kind.Slider ] : 'volts' };
 
-export const UNITS : Partial<Record<Kind, string>> = { [ Kind.Resistor ] : 'Ω', [ Kind.Battery ] : 'V', [ Kind.Capacitor ] : 'F', [ Kind.Inductor ] : 'H', [ Kind.Supply ] : 'V', [ Kind.Clock ] : 'Hz' };
+export const UNITS : Partial<Record<Kind, string>> = { [ Kind.Resistor ] : 'Ω', [ Kind.Battery ] : 'V', [ Kind.Capacitor ] : 'F', [ Kind.Inductor ] : 'H', [ Kind.Supply ] : 'V', [ Kind.Clock ] : 'Hz', [ Kind.Slider ] : 'V' };
 
-export const INPUTS : Partial<Record<Kind, [ string, number ]>> = { [ Kind.Resistor ] : [ 'Ω', 1 ], [ Kind.Battery ] : [ 'V', 1 ], [ Kind.Capacitor ] : [ 'µF', 1e-6 ], [ Kind.Inductor ] : [ 'mH', 1e-3 ], [ Kind.Supply ] : [ 'V', 1 ], [ Kind.Clock ] : [ 'MHz', 1e6 ] };
+export const INPUTS : Partial<Record<Kind, [ string, number ]>> = { [ Kind.Resistor ] : [ 'Ω', 1 ], [ Kind.Battery ] : [ 'V', 1 ], [ Kind.Capacitor ] : [ 'µF', 1e-6 ], [ Kind.Inductor ] : [ 'mH', 1e-3 ], [ Kind.Supply ] : [ 'V', 1 ], [ Kind.Clock ] : [ 'MHz', 1e6 ], [ Kind.Slider ] : [ 'V', 1 ] };

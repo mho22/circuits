@@ -4,7 +4,7 @@ import type { Point } from './types/point.ts';
 
 export function terminals( kind : Kind, from : Point, to : Point, mirrored : boolean ) : Point[]
 {
-	if( PINS.includes( kind ) || kind === Kind.Toggle || kind === Kind.Clock ) return [ to, to ];
+	if( PINS.includes( kind ) || kind === Kind.Toggle || kind === Kind.Clock || kind === Kind.Slider ) return [ to, to ];
 
 	if( ! TRANSISTORS.includes( kind ) ) return [ from, to ];
 

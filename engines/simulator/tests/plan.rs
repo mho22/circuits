@@ -107,9 +107,9 @@ fn it_keeps_a_net_that_a_toggle_drives_alone_out_of_the_analog_circuit()
 }
 
 #[test]
-fn it_solves_a_clock_or_a_toggle_on_the_analog_circuit_as_a_supply()
+fn it_solves_a_clock_a_toggle_or_a_slider_on_the_analog_circuit_as_a_supply()
 {
-	for kind in [ Kind::Clock { hertz : 1e6 }, Kind::Toggle { high : true } ]
+	for kind in [ Kind::Clock { hertz : 1e6 }, Kind::Toggle { high : true }, Kind::Slider { volts : 2.5 } ]
 	{
 		let loaded = plan( layer( &[ ( kind, ( 4, 0 ), ( 8, 0 ) ), ( Kind::Resistor { ohms : 1000.0 }, ( 8, 0 ), ( 8, 4 ) ) ] ) );
 		let position = loaded.analog.iter().position( | &index | index == loaded.generators[ 0 ].0 ).unwrap();

@@ -1,3 +1,4 @@
+use crate::flatten::HIGH;
 use crate::{ Error, Junction, LIGHTS, SILICON };
 
 
@@ -26,6 +27,7 @@ pub enum Kind
 	Toggle { high : bool },
 	Led { color : u8 },
 	Clock { hertz : f64 },
+	Slider { volts : f64 },
 }
 
 impl Kind
@@ -43,6 +45,7 @@ impl Kind
 			Kind::Symbol { rotation, .. } if rotation > 3 => Err( Error::Rotation ),
 			Kind::Clock { hertz } if ! positive( hertz ) => Err( Error::Frequency ),
 			Kind::Led { color } if color >= COLORS => Err( Error::Color ),
+			Kind::Slider { volts } if ! ( 0.0 ..= HIGH ).contains( &volts ) => Err( Error::Range ),
 			_ => Ok( () ),
 		}
 	}
@@ -76,6 +79,7 @@ impl Kind
 			Kind::Capacitor { farads } => Some( farads ),
 			Kind::Inductor { henries } => Some( henries ),
 			Kind::Clock { hertz } => Some( hertz ),
+			Kind::Slider { volts } => Some( volts ),
 			Kind::Led { color } => Some( color as f64 ),
 			_ => None,
 		}
@@ -91,6 +95,7 @@ impl Kind
 			Kind::Capacitor { .. } => Kind::Capacitor { farads : value },
 			Kind::Inductor { .. } => Kind::Inductor { henries : value },
 			Kind::Clock { .. } => Kind::Clock { hertz : value },
+			Kind::Slider { .. } => Kind::Slider { volts : value },
 			Kind::Led { .. } if value.fract() == 0.0 && ( 0.0 .. COLORS as f64 ).contains( &value ) => Kind::Led { color : value as u8 },
 			Kind::Led { .. } => return Err( Error::Color ),
 			_ => return Err( Error::Valueless ),

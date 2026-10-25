@@ -17,9 +17,11 @@ fn it_describes_each_error()
 	assert_eq!( Error::Misplaced.to_string(), "A ground, a VCC or a symbol sits on one point." );
 	assert_eq!( Error::Missing.to_string(), "No part has this id." );
 	assert_eq!( Error::Oscillating.to_string(), "A loop of gates switches too fast for the time step." );
+	assert_eq!( Error::Range.to_string(), "A slider sets a voltage from 0 V to 5 V." );
 	assert_eq!( Error::Recursive.to_string(), "A symbol cannot hold itself." );
 	assert_eq!( Error::Resistance.to_string(), "A resistance must be greater than 0 Ω." );
 	assert_eq!( Error::Rotation.to_string(), "A rotation is 0, 1, 2 or 3 quarter turns." );
+	assert_eq!( Error::Short.to_string(), "A slider needs a lead of 2 steps or more along its width." );
 	assert_eq!( Error::Singular.to_string(), "The circuit has no single solution: a battery is shorted, or batteries form a loop." );
 	assert_eq!( Error::Straddled.to_string(), "A part crosses the edge of the selection." );
 	assert_eq!( Error::Switchless.to_string(), "This part is not a switch." );

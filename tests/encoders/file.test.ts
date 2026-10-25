@@ -89,6 +89,11 @@ describe( 'file encoder', () =>
 		expect( encode( [ element( { kind : Kind.Clock, value : 1e7, from : { x : 0, y : 0 }, to : { x : 2, y : 0 } } ) ] ) ).toContain( '{ "kind" : "clock", "hertz" : 10000000, "from" : [ 0, 0 ], "to" : [ 2, 0 ] }' );
 	} );
 
+	it( 'writes the voltage of a slider', () =>
+	{
+		expect( encode( [ element( { kind : Kind.Slider, value : 2.4, from : { x : 0, y : 0 }, to : { x : 2, y : 0 } } ) ] ) ).toContain( '{ "kind" : "slider", "volts" : 2.4, "from" : [ 0, 0 ], "to" : [ 2, 0 ] }' );
+	} );
+
 	it( 'writes the level of a toggle only when it is 1', () =>
 	{
 		const low = element( { kind : Kind.Toggle, from : { x : 0, y : 0 }, to : { x : 1, y : 0 } } );

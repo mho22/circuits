@@ -17,10 +17,11 @@ describe( 'terminals', () =>
 		expect( terminals( Kind.Output, { x : 2, y : 0 }, { x : 0, y : 0 }, false ) ).toEqual( [ { x : 0, y : 0 }, { x : 0, y : 0 } ] );
 	} );
 
-	it( 'gives a toggle the end of its lead only', () =>
+	it( 'gives a toggle, a clock or a slider the end of its lead only', () =>
 	{
 		expect( terminals( Kind.Toggle, { x : 0, y : 0 }, { x : 0, y : 2 }, false ) ).toEqual( [ { x : 0, y : 2 }, { x : 0, y : 2 } ] );
 		expect( terminals( Kind.Clock, { x : 0, y : 0 }, { x : 2, y : 0 }, false ) ).toEqual( [ { x : 2, y : 0 }, { x : 2, y : 0 } ] );
+		expect( terminals( Kind.Slider, { x : 0, y : 0 }, { x : -2, y : 0 }, false ) ).toEqual( [ { x : -2, y : 0 }, { x : -2, y : 0 } ] );
 	} );
 
 	it( 'puts the collector left and the emitter right one step past the bar', () =>

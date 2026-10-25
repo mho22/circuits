@@ -167,6 +167,16 @@ fn it_turns_a_toggle_into_a_probe_on_a_net_that_a_source_a_channel_or_a_gate_dri
 }
 
 #[test]
+fn it_keeps_a_slider_at_its_voltage_at_the_end_of_its_lead_and_turns_it_into_a_probe_on_a_driven_net()
+{
+	let kinds = | parts : &[ Part ] | flatten( &[ layer( parts ) ], &mut Registry::default(), &[], 0, &[] ).unwrap().0;
+	let slider = Kind::Slider { volts : 2.5 };
+
+	assert_eq!( kinds( &[ ( slider, ( 0, 0 ), ( 2, 0 ) ) ] ), vec![ Element { id : 0, kind : slider, segment : segment( ( 2, 0 ), ( 2, 0 ) ), mirrored : false } ] );
+	assert_eq!( kinds( &[ ( slider, ( 0, 0 ), ( 2, 0 ) ), ( Kind::Wire, ( 2, 0 ), ( 6, 0 ) ), ( Kind::Supply { volts : 5.0 }, ( 6, 0 ), ( 6, 0 ) ) ] )[ 0 ].kind, Kind::Output );
+}
+
+#[test]
 fn it_keeps_a_clock_at_the_end_of_its_lead()
 {
 	let drawing = layer( &[ ( Kind::Clock { hertz : 1e6 }, ( 1, 0 ), ( 3, 0 ) ) ] );

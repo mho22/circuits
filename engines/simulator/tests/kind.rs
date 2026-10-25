@@ -79,6 +79,14 @@ fn it_rejects_a_voltage_that_is_not_finite()
 }
 
 #[test]
+fn it_accepts_a_slider_voltage_from_0_v_to_5_v_only()
+{
+	for volts in [ 0.0, 2.5, 5.0 ] { assert_eq!( Kind::Slider { volts }.check(), Ok( () ) ); }
+
+	for volts in [ -0.1, 5.1, f64::NAN, f64::INFINITY ] { assert_eq!( Kind::Slider { volts }.check(), Err( Error::Range ) ); }
+}
+
+#[test]
 fn it_reads_the_value_of_a_part()
 {
 	assert_eq!( Kind::Resistor { ohms : 220.0 }.value(), Some( 220.0 ) );
@@ -87,6 +95,7 @@ fn it_reads_the_value_of_a_part()
 	assert_eq!( Kind::Capacitor { farads : 1e-6 }.value(), Some( 1e-6 ) );
 	assert_eq!( Kind::Inductor { henries : 1e-3 }.value(), Some( 1e-3 ) );
 	assert_eq!( Kind::Clock { hertz : 1e7 }.value(), Some( 1e7 ) );
+	assert_eq!( Kind::Slider { volts : 2.4 }.value(), Some( 2.4 ) );
 	assert_eq!( Kind::Led { color : 1 }.value(), Some( 1.0 ) );
 	assert_eq!( Kind::Wire.value(), None );
 	assert_eq!( Kind::Ground.value(), None );
@@ -105,6 +114,7 @@ fn it_replaces_the_value_of_a_part()
 	assert_eq!( Kind::Capacitor { farads : 1.0 }.with_value( 1e-6 ), Ok( Kind::Capacitor { farads : 1e-6 } ) );
 	assert_eq!( Kind::Inductor { henries : 1.0 }.with_value( 1e-3 ), Ok( Kind::Inductor { henries : 1e-3 } ) );
 	assert_eq!( Kind::Clock { hertz : 1.0 }.with_value( 6e7 ), Ok( Kind::Clock { hertz : 6e7 } ) );
+	assert_eq!( Kind::Slider { volts : 0.0 }.with_value( 3.7 ), Ok( Kind::Slider { volts : 3.7 } ) );
 	assert_eq!( Kind::Led { color : 0 }.with_value( 2.0 ), Ok( Kind::Led { color : 2 } ) );
 }
 
@@ -117,6 +127,7 @@ fn it_rejects_an_invalid_new_value()
 	assert_eq!( Kind::Capacitor { farads : 1.0 }.with_value( 0.0 ), Err( Error::Capacitance ) );
 	assert_eq!( Kind::Inductor { henries : 1.0 }.with_value( -1.0 ), Err( Error::Inductance ) );
 	assert_eq!( Kind::Clock { hertz : 1.0 }.with_value( 0.0 ), Err( Error::Frequency ) );
+	assert_eq!( Kind::Slider { volts : 0.0 }.with_value( 6.0 ), Err( Error::Range ) );
 	assert_eq!( Kind::Led { color : 0 }.with_value( 3.0 ), Err( Error::Color ) );
 	assert_eq!( Kind::Led { color : 0 }.with_value( 0.5 ), Err( Error::Color ) );
 	assert_eq!( Kind::Led { color : 0 }.with_value( -1.0 ), Err( Error::Color ) );

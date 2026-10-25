@@ -16,7 +16,7 @@ impl Element
 	{
 		let Segment { from, to } = self.segment;
 
-		if self.kind.pin() || matches!( self.kind, Kind::Toggle { .. } | Kind::Clock { .. } ) { return vec![ to, to ]; }
+		if self.kind.pin() || matches!( self.kind, Kind::Toggle { .. } | Kind::Clock { .. } | Kind::Slider { .. } ) { return vec![ to, to ]; }
 
 		if ! matches!( self.kind, Kind::Npn | Kind::Pnp | Kind::Nmos | Kind::Pmos ) { return vec![ from, to ]; }
 

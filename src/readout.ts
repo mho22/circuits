@@ -51,6 +51,10 @@ export function describe( element : Element, branch : Branch | undefined, point 
 
 	if( element.kind === Kind.Toggle ) return [ title, String( element.value ), format( element.potentials[ 1 ], 'V' ), format( Math.abs( element.currents[ 0 ] ), 'A' ) ].join( ' · ' );
 
+	if( element.kind === Kind.Slider && element.listening ) return [ title, format( element.potentials[ 1 ], 'V' ) ].join( ' · ' );
+
+	if( element.kind === Kind.Slider ) return [ title, format( Math.abs( element.currents[ 0 ] ), 'A' ) ].join( ' · ' );
+
 	if( element.kind === Kind.Clock ) return [ title, String( bit( element.potentials[ 1 ] ) ), format( element.potentials[ 1 ], 'V' ), format( Math.abs( element.currents[ 0 ] ), 'A' ) ].join( ' · ' );
 
 	if( element.kind === Kind.Supply ) return [ title, format( Math.abs( element.currents[ 0 ] ), 'A' ) ].join( ' · ' );

@@ -128,8 +128,15 @@ export class View
 		return { x : toScreen( point.x ) / this.stride - this.x, y : toScreen( point.y ) / this.stride - this.y };
 	}
 
+	toPixels( x : number, y : number ) : Point
+	{
+		return { x : ( x + this.x ) * this.stride, y : ( y + this.y ) * this.stride };
+	}
+
 	toGrid( x : number, y : number ) : Point
 	{
-		return toGrid( ( x + this.x ) * this.stride, ( y + this.y ) * this.stride );
+		const pixels = this.toPixels( x, y );
+
+		return toGrid( pixels.x, pixels.y );
 	}
 }

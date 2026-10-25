@@ -13,8 +13,9 @@ import * as pin from './pin.ts';
 import * as resistor from './resistor.ts';
 import * as supply from './supply.ts';
 import * as symbol from './symbol.ts';
-import * as toggle from './switch.ts';
-import * as slider from './toggle.ts';
+import * as slider from './slider.ts';
+import * as switcher from './switch.ts';
+import * as toggle from './toggle.ts';
 import * as transistor from './transistor.ts';
 import * as wire from './wire.ts';
 
@@ -26,7 +27,7 @@ const RENDERERS : Record<Kind, ( context : CanvasRenderingContext2D, element : E
 	[ Kind.Ground ] : ground.draw,
 	[ Kind.Capacitor ] : capacitor.draw,
 	[ Kind.Inductor ] : inductor.draw,
-	[ Kind.Switch ] : toggle.draw,
+	[ Kind.Switch ] : switcher.draw,
 	[ Kind.Diode ] : diode.draw,
 	[ Kind.Npn ] : transistor.draw,
 	[ Kind.Pnp ] : transistor.draw,
@@ -36,9 +37,10 @@ const RENDERERS : Record<Kind, ( context : CanvasRenderingContext2D, element : E
 	[ Kind.Input ] : pin.draw,
 	[ Kind.Symbol ] : symbol.draw,
 	[ Kind.Output ] : pin.draw,
-	[ Kind.Toggle ] : slider.draw,
+	[ Kind.Toggle ] : toggle.draw,
 	[ Kind.Led ] : led.draw,
 	[ Kind.Clock ] : clock.draw,
+	[ Kind.Slider ] : slider.draw,
 };
 
 

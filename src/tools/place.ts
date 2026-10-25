@@ -38,8 +38,9 @@ export class PlaceTool
 		if( ! this.start || this.kind === null || POINTS.includes( this.kind ) ) return;
 
 		const [ x, y ] = Circuit.snap( this.start.x, this.start.y, point.x, point.y );
+		const short = this.kind === Kind.Slider && y === this.start.y && Math.abs( x - this.start.x ) === 1;
 
-		this.end = { x, y };
+		this.end = { x : short ? 2 * x - this.start.x : x, y };
 	}
 
 	release() : boolean

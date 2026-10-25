@@ -22,6 +22,7 @@ fn emit( kind : Kind, time : f64 ) -> f64
 	{
 		Kind::Clock { hertz } => level( count( hertz, time ) ),
 		Kind::Toggle { high : true } => HIGH,
+		Kind::Slider { volts } => volts,
 		_ => 0.0,
 	}
 }
@@ -260,7 +261,7 @@ impl<'a> Run<'a>
 				readings[ index ] = Some( match self.elements[ index ].kind
 				{
 					Kind::Wire | Kind::Output => Reading { potentials : vec![ volts; 2 ], currents : vec![ f64::NAN; 2 ] },
-					Kind::Supply { .. } | Kind::Clock { .. } | Kind::Toggle { .. } => Reading { potentials : vec![ 0.0, volts ], currents : vec![ 0.0; 2 ] },
+					Kind::Supply { .. } | Kind::Clock { .. } | Kind::Toggle { .. } | Kind::Slider { .. } => Reading { potentials : vec![ 0.0, volts ], currents : vec![ 0.0; 2 ] },
 					_ => Reading { potentials : vec![ volts; 2 ], currents : vec![ 0.0; 2 ] },
 				} );
 			}

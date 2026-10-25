@@ -304,6 +304,12 @@ impl Circuit
 		self.apply( Operation::SetValue { id, value } )
 	}
 
+	#[wasm_bindgen( js_name = amendValue )]
+	pub fn amend_value( &mut self, id : u32, value : f64 ) -> Result<u32, JsError>
+	{
+		self.simulation.amend( self.current(), Operation::SetValue { id, value } ).map_err( | error | JsError::new( &error.to_string() ) )
+	}
+
 	#[wasm_bindgen( js_name = setClosed )]
 	pub fn set_closed( &mut self, id : u32, closed : bool ) -> Result<u32, JsError>
 	{
@@ -438,6 +444,7 @@ impl Circuit
 				Kind::Toggle { high } => ( 16.0, if high { 1.0 } else { 0.0 }, 0 ),
 				Kind::Led { color } => ( 17.0, color as f64, 0 ),
 				Kind::Clock { hertz } => ( 18.0, hertz, 0 ),
+				Kind::Slider { volts } => ( 19.0, volts, 0 ),
 			};
 
 			let count = self.simulation.terminals( element ).len();
@@ -497,6 +504,7 @@ impl Circuit
 			16 => Kind::Toggle { high : value != 0.0 },
 			17 => Kind::Led { color : value as u8 },
 			18 => Kind::Clock { hertz : value },
+			19 => Kind::Slider { volts : value },
 			_ => return Err( JsError::new( "Unknown part kind." ) ),
 		};
 

@@ -49,7 +49,7 @@ pub fn stages( elements : &[ Element ], drives : &[ usize ], probes : &[ usize ]
 	let net = | point | netlist.net( point );
 	let mut fixed = vec![ false; netlist.count ];
 
-	for ( _, element ) in elements.iter().enumerate().filter( | ( index, element ) | ! drives.contains( index ) && matches!( element.kind, Kind::Ground | Kind::Supply { .. } | Kind::Battery { .. } | Kind::Toggle { .. } ) )
+	for ( _, element ) in elements.iter().enumerate().filter( | ( index, element ) | ! drives.contains( index ) && matches!( element.kind, Kind::Ground | Kind::Supply { .. } | Kind::Battery { .. } | Kind::Toggle { .. } | Kind::Slider { .. } ) )
 	{
 		for point in element.terminals() { fixed[ net( point ) ] = true; }
 	}

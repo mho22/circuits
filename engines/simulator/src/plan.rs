@@ -40,7 +40,7 @@ impl Plan
 		let mut drivers : HashMap<usize, usize> = HashMap::new();
 		let mut touched = vec![ false; netlist.count ];
 
-		let generators : Vec<usize> = ( 0 .. elements.len() ).filter( | &index | matches!( elements[ index ].kind, Kind::Clock { .. } | Kind::Toggle { .. } ) ).collect();
+		let generators : Vec<usize> = ( 0 .. elements.len() ).filter( | &index | matches!( elements[ index ].kind, Kind::Clock { .. } | Kind::Toggle { .. } | Kind::Slider { .. } ) ).collect();
 
 		for index in devices.iter().flat_map( | device | device.inputs.iter().copied().chain( device.outputs.iter().flat_map( | &( supply, resistor ) | [ supply, resistor ] ) ) ) { joined[ index ] = true; }
 
@@ -135,7 +135,7 @@ impl Plan
 		let analog : Vec<usize> = ( 0 .. elements.len() ).filter( | &index | ! digital[ index ] ).collect();
 		let circuit : Vec<Element> = analog.iter().map( | &index | match elements[ index ].kind
 		{
-			Kind::Clock { .. } | Kind::Toggle { .. } => Element { kind : Kind::Supply { volts : 0.0 }, ..elements[ index ] },
+			Kind::Clock { .. } | Kind::Toggle { .. } | Kind::Slider { .. } => Element { kind : Kind::Supply { volts : 0.0 }, ..elements[ index ] },
 			_ => elements[ index ],
 		} ).collect();
 		let topology = Topology::build( &circuit );

@@ -20,6 +20,19 @@ describe( 'view', () =>
 		expect( view.toGrid( SPACING * 3, SPACING * 2 ) ).toEqual( { x : 3, y : 2 } );
 	} );
 
+	it( 'turns a screen position into the pixels of the drawing at the zoom of the view', () =>
+	{
+		const view = new View();
+
+		pan( view, 10, 20 );
+
+		expect( view.toPixels( 5, 5 ) ).toEqual( { x : 15, y : 25 } );
+
+		view.zoom( 1, { x : 0, y : 0 } );
+
+		expect( view.toPixels( 5, 5 ) ).toEqual( { x : 20, y : 30 } );
+	} );
+
 	it( 'drags the drawing with the pointer', () =>
 	{
 		const view = new View();

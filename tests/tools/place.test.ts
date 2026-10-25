@@ -119,6 +119,24 @@ describe( 'place tool', () =>
 		expect( decode( circuit.elements() ).map( element => [ element.kind, element.value, element.from, element.to ] ) ).toEqual( [ [ Kind.Clock, 1e6, { x : 2, y : 2 }, { x : 4, y : 2 } ] ] );
 	} );
 
+	it( 'places a slider at 0 V with a lead of 2 steps or more along its width', () =>
+	{
+		const circuit = new Circuit();
+		const tool = new PlaceTool( circuit );
+
+		tool.kind = Kind.Slider;
+		tool.press( { x : 0, y : 0 } );
+		tool.move( { x : -1, y : 0 } );
+
+		expect( tool.preview()?.to ).toEqual( { x : -2, y : 0 } );
+
+		tool.move( { x : 0, y : 1 } );
+
+		expect( tool.preview()?.to ).toEqual( { x : 0, y : 1 } );
+		expect( tool.release() ).toBe( true );
+		expect( decode( circuit.elements() )[ 0 ] ).toMatchObject( { kind : Kind.Slider, value : 0, from : { x : 0, y : 0 }, to : { x : 0, y : 1 } } );
+	} );
+
 	it( 'places a symbol of its layer with a click', () =>
 	{
 		const circuit = new Circuit();

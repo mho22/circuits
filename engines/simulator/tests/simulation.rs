@@ -162,6 +162,22 @@ fn it_undoes_each_operation_from_the_last_one()
 }
 
 #[test]
+fn it_amends_the_last_undo_step_with_a_new_value()
+{
+	let mut simulation = series( Kind::Resistor { ohms : 1000.0 } );
+
+	simulation.apply( 0, Operation::SetValue { id : 1, value : 2000.0 } ).unwrap();
+	simulation.amend( 0, Operation::SetValue { id : 1, value : 3000.0 } ).unwrap();
+	simulation.amend( 0, Operation::SetValue { id : 1, value : 4000.0 } ).unwrap();
+
+	assert!( near( simulation.solution().unwrap().readings[ 1 ].currents[ 0 ], 5.0 / 5000.0, 1e-12 ) );
+	assert_eq!( simulation.undo(), Ok( Some( 1 ) ) );
+	assert_eq!( simulation.document( 0 ).unwrap().elements()[ 1 ].kind, Kind::Resistor { ohms : 1000.0 } );
+	assert_eq!( simulation.redo(), Ok( Some( 1 ) ) );
+	assert_eq!( simulation.document( 0 ).unwrap().elements()[ 1 ].kind, Kind::Resistor { ohms : 4000.0 } );
+}
+
+#[test]
 fn it_redoes_what_it_undid()
 {
 	let mut simulation = series( Kind::Resistor { ohms : 1000.0 } );
@@ -277,6 +293,21 @@ fn it_lists_a_toggle_that_reads_its_wire_and_shows_the_level_of_the_wire()
 	simulation.apply( 0, Operation::Delete { id : supply } ).unwrap();
 
 	assert!( simulation.listening().is_empty() );
+}
+
+#[test]
+fn it_lists_a_slider_that_reads_its_wire()
+{
+	let mut simulation = Simulation::new( STEP );
+	let slider = add( &mut simulation, Kind::Slider { volts : 1.0 }, ( 0, 0 ), ( 2, 0 ) );
+
+	add( &mut simulation, Kind::Wire, ( 2, 0 ), ( 6, 0 ) );
+
+	assert!( simulation.listening().is_empty() );
+
+	add( &mut simulation, Kind::Supply { volts : 5.0 }, ( 6, 0 ), ( 6, 0 ) );
+
+	assert_eq!( simulation.listening(), vec![ slider ] );
 }
 
 #[test]
@@ -840,7 +871,7 @@ fn inverter( simulation : &mut Simulation ) -> u32
 }
 
 #[test]
-fn it_captions_each_toggle_with_the_label_of_a_pin_on_its_net_after_the_label_of_its_symbol()
+fn it_captions_each_toggle_or_slider_with_the_label_of_a_pin_on_its_net_after_the_label_of_its_symbol()
 {
 	let mut simulation = Simulation::new( STEP );
 	let layer = inverter( &mut simulation ) as usize;
@@ -849,7 +880,7 @@ fn it_captions_each_toggle_with_the_label_of_a_pin_on_its_net_after_the_label_of
 	simulation.apply( layer, Operation::Label { id : 0, label : "foo".to_string() } ).unwrap();
 	add( &mut simulation, Kind::Toggle { high : false }, ( end.x - 4, end.y ), ( end.x - 3, end.y ) );
 	add( &mut simulation, Kind::Wire, ( end.x - 3, end.y ), ( end.x, end.y ) );
-	add( &mut simulation, Kind::Toggle { high : false }, ( 0, 20 ), ( 1, 20 ) );
+	add( &mut simulation, Kind::Slider { volts : 0.0 }, ( -1, 20 ), ( 1, 20 ) );
 
 	let output = add( &mut simulation, Kind::Output, ( 2, 20 ), ( 1, 20 ) );
 

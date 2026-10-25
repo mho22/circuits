@@ -65,6 +65,18 @@ fn it_puts_a_toggle_on_two_points()
 }
 
 #[test]
+fn it_puts_a_slider_on_two_points_at_least_2_steps_apart_along_its_width()
+{
+	let mut document = Document::default();
+	let slider = Kind::Slider { volts : 0.0 };
+
+	assert_eq!( document.apply( add( slider, FOO, Point { x : 2, y : 0 } ) ), Ok( 0 ) );
+	assert_eq!( document.apply( add( slider, FOO, Point { x : 0, y : 1 } ) ), Ok( 1 ) );
+	assert_eq!( document.apply( add( slider, FOO, Point { x : -1, y : 0 } ) ), Err( Error::Short ) );
+	assert_eq!( document.apply( add( slider, FOO, FOO ) ), Err( Error::Empty ) );
+}
+
+#[test]
 fn it_puts_a_symbol_on_one_point_and_an_input_or_an_output_on_two()
 {
 	let mut document = Document::default();

@@ -40,7 +40,7 @@ describe( 'toolbar', () =>
 			[ 'WireW', 'SwitchS' ],
 			[ 'ResistorR', 'CapacitorC', 'InductorL' ],
 			[ 'DiodeD', 'LEDE', 'NPNN', 'PNPP', 'NMOSM', 'PMOSF' ],
-			[ 'BatteryB', 'VCCV', 'ToggleT', 'ClockK', 'GroundG' ],
+			[ 'BatteryB', 'VCCV', 'ClockK', 'ToggleT', 'SliderU', 'GroundG' ],
 			[ 'InputI', 'OutputO' ],
 		] );
 	} );

@@ -28,6 +28,12 @@ describe( 'readout', () =>
 		expect( read( element( { kind : Kind.Symbol, value : 2, potentials : [ 5, 0, 2.5 ], currents : [ 0.001, -0.001, 0 ] } ), undefined ) ).toBe( 'Symbol 2' );
 	} );
 
+	it( 'describes a slider with its voltage and its current, or with the voltage of its wire when it reads it', () =>
+	{
+		expect( read( element( { kind : Kind.Slider, value : 2.4, potentials : [ 0, 2.4 ], currents : [ 0.002, -0.002 ] } ), undefined ) ).toBe( 'Slider 2.4 V · 2 mA' );
+		expect( read( element( { kind : Kind.Slider, value : 2.4, potentials : [ 0, 5 ], currents : [ NaN, NaN ], listening : true } ), undefined ) ).toBe( 'Slider 2.4 V · 5 V' );
+	} );
+
 	it( 'describes an input with its bit and its voltage', () =>
 	{
 		expect( read( element( { kind : Kind.Input, potentials : [ 3.3, 3.3 ] } ), undefined ) ).toBe( 'Input · 1 · 3.3 V' );

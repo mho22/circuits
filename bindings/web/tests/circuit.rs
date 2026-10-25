@@ -227,6 +227,24 @@ fn it_lists_a_clock_with_its_frequency_and_runs_two_of_its_periods_each_second()
 }
 
 #[wasm_bindgen_test]
+fn it_lists_a_slider_with_its_voltage_and_undoes_a_set_value_and_its_amends_at_once()
+{
+	let mut circuit = Circuit::new();
+
+	circuit.add( 19, 2.5, 0, -2, 0, 0 ).ok();
+
+	assert_eq!( [ circuit.elements()[ 1 ], circuit.elements()[ 6 ] ], [ 19.0, 2.5 ] );
+
+	circuit.set_value( 0, 3.0 ).ok();
+	circuit.amend_value( 0, 4.0 ).ok();
+
+	assert_eq!( circuit.elements()[ 6 ], 4.0 );
+	assert!( circuit.amend_value( 0, 6.0 ).is_err() );
+	assert_eq!( circuit.undo().ok(), Some( Some( 0 ) ) );
+	assert_eq!( circuit.elements()[ 6 ], 2.5 );
+}
+
+#[wasm_bindgen_test]
 fn it_undoes_and_redoes_a_deletion()
 {
 	let mut circuit = powered();

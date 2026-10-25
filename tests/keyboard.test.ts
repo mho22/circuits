@@ -13,7 +13,7 @@ describe( 'keyboard', () =>
 
 	it( 'picks a part with its letter in either case', () =>
 	{
-		expect( [ 'w', 'r', 'b', 'g', 'c', 'l', 's', 'd', 'n', 'p', 'm', 'f', 'v', 'i', 'o', 't', 'e', 'k' ].map( key => press( key ) ) ).toEqual( [ Kind.Wire, Kind.Resistor, Kind.Battery, Kind.Ground, Kind.Capacitor, Kind.Inductor, Kind.Switch, Kind.Diode, Kind.Npn, Kind.Pnp, Kind.Nmos, Kind.Pmos, Kind.Supply, Kind.Input, Kind.Output, Kind.Toggle, Kind.Led, Kind.Clock ] );
+		expect( [ 'w', 'r', 'b', 'g', 'c', 'l', 's', 'd', 'n', 'p', 'm', 'f', 'v', 'i', 'o', 't', 'u', 'e', 'k' ].map( key => press( key ) ) ).toEqual( [ Kind.Wire, Kind.Resistor, Kind.Battery, Kind.Ground, Kind.Capacitor, Kind.Inductor, Kind.Switch, Kind.Diode, Kind.Npn, Kind.Pnp, Kind.Nmos, Kind.Pmos, Kind.Supply, Kind.Input, Kind.Output, Kind.Toggle, Kind.Slider, Kind.Led, Kind.Clock ] );
 		expect( press( 'R', { shiftKey : true } ) ).toBe( Kind.Resistor );
 	} );
 

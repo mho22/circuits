@@ -52,7 +52,7 @@ fn listen( elements : &mut [ Element ], devices : &[ Device ] )
 		for point in points { driven[ netlist.net( point ) ] = true; }
 	}
 
-	for element in elements.iter_mut().filter( | element | matches!( element.kind, Kind::Toggle { .. } ) )
+	for element in elements.iter_mut().filter( | element | matches!( element.kind, Kind::Toggle { .. } | Kind::Slider { .. } ) )
 	{
 		if driven[ netlist.net( element.segment.to ) ] { element.kind = Kind::Output; }
 	}
@@ -86,7 +86,7 @@ impl Walk<'_>
 
 				let from = match element.kind
 				{
-					Kind::Toggle { .. } | Kind::Clock { .. } => element.segment.to,
+					Kind::Toggle { .. } | Kind::Clock { .. } | Kind::Slider { .. } => element.segment.to,
 					_ => element.segment.from,
 				};
 

@@ -113,6 +113,8 @@ impl Document
 
 		if ! segment.is_straight() { return Err( Error::Crooked ); }
 
+		if matches!( kind, Kind::Slider { .. } ) && segment.from.y == segment.to.y && segment.length() < 2 { return Err( Error::Short ); }
+
 		kind.check()
 	}
 

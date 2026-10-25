@@ -55,6 +55,7 @@ import { MoveTool } from './tools/move.ts';
 import { PlaceTool } from './tools/place.ts';
 import { SelectTool } from './tools/select.ts';
 import { ShiftTool } from './tools/shift.ts';
+import { SlideTool } from './tools/slide.ts';
 import { toggle } from './tools/toggle.ts';
 import type { Action } from './types/action.ts';
 import type { Area } from './types/area.ts';
@@ -93,6 +94,7 @@ const selector = new SelectTool();
 const drawer = new DrawTool();
 const carrier = new CarryTool();
 const shifter = new ShiftTool();
+const slider = new SlideTool( circuit );
 const toolbar = new Toolbar( document.querySelector( 'nav' )!, PART_GROUPS, pick );
 const library = new Library( document.querySelector( 'nav' )!, place );
 const pinbar = new Toolbar( document.querySelector( 'nav' )!, PIN_GROUPS, pick );
@@ -174,7 +176,7 @@ function captioned( elements : Element[] ) : Element[]
 	const captions = circuit.captions();
 	let index = 0;
 
-	return elements.map( item => item.kind === Kind.Toggle ? { ... item, label : captions[ index++ ] } : item );
+	return elements.map( item => item.kind === Kind.Toggle || item.kind === Kind.Slider ? { ... item, label : captions[ index++ ] } : item );
 }
 
 function lit( elements : Element[] ) : Element[]
@@ -736,6 +738,8 @@ canvas.addEventListener( 'pointerdown', ( event : PointerEvent ) =>
 
 	if( event.button === 0 && mover.elements.length > 0 ) { attempt( () => mover.drop() ); return; }
 
+	if( event.button === 0 && ! maker.area && slider.press( parts(), view.toPixels( event.clientX, event.clientY ) ) ) { canvas.setPointerCapture( event.pointerId ); return; }
+
 	if( event.button === 0 ) pressed = point;
 
 	if( event.button === 0 && event.detail < 2 )
@@ -754,6 +758,8 @@ canvas.addEventListener( 'pointermove', ( event : PointerEvent ) =>
 
 	if( view.move( pointer ) ) return;
 
+	if( slider.move( view.toPixels( pointer.x, pointer.y ) ) ) return;
+
 	track();
 } );
 
@@ -766,6 +772,8 @@ canvas.addEventListener( 'pointerup', ( event : PointerEvent ) =>
 	pressed = null;
 
 	view.release();
+
+	if( slider.release() ) return;
 
 	const draft = tool.preview();
 	const added = tool.release();

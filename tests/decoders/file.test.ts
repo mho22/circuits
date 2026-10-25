@@ -148,6 +148,13 @@ describe( 'file decoder', () =>
 		expect( Array.from( decode( encode( [ clock ] ) ).parts ) ).toEqual( [ 0, Kind.Clock, 6e7, 0, 0, 0, 2, 0 ] );
 	} );
 
+	it( 'reads the voltage of a slider as its value', () =>
+	{
+		const slider = element( { kind : Kind.Slider, value : 2.4, from : { x : 0, y : 0 }, to : { x : 2, y : 0 } } );
+
+		expect( Array.from( decode( encode( [ slider ] ) ).parts ) ).toEqual( [ 0, Kind.Slider, 2.4, 0, 0, 0, 2, 0 ] );
+	} );
+
 	it( 'reads the level of a toggle and the color of an led as their values, with red for an led without a color', () =>
 	{
 		const toggle = element( { kind : Kind.Toggle, value : 1, from : { x : 0, y : 0 }, to : { x : 1, y : 0 } } );

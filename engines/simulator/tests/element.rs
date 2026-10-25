@@ -20,10 +20,11 @@ fn it_gives_a_two_ended_part_its_two_ends()
 }
 
 #[test]
-fn it_gives_a_toggle_or_a_clock_the_end_of_its_lead_as_its_only_end()
+fn it_gives_a_toggle_a_clock_or_a_slider_the_end_of_its_lead_as_its_only_end()
 {
 	assert_eq!( element( Kind::Toggle { high : true }, ( 0, 0 ), ( 2, 0 ) ).terminals(), points( &[ ( 2, 0 ), ( 2, 0 ) ] ) );
 	assert_eq!( element( Kind::Clock { hertz : 1.0 }, ( 0, 0 ), ( 0, 2 ) ).terminals(), points( &[ ( 0, 2 ), ( 0, 2 ) ] ) );
+	assert_eq!( element( Kind::Slider { volts : 2.5 }, ( 0, 0 ), ( -2, 0 ) ).terminals(), points( &[ ( -2, 0 ), ( -2, 0 ) ] ) );
 }
 
 #[test]
