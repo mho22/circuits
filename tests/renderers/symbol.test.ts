@@ -34,7 +34,7 @@ describe( 'symbol renderer', () =>
 		expect( calls.filter( call => call[ 0 ] === 'arc' ).map( call => call.slice( 1, 3 ) ) ).toEqual( [ [ 4 * SPACING, 3 * SPACING ], [ 5 * SPACING, 7 * SPACING ] ] );
 	} );
 
-	it( 'draws each light as a filled square without a border, in its color while its led conducts and dark otherwise', () =>
+	it( 'draws each light as a filled square without a border, in its color scaled by the current of its led and dark otherwise', () =>
 	{
 		const { context, calls } = record();
 		const lights = [ { point : { x : 0, y : -1 }, color : Color.Green }, { point : { x : 1, y : 0 }, color : Color.Red } ];
@@ -42,10 +42,10 @@ describe( 'symbol renderer', () =>
 		draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline : { ... outline, lights }, potentials : [ 5, 0 ], lights : [ 0.0025, 0 ] } ), { voltage : 5, current : 0 } );
 
 		expect( calls.filter( call => call[ 0 ] === 'fillRect' ) ).toEqual( [ [ 'fillRect', 91, 71, 18, 18 ], [ 'fillRect', 111, 91, 18, 18 ] ] );
-		expect( calls.filter( call => call[ 1 ] === 'fillStyle' ).map( call => call[ 2 ] ).slice( 0, 2 ) ).toEqual( [ 'rgb(48, 220, 96)', '#1a1a1a' ] );
+		expect( calls.filter( call => call[ 1 ] === 'fillStyle' ).map( call => call[ 2 ] ).slice( 0, 2 ) ).toEqual( [ 'rgb(26, 110, 48)', '#1a1a1a' ] );
 	} );
 
-	it( 'fills the square of lights that share a point with the mix of the colors of their conducting leds', () =>
+	it( 'fills the square of lights that share a point with the mix of the colors of their conducting leds, each scaled by its current', () =>
 	{
 		const { context, calls } = record();
 		const lights = [ Color.Red, Color.Green, Color.Blue ].map( color => ( { point : { x : 0, y : 0 }, color } ) );
@@ -60,6 +60,7 @@ describe( 'symbol renderer', () =>
 
 		expect( fills( [ 0.005, 0.005, 0.005 ] ) ).toEqual( [ 'rgb(255, 255, 255)', 'rgb(255, 255, 255)', 'rgb(255, 255, 255)' ] );
 		expect( fills( [ 0.005, 0.005, 0 ] ) ).toEqual( [ 'rgb(255, 255, 144)', 'rgb(255, 255, 144)', 'rgb(255, 255, 144)' ] );
+		expect( fills( [ 0.0025, 0, 0.005 ] ) ).toEqual( [ 'rgb(176, 152, 255)', 'rgb(176, 152, 255)', 'rgb(176, 152, 255)' ] );
 		expect( fills( [ 0, 0, 0 ] ) ).toEqual( [ '#1a1a1a', '#1a1a1a', '#1a1a1a' ] );
 	} );
 

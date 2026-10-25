@@ -1,5 +1,6 @@
 import { brightness, DARK, mix } from '../colors/light.ts';
 import { color } from '../colors/voltage.ts';
+import type { Color } from '../enums/color.ts';
 import { FINE, SPACING, toScreen } from '../grid.ts';
 import { pins } from '../pins.ts';
 import { turn } from '../turn.ts';
@@ -44,9 +45,9 @@ export function draw( context : CanvasRenderingContext2D, element : Element, sca
 		const point = turn( light.point, element.rotation );
 		const x = toScreen( element.from.x + point.x );
 		const y = toScreen( element.from.y + point.y );
-		const colors = outline.lights.flatMap( ( other, index ) => other.point.x === light.point.x && other.point.y === light.point.y && brightness( element.lights?.[ index ] ?? 0 ) > 0 ? [ other.color ] : [] );
+		const glows = outline.lights.flatMap( ( other, index ) : [ Color, number ][] => other.point.x === light.point.x && other.point.y === light.point.y ? [ [ other.color, brightness( element.lights?.[ index ] ?? 0 ) ] ] : [] ).filter( ( [ , glow ] ) => glow > 0 );
 
-		context.fillStyle = colors.length ? `rgb(${ mix( colors ) })` : DARK;
+		context.fillStyle = glows.length ? `rgb(${ mix( glows ) })` : DARK;
 		context.fillRect( x - SQUARE, y - SQUARE, 2 * SQUARE, 2 * SQUARE );
 	} );
 

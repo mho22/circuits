@@ -18,12 +18,23 @@ describe( 'light color', () =>
 
 	it( 'mixes one color into itself', () =>
 	{
-		expect( mix( [ Color.Green ] ) ).toBe( LIT[ Color.Green ] );
+		expect( mix( [ [ Color.Green, 1 ] ] ) ).toBe( LIT[ Color.Green ] );
 	} );
 
 	it( 'adds the colors channel by channel up to 255', () =>
 	{
-		expect( mix( [ Color.Red, Color.Green ] ) ).toBe( '255, 255, 144' );
-		expect( mix( [ Color.Red, Color.Green, Color.Blue ] ) ).toBe( '255, 255, 255' );
+		expect( mix( [ [ Color.Red, 1 ], [ Color.Green, 1 ] ] ) ).toBe( '255, 255, 144' );
+		expect( mix( [ [ Color.Red, 1 ], [ Color.Green, 1 ], [ Color.Blue, 1 ] ] ) ).toBe( '255, 255, 255' );
+	} );
+
+	it( 'scales each color by its brightness before the sum', () =>
+	{
+		expect( mix( [ [ Color.Red, 0.5 ], [ Color.Blue, 1 ] ] ) ).toBe( '176, 152, 255' );
+	} );
+
+	it( 'keeps each channel at the dark gray or above', () =>
+	{
+		expect( mix( [ [ Color.Red, 0.04 ] ] ) ).toBe( '26, 26, 26' );
+		expect( mix( [ [ Color.Blue, 0.5 ] ] ) ).toBe( '26, 64, 128' );
 	} );
 } );
