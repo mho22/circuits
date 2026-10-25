@@ -429,6 +429,49 @@ fn it_reports_an_open_that_fails_at_the_last_step_of_a_load()
 }
 
 #[test]
+fn it_opens_a_load_over_a_page_whose_symbol_had_other_pins_on_the_same_layer()
+{
+	let mut simulation = Simulation::new( STEP );
+	let pixel = [
+		( 0, Kind::Symbol { layer : 1, rotation : 0 }, segment( ( 10, 10 ), ( 10, 10 ) ), false ),
+		( 1, Kind::Input { high : true }, segment( ( -1, 0 ), ( 0, 0 ) ), false ),
+		( 1, Kind::Resistor { ohms : 600.0 }, segment( ( 0, 0 ), ( 2, 0 ) ), false ),
+		( 1, Kind::Led { color : 0 }, segment( ( 2, 0 ), ( 4, 0 ) ), false ),
+		( 1, Kind::Ground, segment( ( 4, 0 ), ( 4, 0 ) ), false ),
+	];
+
+	simulation.load( added( &pixel ) ).unwrap();
+
+	while simulation.proceed().unwrap() {}
+
+	simulation.load( gate() ).unwrap();
+
+	while simulation.proceed().unwrap() {}
+
+	assert_eq!( simulation.delay( 1 ), Some( DELAY ) );
+}
+
+#[test]
+fn it_keeps_the_models_and_the_page_of_the_drawing_when_a_load_fails_at_its_last_step()
+{
+	let mut simulation = Simulation::new( STEP );
+
+	simulation.load( gate() ).unwrap();
+
+	while simulation.proceed().unwrap() {}
+
+	simulation.focus( &[ 0 ] ).unwrap();
+	simulation.load( added( &[ ( 0, Kind::Symbol { layer : 3, rotation : 0 }, segment( ( 0, 0 ), ( 0, 0 ) ), false ), ( 1, Kind::Led { color : 0 }, segment( ( 0, 0 ), ( 2, 0 ) ), false ) ] ) ).unwrap();
+
+	let mut result = simulation.proceed();
+
+	while result == Ok( true ) { result = simulation.proceed(); }
+
+	assert_eq!( result, Err( Error::Layerless ) );
+	assert_eq!( ( simulation.path(), simulation.delay( 1 ) ), ( &[ 0 ][ .. ], Some( DELAY ) ) );
+}
+
+#[test]
 fn it_adds_no_layer_when_an_open_fails()
 {
 	let mut simulation = Simulation::new( STEP );

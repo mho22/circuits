@@ -260,12 +260,13 @@ impl Simulation
 		let deletions = self.layers.iter().enumerate().flat_map( | ( layer, document ) | document.elements().iter().map( move | element | ( layer, Operation::Delete { id : element.id } ) ).chain( [ ( layer, Operation::Describe { name : String::new(), drawing : Vec::new(), layout : Vec::new() } ) ] ) );
 		let edits : Vec<( usize, Operation )> = deletions.chain( additions ).collect();
 
-		self.focus( &[] )?;
+		let focus = std::mem::take( &mut self.focus );
+
 		self.layers.resize_with( count.max( needed ), Document::default );
 
 		let result = self.commit( &edits );
 
-		if result.is_err() { self.layers.truncate( count ); }
+		if result.is_err() { self.layers.truncate( count ); self.focus = focus; }
 
 		result
 	}
@@ -293,10 +294,15 @@ impl Simulation
 		if catalog.advance( layers ) { return Ok( true ); }
 
 		let Some( ( _, additions, catalog ) ) = self.loading.take() else { return Ok( false ); };
+		let previous = ( self.models.clone(), self.sources.clone() );
 
 		( self.models, self.sources ) = catalog.finish();
 
-		self.open( additions ).map( | _ | false )
+		let result = self.open( additions );
+
+		if result.is_err() { ( self.models, self.sources ) = previous; }
+
+		result.map( | _ | false )
 	}
 
 	pub fn progress( &self ) -> f64
