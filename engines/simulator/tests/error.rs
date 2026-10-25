@@ -9,7 +9,7 @@ fn it_describes_each_error()
 	assert_eq!( Error::Crooked.to_string(), "A part must run at 0° or 90°." );
 	assert_eq!( Error::Empty.to_string(), "A part must have a length." );
 	assert_eq!( Error::Flat.to_string(), "A shape must have a size." );
-	assert_eq!( Error::Frequency.to_string(), "A frequency must be greater than 0 Hz." );
+	assert_eq!( Error::Frequency.to_string(), "A frequency must be greater than 0 Hz and at most 10 GHz." );
 	assert_eq!( Error::Inductance.to_string(), "An inductance must be greater than 0 H." );
 	assert_eq!( Error::Inputless.to_string(), "This part is not an input or a toggle." );
 	assert_eq!( Error::Labelless.to_string(), "This part is not an input, an output or a symbol." );

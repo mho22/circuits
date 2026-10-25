@@ -22,6 +22,7 @@ fn it_accepts_valid_values()
 	assert_eq!( Kind::Output.check(), Ok( () ) );
 	assert_eq!( Kind::Symbol { layer : 1, rotation : 3 }.check(), Ok( () ) );
 	assert_eq!( Kind::Clock { hertz : 1e7 }.check(), Ok( () ) );
+	assert_eq!( Kind::Clock { hertz : 1e10 }.check(), Ok( () ) );
 	assert_eq!( Kind::Led { color : 2 }.check(), Ok( () ) );
 }
 
@@ -32,11 +33,12 @@ fn it_rejects_an_led_color_past_blue()
 }
 
 #[test]
-fn it_rejects_a_frequency_that_is_not_positive_and_finite()
+fn it_rejects_a_frequency_that_is_not_positive_or_above_ten_gigahertz()
 {
 	assert_eq!( Kind::Clock { hertz : 0.0 }.check(), Err( Error::Frequency ) );
 	assert_eq!( Kind::Clock { hertz : f64::INFINITY }.check(), Err( Error::Frequency ) );
 	assert_eq!( Kind::Clock { hertz : f64::NAN }.check(), Err( Error::Frequency ) );
+	assert_eq!( Kind::Clock { hertz : 1.000001e10 }.check(), Err( Error::Frequency ) );
 }
 
 #[test]
@@ -127,6 +129,7 @@ fn it_rejects_an_invalid_new_value()
 	assert_eq!( Kind::Capacitor { farads : 1.0 }.with_value( 0.0 ), Err( Error::Capacitance ) );
 	assert_eq!( Kind::Inductor { henries : 1.0 }.with_value( -1.0 ), Err( Error::Inductance ) );
 	assert_eq!( Kind::Clock { hertz : 1.0 }.with_value( 0.0 ), Err( Error::Frequency ) );
+	assert_eq!( Kind::Clock { hertz : 1.0 }.with_value( 2e10 ), Err( Error::Frequency ) );
 	assert_eq!( Kind::Slider { volts : 0.0 }.with_value( 6.0 ), Err( Error::Range ) );
 	assert_eq!( Kind::Led { color : 0 }.with_value( 3.0 ), Err( Error::Color ) );
 	assert_eq!( Kind::Led { color : 0 }.with_value( 0.5 ), Err( Error::Color ) );

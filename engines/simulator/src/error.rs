@@ -43,7 +43,7 @@ impl fmt::Display for Error
 			Error::Crooked => "A part must run at 0° or 90°.",
 			Error::Empty => "A part must have a length.",
 			Error::Flat => "A shape must have a size.",
-			Error::Frequency => "A frequency must be greater than 0 Hz.",
+			Error::Frequency => "A frequency must be greater than 0 Hz and at most 10 GHz.",
 			Error::Inductance => "An inductance must be greater than 0 H.",
 			Error::Inputless => "This part is not an input or a toggle.",
 			Error::Labelless => "This part is not an input, an output or a symbol.",

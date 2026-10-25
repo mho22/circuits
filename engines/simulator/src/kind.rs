@@ -3,6 +3,7 @@ use crate::{ Error, Junction, LIGHTS, SILICON };
 
 
 const COLORS : u8 = LIGHTS.len() as u8;
+const FASTEST : f64 = 1e10;
 
 
 #[derive( Clone, Copy, Debug, PartialEq )]
@@ -43,7 +44,7 @@ impl Kind
 			Kind::Capacitor { farads } if ! positive( farads ) => Err( Error::Capacitance ),
 			Kind::Inductor { henries } if ! positive( henries ) => Err( Error::Inductance ),
 			Kind::Symbol { rotation, .. } if rotation > 3 => Err( Error::Rotation ),
-			Kind::Clock { hertz } if ! positive( hertz ) => Err( Error::Frequency ),
+			Kind::Clock { hertz } if ! positive( hertz ) || hertz > FASTEST => Err( Error::Frequency ),
 			Kind::Led { color } if color >= COLORS => Err( Error::Color ),
 			Kind::Slider { volts } if ! ( 0.0 ..= HIGH ).contains( &volts ) => Err( Error::Range ),
 			_ => Ok( () ),

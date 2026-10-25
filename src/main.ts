@@ -500,6 +500,8 @@ function menu( event : MouseEvent ) : void
 	const targets = Array.from( circuit.elementsAt( point.x, point.y ) ).map( id => elements.find( item => item.id === id )! );
 	const target = targets.find( item => item.kind !== Kind.Wire ) ?? targets[ 0 ];
 
+	if( ! target && tool.kind !== null ) { select( null ); return; }
+
 	if( ! target && copied > 0 ) { fill( document.body, { x : event.clientX, y : event.clientY }, () => paste( point ) ); return; }
 
 	if( ! target ) return;
@@ -822,7 +824,7 @@ canvas.addEventListener( 'dblclick', ( event : MouseEvent ) =>
 
 	const [ unit, scale ] = INPUTS[ target.kind ]!;
 
-	edit( document.body, { x : event.clientX, y : event.clientY }, write( target.value / scale, SEPARATOR ), unit, text =>
+	edit( document.body, view.toScreen( point ), write( target.value / scale, SEPARATOR ), unit, text =>
 	{
 		const value = parse( text ) * scale;
 
@@ -831,7 +833,7 @@ canvas.addEventListener( 'dblclick', ( event : MouseEvent ) =>
 		try { circuit.setValue( target.id, value ); }
 
 		catch( error ) { notice = ( error as Error ).message; }
-	} );
+	} ).parentElement!.classList.add( 'beside' );
 } );
 
 document.querySelector( 'button.center' )!.addEventListener( 'click', () => view.center( screen() ) );
