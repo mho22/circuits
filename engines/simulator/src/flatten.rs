@@ -1,4 +1,4 @@
-use crate::{ driven, Device, Document, Element, Error, Kind, Model, Netlist, Outline, Point, Registry, Segment, FLOOR };
+use crate::{ driven, Device, Document, Element, Error, Kind, Model, Netlist, Outline, Point, Registry, Segment, UnionFind, FLOOR };
 
 
 pub const STRIDE : i32 = 1 << 16;
@@ -37,24 +37,31 @@ fn listen( elements : &mut [ Element ], devices : &[ Device ] )
 {
 	let netlist = Netlist::build( elements );
 	let outputs : Vec<usize> = devices.iter().flat_map( | device | device.outputs.iter().map( | &( _, resistor ) | resistor ) ).collect();
+	let mut groups = UnionFind::new( netlist.count );
 	let mut driven = vec![ false; netlist.count ];
+
+	for element in elements.iter().filter( | element | matches!( element.kind, Kind::Npn | Kind::Pnp | Kind::Nmos | Kind::Pmos ) )
+	{
+		let terminals = element.terminals();
+
+		groups.union( netlist.net( terminals[ 1 ] ), netlist.net( terminals[ 2 ] ) );
+	}
 
 	for ( index, element ) in elements.iter().enumerate()
 	{
 		let points = match element.kind
 		{
 			Kind::Supply { .. } | Kind::Battery { .. } | Kind::Ground | Kind::Clock { .. } => element.terminals(),
-			Kind::Npn | Kind::Pnp | Kind::Nmos | Kind::Pmos => element.terminals()[ 1 .. ].to_vec(),
 			_ if outputs.contains( &index ) => vec![ element.segment.to ],
 			_ => continue,
 		};
 
-		for point in points { driven[ netlist.net( point ) ] = true; }
+		for point in points { driven[ groups.find( netlist.net( point ) ) ] = true; }
 	}
 
 	for element in elements.iter_mut().filter( | element | matches!( element.kind, Kind::Toggle { .. } | Kind::Slider { .. } ) )
 	{
-		if driven[ netlist.net( element.segment.to ) ] { element.kind = Kind::Output; }
+		if driven[ groups.find( netlist.net( element.segment.to ) ) ] { element.kind = Kind::Output; }
 	}
 }
 

@@ -154,7 +154,7 @@ fn it_keeps_a_toggle_at_its_level_with_its_id_at_the_end_of_its_lead()
 }
 
 #[test]
-fn it_turns_a_toggle_into_a_probe_on_a_net_that_a_source_a_channel_or_a_gate_drives()
+fn it_turns_a_toggle_into_a_probe_on_a_net_that_a_source_a_gate_or_a_channel_to_a_source_drives()
 {
 	let kinds = | parts : &[ Part ], models : &[ Option<Model> ] | flatten( &[ layer( parts ), input( true ) ], &mut Registry::default(), models, 0, &[] ).unwrap().0.iter().map( | element | element.kind ).collect::<Vec<Kind>>();
 	let model = Model { rows : vec![ vec![ Drive { volts : 5.0, ohms : 10.0 } ]; 2 ], next : vec![ 0; 2 ], delay : DELAY };
@@ -162,7 +162,10 @@ fn it_turns_a_toggle_into_a_probe_on_a_net_that_a_source_a_channel_or_a_gate_dri
 
 	assert_eq!( kinds( &[ ( Kind::Toggle { high : true }, ( 1, 0 ), ( 2, 0 ) ), ( Kind::Wire, ( 2, 0 ), ( 6, 0 ) ), ( Kind::Supply { volts : 5.0 }, ( 6, 0 ), ( 6, 0 ) ) ], &[] )[ 0 ], Kind::Output );
 	assert_eq!( kinds( &[ ( Kind::Toggle { high : true }, ( 1, 0 ), ( 2, 0 ) ), ( Kind::Led { color : 0 }, ( 2, 0 ), ( 2, 4 ) ), ( Kind::Ground, ( 2, 4 ), ( 2, 4 ) ) ], &[] )[ 0 ], high );
-	assert_eq!( kinds( &[ ( Kind::Toggle { high : true }, ( 4, 1 ), ( 3, 1 ) ), ( Kind::Toggle { high : true }, ( -1, 2 ), ( 0, 2 ) ), ( Kind::Nmos, ( 0, 2 ), ( 2, 2 ) ) ], &[] )[ .. 2 ], [ Kind::Output, high ] );
+	assert_eq!( kinds( &[ ( Kind::Toggle { high : true }, ( 4, 1 ), ( 3, 1 ) ), ( Kind::Toggle { high : true }, ( -1, 2 ), ( 0, 2 ) ), ( Kind::Nmos, ( 0, 2 ), ( 2, 2 ) ) ], &[] )[ .. 2 ], [ high, high ] );
+	assert_eq!( kinds( &[ ( Kind::Toggle { high : true }, ( 4, 1 ), ( 3, 1 ) ), ( Kind::Nmos, ( 0, 2 ), ( 2, 2 ) ), ( Kind::Resistor { ohms : 1000.0 }, ( 3, 3 ), ( 3, 6 ) ), ( Kind::Ground, ( 3, 6 ), ( 3, 6 ) ) ], &[] )[ 0 ], high );
+	assert_eq!( kinds( &[ ( Kind::Toggle { high : true }, ( 4, 3 ), ( 3, 3 ) ), ( Kind::Pmos, ( 0, 2 ), ( 2, 2 ) ), ( Kind::Supply { volts : 5.0 }, ( 3, 1 ), ( 3, 1 ) ), ( Kind::Wire, ( 3, 3 ), ( 3, 5 ) ), ( Kind::Nmos, ( 0, 6 ), ( 2, 6 ) ), ( Kind::Ground, ( 3, 7 ), ( 3, 7 ) ) ], &[] )[ 0 ], Kind::Output );
+	assert_eq!( kinds( &[ ( Kind::Toggle { high : true }, ( 4, 1 ), ( 3, 1 ) ), ( Kind::Npn, ( 0, 2 ), ( 2, 2 ) ), ( Kind::Nmos, ( 0, 4 ), ( 2, 4 ) ), ( Kind::Ground, ( 3, 5 ), ( 3, 5 ) ) ], &[] )[ 0 ], Kind::Output );
 	assert_eq!( kinds( &[ ( Kind::Symbol { layer : 1, rotation : 0 }, ( 10, 10 ), ( 10, 10 ) ), ( Kind::Toggle { high : true }, ( 13, 10 ), ( 12, 10 ) ) ], &[ None, Some( model ) ] ).last(), Some( &Kind::Output ) );
 }
 
