@@ -25,6 +25,36 @@ fn powered() -> Circuit
 	circuit
 }
 
+fn blinking( hertz : f64 ) -> Vec<f64>
+{
+	let mut circuit = Circuit::new();
+
+	circuit.add( 18, hertz, 0, -2, 0, 0 ).ok();
+	circuit.add( 1, 1000.0, 0, 0, 4, 0 ).ok();
+	circuit.add( 17, 0.0, 4, 0, 4, 4 ).ok();
+	circuit.add( 3, 0.0, 4, 4, 4, 4 ).ok();
+
+	( 0 .. 2000 ).map( | _ |
+	{
+		circuit.advance( 1 );
+
+		let elements = circuit.elements();
+		let led = 2 * ( 9 + 2 * 2 );
+
+		elements[ led + 9 + elements[ led + 8 ] as usize ]
+	} ).collect()
+}
+
+fn glowing( hertz : f64 ) -> Vec<f64>
+{
+	let mut circuit = Circuit::new();
+	let data = [ 0.0, 14.0, 1.0, 0.0, 5.0, 5.0, 5.0, 5.0, 0.0, 18.0, hertz, 0.0, 1.0, 5.0, 3.0, 5.0, 1.0, 13.0, 1.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1000.0, 0.0, 0.0, 0.0, 4.0, 0.0, 1.0, 17.0, 1.0, 0.0, 4.0, 0.0, 4.0, 4.0, 1.0, 3.0, 0.0, 0.0, 4.0, 4.0, 4.0, 4.0 ];
+
+	open( &mut circuit, &data, Vec::new(), &[ 1 ], vec![ "foo".to_string() ], &[ 0 ], &[ 2, -2, 0, 0, 2 ] ).ok();
+
+	( 0 .. 2000 ).map( | _ | { circuit.advance( 1 ); circuit.lights()[ 0 ] } ).collect()
+}
+
 fn laddered() -> Circuit
 {
 	let mut circuit = Circuit::new();
@@ -203,13 +233,13 @@ fn it_advances_the_time_step_by_step()
 	circuit.add( 4, 1e-5, 2, 0, 2, 2 ).ok();
 	circuit.add( 0, 0.0, 2, 2, 0, 2 ).ok();
 
-	circuit.advance( 1000 );
+	circuit.advance( 5000 );
 
-	assert!( ( circuit.elements()[ 35 ] - 5.0 * ( 1.0 - ( -1.0_f64 ).exp() ) ).abs() < 1e-2 );
+	assert!( ( circuit.elements()[ 35 ] - 5.0 * ( 1.0 - ( -5.0_f64 ).exp() ) ).abs() < 1e-2 );
 }
 
 #[wasm_bindgen_test]
-fn it_lists_a_clock_with_its_frequency_and_runs_two_of_its_periods_each_second()
+fn it_lists_a_clock_with_its_frequency_and_runs_it_in_real_time()
 {
 	let mut circuit = Circuit::new();
 
@@ -219,7 +249,7 @@ fn it_lists_a_clock_with_its_frequency_and_runs_two_of_its_periods_each_second()
 	circuit.add( 18, 1e7, 0, -2, 0, 0 ).ok();
 
 	assert_eq!( [ circuit.elements()[ 1 ], circuit.elements()[ 6 ] ], [ 18.0, 1e7 ] );
-	assert!( ( circuit.rate() - 40.0 ).abs() < 1e-9 );
+	assert!( ( circuit.rate() - 2e8 ).abs() < 1e-3 );
 
 	circuit.set_value( 0, 0.1 ).ok();
 
@@ -796,4 +826,41 @@ fn it_opens_sets_and_lists_the_level_of_a_free_input()
 	assert_eq!( circuit.set_high( 0, false ).ok(), Some( 0 ) );
 	assert_eq!( reading( &circuit ), ( 0.0, 0.0 ) );
 	assert!( circuit.set_high( 2, true ).is_err() );
+}
+
+#[wasm_bindgen_test]
+fn it_shows_each_blink_of_a_slow_led_and_the_steady_mean_of_an_led_that_blinks_faster_than_the_eye()
+{
+	let slow = blinking( 1.0 );
+	let fast = blinking( 1e3 );
+	let peak = slow.iter().copied().fold( 0.0, f64::max );
+
+	assert!( peak > 1e-3 );
+	assert!( slow.iter().copied().fold( f64::INFINITY, f64::min ) < 0.01 * peak );
+	assert!( fast[ 1980 .. ].iter().all( | &current | ( current / peak - 0.5 ).abs() < 0.1 ) );
+}
+
+#[wasm_bindgen_test]
+fn it_shows_the_steady_mean_of_an_led_inside_a_symbol_that_blinks_faster_than_the_eye()
+{
+	let slow = glowing( 1.0 );
+	let fast = glowing( 1e3 );
+	let peak = slow.iter().copied().fold( 0.0, f64::max );
+
+	assert!( peak > 1e-3 );
+	assert!( slow.iter().copied().fold( f64::INFINITY, f64::min ) < 0.01 * peak );
+	assert!( fast[ 1980 .. ].iter().all( | &current | ( current / peak - 0.5 ).abs() < 0.1 ) );
+}
+
+#[wasm_bindgen_test]
+fn it_shows_the_solution_of_an_edit_at_once_when_it_changes_the_parts()
+{
+	let mut circuit = powered();
+
+	circuit.advance( 10 );
+	circuit.add( 1, 1000.0, 2, 0, 2, 2 ).ok();
+
+	let elements = circuit.elements();
+
+	assert!( ( elements[ elements.len() - 2 ] - 0.0025 ).abs() < 1e-9 );
 }

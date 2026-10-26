@@ -1,4 +1,4 @@
-use simulator::{ Branch, Point, Segment, Solution };
+use simulator::{ mix, Branch, Point, Reading, Segment, Solution };
 
 
 #[test]
@@ -11,4 +11,33 @@ fn it_finds_the_branch_at_a_point()
 	assert_eq!( solution.branch_at( Point { x : 1, y : 0 } ), Some( 0 ) );
 	assert_eq!( solution.branch_at( Point { x : 3, y : 0 } ), Some( 1 ) );
 	assert_eq!( solution.branch_at( Point { x : 1, y : 1 } ), None );
+}
+
+#[test]
+fn it_mixes_a_value_toward_the_next_by_a_weight_and_replaces_a_value_that_is_not_finite()
+{
+	assert_eq!( [ mix( 1.0, 3.0, 0.25 ), mix( 1.0, 3.0, 0.0 ), mix( 1.0, 3.0, 1.0 ), mix( f64::NAN, 3.0, 0.25 ) ], [ 1.5, 1.0, 3.0, 3.0 ] );
+}
+
+#[test]
+fn it_blends_each_reading_and_each_branch_toward_the_next_solution()
+{
+	let segment = Segment { from : Point { x : 0, y : 0 }, to : Point { x : 2, y : 0 } };
+	let solution = | value : f64 | Solution { readings : vec![ Reading { potentials : vec![ value, 0.0 ], currents : vec![ value, - value ] } ], branches : vec![ Branch { segment, voltage : value, current : value } ] };
+
+	assert_eq!( solution( 0.0 ).blend( &solution( 4.0 ), 0.5 ), solution( 2.0 ) );
+}
+
+#[test]
+fn it_takes_the_next_solution_when_its_readings_or_its_branches_differ()
+{
+	let branch = | x : i32 | Branch { segment : Segment { from : Point { x, y : 0 }, to : Point { x : x + 2, y : 0 } }, voltage : 1.0, current : 1.0 };
+	let reading = | count : usize | Reading { potentials : vec![ 1.0; count ], currents : vec![ 1.0; count ] };
+	let solution = | readings : Vec<Reading>, branches : Vec<Branch> | Solution { readings, branches };
+	let next = solution( vec![ reading( 2 ) ], vec![ branch( 0 ) ] );
+
+	assert_eq!( solution( vec![ reading( 3 ) ], vec![ branch( 0 ) ] ).blend( &next, 0.5 ), next );
+	assert_eq!( solution( vec![], vec![ branch( 0 ) ] ).blend( &next, 0.5 ), next );
+	assert_eq!( solution( vec![ reading( 2 ) ], vec![ branch( 2 ) ] ).blend( &next, 0.5 ), next );
+	assert_eq!( solution( vec![ reading( 2 ) ], vec![] ).blend( &next, 0.5 ), next );
 }

@@ -31,6 +31,7 @@ import { open as revise } from './menus/drawing.ts';
 import { open } from './menus/part.ts';
 import { open as offer } from './menus/selection.ts';
 import { open as amend } from './menus/sketch.ts';
+import { pace } from './pace.ts';
 import { Palette } from './palette.ts';
 import { describe } from './readout.ts';
 import * as area from './renderers/area.ts';
@@ -73,7 +74,7 @@ import { STRIDES, View } from './view.ts';
 await init();
 
 
-const STEPS_PER_FRAME = 100;
+const STEP_BUDGET = 8;
 const LOAD_BUDGET = 12;
 const LOAD_DELAY = 150;
 const LOAD_DOTS = 16;
@@ -101,7 +102,7 @@ const pinbar = new Toolbar( document.querySelector( 'nav' )!, PIN_GROUPS, pick )
 const trail = new Trail( document.querySelector( 'nav' )! );
 const maker = new Maker( document.body, make, sketch, discard, purge );
 const palette = new Palette( document.querySelector( 'nav' )!, document.body, choose, unsketch );
-const clock = new Clock( STEPS_PER_FRAME );
+const clock = new Clock( STEP_BUDGET );
 const drift = new Drift();
 const view = new View();
 
@@ -614,7 +615,11 @@ function frame( time : number ) : void
 
 	proceed();
 
-	circuit.advance( clock.tick( seconds, circuit.rate ) );
+	const steps = clock.tick( seconds, circuit.rate );
+	const start = performance.now();
+
+	circuit.advance( steps );
+	clock.measure( steps, performance.now() - start );
 
 	follow();
 
@@ -639,7 +644,7 @@ function frame( time : number ) : void
 
 	canvas.classList.toggle( 'idle', sketching ? drawer.figure === null : tool.kind === null );
 
-	const engine = circuit.frozen ? 'Measuring' : circuit.mode;
+	const engine = circuit.frozen ? 'Measuring' : circuit.mode + pace( clock.speed );
 
 	if( mode.textContent !== engine ) mode.textContent = engine;
 

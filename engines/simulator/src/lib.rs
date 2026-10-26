@@ -75,7 +75,7 @@ pub use registry::Registry;
 pub use segment::Segment;
 pub use shape::Shape;
 pub use simulation::Simulation;
-pub use solution::Solution;
+pub use solution::{ mix, Solution };
 pub use solver::{ compute, solve };
 pub use stamp::Stamp;
 pub use stretch::stretch;

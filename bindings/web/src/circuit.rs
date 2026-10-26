@@ -1,11 +1,11 @@
-use simulator::{ Document, Element, Kind, Operation, Outline, Point, Reading, Segment, Shape, Simulation };
+use simulator::{ mix, Document, Element, Kind, Operation, Outline, Point, Reading, Segment, Shape, Simulation, Solution };
 use wasm_bindgen::prelude::*;
 
 
 const STEP : f64 = 1e-5;
 const SPEED : f64 = 1e-2;
-const PERIODS : f64 = 2.0;
 const REAL : f64 = 1.0;
+const EYE : f64 = 1.0 / 125.0;
 
 
 fn points( data : &[ i32 ] ) -> Vec<Point>
@@ -63,6 +63,7 @@ pub struct Circuit
 {
 	simulation : Simulation,
 	clipboard : Vec<( Element, String )>,
+	seen : Option<( Solution, Vec<f64> )>,
 }
 
 #[wasm_bindgen]
@@ -71,7 +72,7 @@ impl Circuit
 	#[wasm_bindgen( constructor )]
 	pub fn new() -> Circuit
 	{
-		Circuit { simulation : Simulation::new( STEP ), clipboard : Vec::new() }
+		Circuit { simulation : Simulation::new( STEP ), clipboard : Vec::new(), seen : None }
 	}
 
 	pub fn snap( from_x : i32, from_y : i32, cursor_x : i32, cursor_y : i32 ) -> Vec<i32>
@@ -227,7 +228,9 @@ impl Circuit
 	#[wasm_bindgen( getter )]
 	pub fn rate( &self ) -> f64
 	{
-		self.simulation.period().map_or( SPEED, | period | ( PERIODS * period ).min( REAL ) ) / self.simulation.step()
+		let speed = if self.simulation.period().is_some() { REAL } else { SPEED };
+
+		speed / self.simulation.step()
 	}
 
 	#[wasm_bindgen( getter )]
@@ -363,7 +366,23 @@ impl Circuit
 
 	pub fn advance( &mut self, count : u32 )
 	{
-		self.simulation.advance( count );
+		if self.simulation.frozen() { return; }
+
+		let weight = 1.0 - ( - 1.0 / ( self.rate() * EYE ) ).exp();
+
+		for _ in 0 .. count
+		{
+			self.simulation.advance( 1 );
+
+			let Ok( solution ) = self.simulation.solution() else { self.seen = None; return; };
+			let lights = self.simulation.lights();
+
+			self.seen = Some( match self.seen.take()
+			{
+				Some( ( seen, glow ) ) if glow.len() == lights.len() => ( seen.blend( solution, weight ), glow.iter().zip( lights ).map( | ( &from, &to ) | mix( from, to, weight ) ).collect() ),
+				_ => ( solution.clone(), lights.to_vec() ),
+			} );
+		}
 	}
 
 	#[wasm_bindgen( js_name = elementsAt )]
@@ -380,14 +399,14 @@ impl Circuit
 
 	pub fn elements( &self ) -> Vec<f64>
 	{
-		let readings = self.simulation.solution().map_or( Vec::new(), | solution | solution.readings.clone() );
+		let readings = self.shown().map_or( Vec::new(), | solution | solution.readings.clone() );
 
 		self.rows( self.document(), &readings )
 	}
 
 	pub fn branches( &self ) -> Vec<f64>
 	{
-		let Ok( solution ) = self.simulation.solution() else { return vec![]; };
+		let Some( solution ) = self.shown() else { return vec![]; };
 
 		solution.branches.iter().flat_map( | branch |
 		{
@@ -404,7 +423,9 @@ impl Circuit
 
 	pub fn lights( &self ) -> Vec<f64>
 	{
-		self.simulation.lights().to_vec()
+		let lights = self.simulation.lights();
+
+		self.seen.as_ref().map( | ( _, glow ) | glow ).filter( | glow | glow.len() == lights.len() ).map_or( lights, | glow | glow ).to_vec()
 	}
 
 	pub fn captions( &self ) -> Vec<String>
@@ -454,6 +475,13 @@ impl Circuit
 
 			head.into_iter().chain( potentials ).chain( currents ).collect::<Vec<f64>>()
 		} ).collect()
+	}
+
+	fn shown( &self ) -> Option<&Solution>
+	{
+		let solution = self.simulation.solution().ok()?;
+
+		Some( self.seen.as_ref().map( | ( seen, _ ) | seen ).filter( | seen | seen.fits( solution ) ).unwrap_or( solution ) )
 	}
 
 	fn current( &self ) -> usize
