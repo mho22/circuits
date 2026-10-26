@@ -1,4 +1,4 @@
-use simulator::{ Characterization, Document, Kind, Model, Operation, Point, Segment, DELAY, FLOOR };
+use simulator::{ Characterization, Document, Kind, Model, Operation, Outline, Point, Segment, DELAY, FLOOR };
 
 
 const STEP : f64 = 1e-6;
@@ -170,6 +170,18 @@ fn flip_flop() -> Document
 	layer( &pins.into_iter().chain( gates ).chain( wires ).collect::<Vec<Part>>() )
 }
 
+fn wrapper( inner : &Document ) -> Document
+{
+	let symbol = ( Kind::Symbol { layer : 2, rotation : 0 }, ( 0, 0 ), ( 0, 0 ) );
+	let pins = inner.elements().iter().filter( | element | element.kind.pin() ).zip( Outline::of( inner ).terminals( Point { x : 0, y : 0 }, 0 ) ).map( | ( pin, end ) | match pin.kind
+	{
+		Kind::Output => ( Kind::Output, ( end.x + 1, end.y ), ( end.x, end.y ) ),
+		kind => ( kind, ( end.x - 1, end.y ), ( end.x, end.y ) ),
+	} );
+
+	layer( &pins.chain( [ symbol ] ).collect::<Vec<Part>>() )
+}
+
 fn characterize( layers : &[ Document ], models : &[ Option<Model> ], layer : usize ) -> Option<Model>
 {
 	let mut characterization = Characterization::new( layers, models, layer, STEP )?;
@@ -229,6 +241,17 @@ fn it_measures_a_flip_flop_built_from_gates_as_a_gate_that_changes_its_state_on_
 	assert!( model.rows.iter().all( | row | row[ 0 ].high() != row[ 1 ].high() && row.iter().all( | drive | drive.ohms < 1e6 ) ) );
 	assert_eq!( walk( &model, &[ 0, 1, 3, 2, 0, 1, 0, 2 ] ), vec![ false, false, true, true, true, true, true, false ] );
 	assert!( ( model.delay - 3.0 * DELAY ).abs() < 1e-15 );
+}
+
+#[test]
+fn it_keeps_the_state_of_a_flip_flop_inside_a_layer_without_feedback_of_its_own()
+{
+	let layers = [ Document::default(), nand(), flip_flop(), wrapper( &flip_flop() ) ];
+	let gates = [ None, characterize( &layers, &[], 1 ) ];
+	let models = [ None, gates[ 1 ].clone(), characterize( &layers, &gates, 2 ) ];
+	let model = characterize( &layers, &models, 3 ).unwrap();
+
+	assert_eq!( walk( &model, &[ 0, 1, 3, 2, 0, 1, 0, 2 ] ), vec![ false, false, true, true, true, true, true, false ] );
 }
 
 #[test]

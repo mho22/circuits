@@ -2,6 +2,9 @@ use simulator::{ compute, solve, Element, Error, History, Kind, Point, Reading, 
 
 
 const STEP : f64 = 1e-3;
+const HIGH : f64 = 4.9999999992857145;
+const LOW : f64 = 7.142854435769328e-10;
+const DRIVE : f64 = 14.422021980745013;
 
 
 fn element( kind : Kind, from : ( i32, i32 ), to : ( i32, i32 ) ) -> Element
@@ -572,4 +575,39 @@ fn it_solves_a_circuit_next_to_a_lone_transistor()
 		assert!( near( solution.readings[ 1 ].currents[ 0 ], 0.005 ) );
 		assert!( solution.readings[ 3 ].currents.iter().all( | current | current.abs() < 1e-9 ) );
 	}
+}
+
+fn display( lit : u32 ) -> Vec<Element>
+{
+	let mut elements = vec![ element( Kind::Supply { volts : 12.0 }, ( 0, 0 ), ( 0, 0 ) ), element( Kind::Ground, ( 0, 12 ), ( 0, 12 ) ) ];
+
+	for segment in 0 .. 7
+	{
+		let x = 4 * segment + 4;
+		let gate = if lit >> segment & 1 == 1 { HIGH } else { LOW };
+
+		elements.extend( [
+			element( Kind::Wire, ( 0, 0 ), ( x, 0 ) ),
+			element( Kind::Led { color : 1 }, ( x, 0 ), ( x, 2 ) ),
+			element( Kind::Led { color : 1 }, ( x, 2 ), ( x, 4 ) ),
+			element( Kind::Led { color : 1 }, ( x, 4 ), ( x, 6 ) ),
+			element( Kind::Resistor { ohms : 220.0 }, ( x, 6 ), ( x, 8 ) ),
+			element( Kind::Nmos, ( x - 3, 9 ), ( x - 1, 9 ) ),
+			element( Kind::Supply { volts : gate }, ( x - 3, 20 ), ( x - 3, 20 ) ),
+			element( Kind::Resistor { ohms : DRIVE }, ( x - 3, 20 ), ( x - 3, 9 ) ),
+			element( Kind::Wire, ( x, 10 ), ( x, 12 ) ),
+			element( Kind::Wire, ( 0, 12 ), ( x, 12 ) ),
+		] );
+	}
+
+	elements.into_iter().zip( 0 .. ).map( | ( element, id ) | Element { id, ..element } ).collect()
+}
+
+#[test]
+fn it_settles_a_display_whose_unlit_segments_hold_their_voltage_only_by_leakage()
+{
+	let before = display( 0b0000110 );
+	let history = History::record( &before, &solve( &before, &History::default(), STEP ).unwrap() );
+
+	assert!( solve( &display( 0b1000011 ), &history, STEP ).is_ok() );
 }

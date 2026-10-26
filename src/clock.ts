@@ -5,6 +5,7 @@ export class Clock
 {
 	private remainder = 0;
 	private limit = 1;
+	private cost : number | null = null;
 
 	speed = 1;
 
@@ -29,7 +30,11 @@ export class Clock
 	{
 		if( steps === 0 ) return;
 
-		const fit = Math.max( 1, Math.floor( steps * this.budget / milliseconds ) );
+		const cost = milliseconds / steps;
+
+		this.cost = this.cost === null ? cost : this.cost + ( cost - this.cost ) * SMOOTHING;
+
+		const fit = Math.max( 1, Math.floor( this.budget / this.cost ) );
 
 		this.limit = steps < this.limit ? Math.min( this.limit, fit ) : Math.min( 2 * steps, fit );
 	}

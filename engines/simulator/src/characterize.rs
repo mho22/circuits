@@ -153,7 +153,8 @@ impl Characterization
 
 		if ! active || timed || lit || looped( &elements, &[], &drives ) { return None; }
 
-		let sequential = looped( &elements, &devices, &drives );
+		let remembers = devices.iter().any( | device | models.get( device.layer ).and_then( Option::as_ref ).is_some_and( | model | model.next.iter().any( | &next | next != 0 ) ) );
+		let sequential = remembers || looped( &elements, &devices, &drives );
 		let netlist = Netlist::build( &elements );
 		let net = | index : usize | netlist.net( elements[ index ].segment.to );
 

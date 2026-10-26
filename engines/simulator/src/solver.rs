@@ -3,6 +3,7 @@ use crate::{ companion, distribute, eliminate, Branch, Element, Error, History, 
 
 const ITERATIONS : usize = 100;
 const TOLERANCE : f64 = 1e-6;
+const RELATIVE : f64 = 1e-5;
 
 
 pub fn solve( elements : &[ Element ], history : &History, step : f64 ) -> Result<Solution, Error>
@@ -93,7 +94,7 @@ pub fn compute( elements : &[ Element ], topology : &Topology, history : &Histor
 			next
 		} ).collect();
 
-		if next.iter().flatten().zip( guesses.iter().flatten() ).all( | ( a, b ) | ( a - b ).abs() <= TOLERANCE ) { break solution; }
+		if next.iter().flatten().zip( guesses.iter().flatten() ).all( | ( a, b ) | ( a - b ).abs() <= TOLERANCE + RELATIVE * a.abs().max( b.abs() ) ) { break solution; }
 
 		iteration += 1;
 

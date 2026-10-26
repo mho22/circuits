@@ -85,6 +85,7 @@ const context = canvas.getContext( '2d' )!;
 const status = document.querySelector( 'output' )!;
 const locator = document.querySelector( '.position' )!;
 const mode = document.querySelector( '.mode' )!;
+const frequency = document.querySelector( '.frequency' )!;
 const picker = document.querySelector( 'input[type=file]' ) as HTMLInputElement;
 const zoomer = document.querySelector( 'button.zoom' ) as HTMLButtonElement;
 const dezoomer = document.querySelector( 'button.dezoom' ) as HTMLButtonElement;
@@ -644,9 +645,13 @@ function frame( time : number ) : void
 
 	canvas.classList.toggle( 'idle', sketching ? drawer.figure === null : tool.kind === null );
 
-	const engine = circuit.frozen ? 'Measuring' : circuit.mode + pace( clock.speed );
+	const engine = circuit.frozen ? 'Measuring' : circuit.mode;
 
 	if( mode.textContent !== engine ) mode.textContent = engine;
+
+	const hertz = pace( circuit.hertz, clock.speed );
+
+	if( frequency.textContent !== hertz ) frequency.textContent = hertz;
 
 	const coordinates = hover ? `${ hover.x } ${ hover.y }` : '';
 

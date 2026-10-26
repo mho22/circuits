@@ -52,7 +52,7 @@ impl Plan
 
 		for ( index, element ) in elements.iter().enumerate()
 		{
-			if element.kind == Kind::Wire || element.kind == Kind::Output || joined[ index ] { continue; }
+			if matches!( element.kind, Kind::Wire | Kind::Output | Kind::Switch { closed : true } ) || joined[ index ] { continue; }
 
 			for point in element.terminals() { touched[ netlist.net( point ) ] = true; }
 		}
@@ -81,7 +81,7 @@ impl Plan
 		let outputs : Vec<Vec<Option<usize>>> = devices.iter().map( | device | device.outputs.iter().map( | &( _, resistor ) | number( netlist.net( elements[ resistor ].segment.to ) ) ).collect() ).collect();
 		let generators : Vec<( usize, Option<usize> )> = generators.iter().map( | &index | ( index, number( netlist.net( elements[ index ].segment.to ) ) ) ).collect();
 		let inputs : Vec<Vec<Source>> = devices.iter().map( | device | device.inputs.iter().map( | &input | number( netlist.net( elements[ input ].segment.to ) ).map_or( Source::Analog( input ), Source::Net ) ).collect() ).collect();
-		let inert : Vec<( usize, Option<usize> )> = elements.iter().enumerate().filter( | ( _, element ) | matches!( element.kind, Kind::Wire | Kind::Output ) ).map( | ( index, element ) | ( index, number( netlist.net( element.terminals()[ 0 ] ) ) ) ).collect();
+		let inert : Vec<( usize, Option<usize> )> = elements.iter().enumerate().filter( | ( _, element ) | matches!( element.kind, Kind::Wire | Kind::Output | Kind::Switch { closed : true } ) ).map( | ( index, element ) | ( index, number( netlist.net( element.terminals()[ 0 ] ) ) ) ).collect();
 		let pieces : Vec<( Segment, Option<usize> )> = netlist.edges.iter().map( | &( a, b ) | ( Segment { from : netlist.points[ a ], to : netlist.points[ b ] }, number( netlist.nets[ a ] ) ) ).collect();
 
 		let mut digital = vec![ false; elements.len() ];

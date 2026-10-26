@@ -69,6 +69,15 @@ fn it_keeps_a_net_between_two_gates_out_of_the_analog_circuit()
 }
 
 #[test]
+fn it_keeps_a_net_that_a_closed_switch_joins_between_two_gates_out_of_the_analog_circuit()
+{
+	let plan = plan( layer( &[ symbol( 10 ), symbol( 16 ), ( Kind::Switch { closed : true }, ( 12, 0 ), ( 14, 0 ) ) ] ) );
+
+	assert_eq!( plan.inputs[ 1 ], vec![ Source::Net( 0 ) ] );
+	assert!( plan.nets[ 0 ].elements.iter().all( | index | ! plan.analog.contains( index ) ) );
+}
+
+#[test]
 fn it_leaves_a_net_with_an_analog_part_or_two_outputs_in_the_analog_circuit()
 {
 	let loaded = plan( layer( &[ symbol( 10 ), symbol( 14 ), ( Kind::Resistor { ohms : 1000.0 }, ( 12, 0 ), ( 12, 4 ) ) ] ) );

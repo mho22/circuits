@@ -257,6 +257,19 @@ fn it_lists_a_clock_with_its_frequency_and_runs_it_in_real_time()
 }
 
 #[wasm_bindgen_test]
+fn it_gives_the_frequency_of_the_fastest_clock()
+{
+	let mut circuit = Circuit::new();
+
+	assert_eq!( circuit.hertz(), None );
+
+	circuit.add( 18, 8.0, 0, -2, 0, 0 ).ok();
+	circuit.add( 18, 64.0, 0, 2, 0, 4 ).ok();
+
+	assert_eq!( circuit.hertz(), Some( 64.0 ) );
+}
+
+#[wasm_bindgen_test]
 fn it_lists_a_slider_with_its_voltage_and_undoes_a_set_value_and_its_amends_at_once()
 {
 	let mut circuit = Circuit::new();

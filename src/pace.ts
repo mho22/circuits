@@ -1,9 +1,12 @@
+import { format } from './si.ts';
+
+
 const SLOW = 0.95;
 
 
-export function pace( speed : number ) : string
+export function pace( hertz : number | undefined, speed : number ) : string
 {
-	if( speed >= SLOW ) return '';
+	if( hertz === undefined || speed >= SLOW ) return '';
 
-	return ` × ${ Number( speed.toPrecision( 1 ) ) }`;
+	return format( hertz * speed, 'Hz' ).replace( /[\d.]+/, digits => String( Math.round( Number( digits ) ) ) );
 }

@@ -234,6 +234,12 @@ impl Circuit
 	}
 
 	#[wasm_bindgen( getter )]
+	pub fn hertz( &self ) -> Option<f64>
+	{
+		self.simulation.period().map( | period | 1.0 / period )
+	}
+
+	#[wasm_bindgen( getter )]
 	pub fn mode( &self ) -> String
 	{
 		self.simulation.mode().to_string()

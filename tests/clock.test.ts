@@ -49,7 +49,7 @@ describe( 'clock', () =>
 	{
 		const clock = grown( 1000 );
 
-		clock.measure( 1000, 40 );
+		for( let frame = 0; frame < 100; frame++ ) clock.measure( 1000, 40 );
 
 		expect( clock.tick( 1, 1000 ) ).toBe( 200 );
 	} );
@@ -58,9 +58,18 @@ describe( 'clock', () =>
 	{
 		const clock = grown( 1000 );
 
-		clock.measure( 10, 16 );
+		for( let frame = 0; frame < 100; frame++ ) clock.measure( 10, 16 );
 
 		expect( clock.tick( 1, 1000 ) ).toBe( 5 );
+	} );
+
+	it( 'keeps its limit after one slow frame among fast frames', () =>
+	{
+		const clock = grown( 10 );
+
+		clock.measure( 3, 6 );
+
+		expect( clock.tick( 1, 1000 ) ).toBe( 16 );
 	} );
 
 	it( 'keeps its limit when fewer steps than the limit fit in the budget', () =>
