@@ -6,6 +6,7 @@ const STEP : f64 = 1e-5;
 const SPEED : f64 = 1e-2;
 const REAL : f64 = 1.0;
 const EYE : f64 = 1.0 / 125.0;
+const ROW : usize = 13;
 
 
 fn points( data : &[ i32 ] ) -> Vec<Point>
@@ -383,11 +384,11 @@ impl Circuit
 			let Ok( solution ) = self.simulation.solution() else { self.seen = None; return; };
 			let lights = self.simulation.lights();
 
-			self.seen = Some( match self.seen.take()
-			{
-				Some( ( seen, glow ) ) if glow.len() == lights.len() => ( seen.blend( solution, weight ), glow.iter().zip( lights ).map( | ( &from, &to ) | mix( from, to, weight ) ).collect() ),
-				_ => ( solution.clone(), lights.to_vec() ),
-			} );
+			let Some( ( seen, glow ) ) = self.seen.as_mut().filter( | ( _, glow ) | glow.len() == lights.len() ) else { self.seen = Some( ( solution.clone(), lights.to_vec() ) ); continue; };
+
+			seen.blend( solution, weight );
+
+			for ( from, &to ) in glow.iter_mut().zip( lights ) { *from = mix( *from, to, weight ); }
 		}
 	}
 
@@ -405,9 +406,9 @@ impl Circuit
 
 	pub fn elements( &self ) -> Vec<f64>
 	{
-		let readings = self.shown().map_or( Vec::new(), | solution | solution.readings.clone() );
+		let readings = self.shown().map_or( &[][ .. ], | solution | solution.readings.as_slice() );
 
-		self.rows( self.document(), &readings )
+		self.rows( self.document(), readings )
 	}
 
 	pub fn branches( &self ) -> Vec<f64>
@@ -446,7 +447,9 @@ impl Circuit
 
 	fn rows( &self, document : &Document, readings : &[ Reading ] ) -> Vec<f64>
 	{
-		document.elements().iter().enumerate().flat_map( | ( index, element ) |
+		let mut rows = Vec::with_capacity( document.elements().len() * ROW );
+
+		for ( index, element ) in document.elements().iter().enumerate()
 		{
 			let mirrored = if element.mirrored { 1.0 } else { 0.0 };
 
@@ -474,13 +477,26 @@ impl Circuit
 				Kind::Slider { volts } => ( 19.0, volts, 0 ),
 			};
 
-			let count = self.simulation.terminals( element ).len();
-			let ( potentials, currents ) = readings.get( index ).map_or( ( vec![ 0.0; count ], vec![ f64::NAN; count ] ), | reading | ( reading.potentials.clone(), reading.currents.clone() ) );
 			let segment = element.segment;
-			let head = [ element.id as f64, code, segment.from.x as f64, segment.from.y as f64, segment.to.x as f64, segment.to.y as f64, value, rotation as f64, potentials.len() as f64 ];
+			let head = | count : usize | [ element.id as f64, code, segment.from.x as f64, segment.from.y as f64, segment.to.x as f64, segment.to.y as f64, value, rotation as f64, count as f64 ];
 
-			head.into_iter().chain( potentials ).chain( currents ).collect::<Vec<f64>>()
-		} ).collect()
+			if let Some( reading ) = readings.get( index )
+			{
+				rows.extend( head( reading.potentials.len() ) );
+				rows.extend( &reading.potentials );
+				rows.extend( &reading.currents );
+
+				continue;
+			}
+
+			let count = self.simulation.terminals( element ).len();
+
+			rows.extend( head( count ) );
+			rows.extend( std::iter::repeat_n( 0.0, count ) );
+			rows.extend( std::iter::repeat_n( f64::NAN, count ) );
+		}
+
+		rows
 	}
 
 	fn shown( &self ) -> Option<&Solution>

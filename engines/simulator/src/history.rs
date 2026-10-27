@@ -1,19 +1,20 @@
-use std::collections::HashMap;
-
 use crate::{ Element, Kind, Solution };
 
 
 #[derive( Debug, Default )]
 pub struct History
 {
-	values : HashMap<u32, [ f64; 2 ]>,
+	values : Vec<[ f64; 2 ]>,
 }
 
 impl History
 {
 	pub fn record( elements : &[ Element ], solution : &Solution ) -> History
 	{
-		let values = elements.iter().zip( &solution.readings ).filter_map( | ( element, reading ) |
+		let size = elements.iter().map( | element | element.id as usize + 1 ).max().unwrap_or( 0 );
+		let mut values = vec![ [ 0.0; 2 ]; size ];
+
+		for ( element, reading ) in elements.iter().zip( &solution.readings )
 		{
 			let across = | ( a, b ) : ( usize, usize ) | reading.potentials[ a ] - reading.potentials[ b ];
 
@@ -29,17 +30,17 @@ impl History
 
 					voltages
 				},
-				_ => return None,
+				_ => continue,
 			};
 
-			Some( ( element.id, value ) )
-		} ).collect();
+			values[ element.id as usize ] = value;
+		}
 
 		History { values }
 	}
 
 	pub fn get( &self, id : u32 ) -> [ f64; 2 ]
 	{
-		self.values.get( &id ).copied().unwrap_or( [ 0.0; 2 ] )
+		self.values.get( id as usize ).copied().unwrap_or( [ 0.0; 2 ] )
 	}
 }

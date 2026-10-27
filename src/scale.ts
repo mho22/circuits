@@ -8,18 +8,19 @@ export const FROZEN : Scale = { voltage : NaN, current : 12 };
 const LEAK = 1e-6;
 
 
-function largest( values : number[] ) : number
+function largest( values : number[], start : number ) : number
 {
-	return values.reduce( ( largest, value ) => Math.abs( value ) > largest ? Math.abs( value ) : largest, 0 );
+	return values.reduce( ( largest, value ) => Math.abs( value ) > largest ? Math.abs( value ) : largest, start );
 }
 
 
 export function measure( elements : Element[], branches : Branch[] ) : Scale
 {
-	const peak = largest( elements.flatMap( element => element.potentials ) );
+	const peak = elements.reduce( ( peak, element ) => largest( element.potentials, peak ), 0 );
 	const voltage = peak < LEAK ? 0 : peak;
 
-	const current = largest( [ ... elements.filter( element => element.kind !== Kind.Wire ).flatMap( element => element.currents ), ... branches.map( branch => branch.current ) ] );
+	const flowing = elements.reduce( ( peak, element ) => element.kind === Kind.Wire ? peak : largest( element.currents, peak ), 0 );
+	const current = largest( branches.map( branch => branch.current ), flowing );
 
 	return { voltage, current };
 }

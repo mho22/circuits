@@ -2,7 +2,7 @@ use std::collections::{ HashMap, HashSet };
 
 use crate::flatten::STRIDE;
 use crate::shape::FINE;
-use crate::{ advance, enclose, flatten, place, settle, stretch, Catalog, Device, Document, Element, Enclosure, Error, History, Kind, Logic, Mode, Model, Netlist, Operation, Outline, Plan, Point, Reading, Registry, Segment, Shape, Solution };
+use crate::{ advance, enclose, flatten, idle, place, settle, stretch, Catalog, Device, Document, Element, Enclosure, Error, History, Kind, Logic, Mode, Model, Netlist, Operation, Outline, Plan, Point, Reading, Registry, Segment, Shape, Solution };
 
 
 const DIVISIONS : f64 = 20.0;
@@ -55,6 +55,9 @@ pub struct Simulation
 	logic : Logic,
 	solution : Result<Solution, Error>,
 	lights : Vec<f64>,
+	places : Vec<Vec<Option<usize>>>,
+	glows : Vec<Option<usize>>,
+	captions : Vec<String>,
 	base : f64,
 	step : f64,
 	undos : Vec<Vec<( usize, Operation )>>,
@@ -67,7 +70,7 @@ impl Simulation
 {
 	pub fn new( step : f64 ) -> Simulation
 	{
-		Simulation { layers : vec![ Document::default() ], registry : Registry::default(), elements : Vec::new(), devices : Vec::new(), plan : Plan::default(), models : Vec::new(), sources : Vec::new(), focus : Vec::new(), history : History::default(), logic : Logic::default(), solution : Ok( Solution::default() ), lights : Vec::new(), base : step, step, undos : Vec::new(), redos : Vec::new(), loading : None, measuring : None }
+		Simulation { layers : vec![ Document::default() ], registry : Registry::default(), elements : Vec::new(), devices : Vec::new(), plan : Plan::default(), models : Vec::new(), sources : Vec::new(), focus : Vec::new(), history : History::default(), logic : Logic::default(), solution : Ok( Solution::default() ), lights : Vec::new(), places : Vec::new(), glows : Vec::new(), captions : Vec::new(), base : step, step, undos : Vec::new(), redos : Vec::new(), loading : None, measuring : None }
 	}
 
 	pub fn create( &mut self ) -> usize
@@ -359,6 +362,8 @@ impl Simulation
 
 		for _ in 0 .. count
 		{
+			if self.solution.is_ok() && idle( &self.elements, &self.plan, self.step, &self.logic ) { self.logic.time += self.step; continue; }
+
 			let solution = advance( &self.elements, &self.devices, &self.plan, &self.models, &self.history, self.step, &mut self.logic );
 
 			if let Ok( solution ) = &solution { self.history = History::record( &self.elements, solution ); }
@@ -384,6 +389,11 @@ impl Simulation
 	}
 
 	pub fn captions( &self ) -> Vec<String>
+	{
+		self.captions.clone()
+	}
+
+	fn caption( &self ) -> Vec<String>
 	{
 		let document = &self.layers[ self.descend( &self.focus ).unwrap_or( 0 ) ];
 		let mut elements = Vec::new();
@@ -638,7 +648,31 @@ impl Simulation
 		self.elements = elements;
 		self.devices = devices;
 
+		self.locate();
 		self.start();
+	}
+
+	fn locate( &mut self )
+	{
+		let path = self.focus.as_slice();
+		let layer = self.descend( path ).unwrap_or( 0 );
+		let positions : HashMap<u32, usize> = self.elements.iter().enumerate().map( | ( index, element ) | ( element.id, index ) ).collect();
+		let position = | key : &[ u32 ] | self.registry.find( key ).and_then( | id | positions.get( &id ).copied() );
+		let symbols : Vec<( u32, usize )> = self.layers[ layer ].elements().iter().filter_map( | element | match element.kind { Kind::Symbol { layer : inner, .. } => Some( ( element.id, inner as usize ) ), _ => None } ).collect();
+
+		self.glows = symbols.iter().flat_map( | &( id, inner ) | self.layers[ inner ].elements().iter().filter( | part | matches!( part.kind, Kind::Led { .. } ) ).map( move | led | ( id, led.id ) ) ).map( | ( id, led ) | position( &[ path, &[ id, led ] ].concat() ) ).collect();
+		self.places = self.layers[ layer ].elements().iter().map( | element |
+		{
+			let key = [ path, &[ element.id ] ].concat();
+
+			match element.kind
+			{
+				Kind::Symbol { layer : inner, .. } => self.layers[ inner as usize ].elements().iter().filter( | part | part.kind.pin() ).map( | pin | position( &[ key.as_slice(), &[ pin.id ] ].concat() ) ).collect(),
+				_ => vec![ position( &key ) ],
+			}
+		} ).collect();
+
+		self.captions = self.caption();
 	}
 
 	fn edit( &mut self, layer : usize, operation : Operation ) -> Result<( u32, Operation ), Error>
@@ -663,47 +697,47 @@ impl Simulation
 	fn show( &mut self, raw : Result<Solution, Error> )
 	{
 		self.lights = raw.as_ref().map_or_else( | _ | Vec::new(), | solution | self.glow( solution ) );
-		self.solution = raw.map( | solution | self.view( &solution ) );
+
+		let solution = match raw { Ok( solution ) => solution, Err( error ) => { self.solution = Err( error ); return; } };
+		let mut shown = std::mem::replace( &mut self.solution, Ok( Solution::default() ) ).unwrap_or_default();
+
+		self.view( &solution, &mut shown );
+		self.solution = Ok( shown );
 	}
 
 	fn glow( &self, solution : &Solution ) -> Vec<f64>
 	{
-		let path = self.focus.as_slice();
-		let layer = self.descend( path ).unwrap_or( 0 );
-		let positions : HashMap<u32, usize> = self.elements.iter().enumerate().map( | ( index, element ) | ( element.id, index ) ).collect();
-		let current = | key : &[ u32 ] | self.registry.find( key ).and_then( | id | positions.get( &id ) ).and_then( | &index | solution.readings.get( index ) ).map_or( 0.0, | reading | reading.currents[ 0 ] );
-
-		self.layers[ layer ].elements().iter().filter_map( | element | match element.kind { Kind::Symbol { layer : inner, .. } => Some( ( element.id, inner as usize ) ), _ => None } ).flat_map( | ( id, inner ) |
-		{
-			self.layers[ inner ].elements().iter().filter( | part | matches!( part.kind, Kind::Led { .. } ) ).map( move | led | current( &[ path, &[ id, led.id ] ].concat() ) )
-		} ).collect()
+		self.glows.iter().map( | &index | index.and_then( | index | solution.readings.get( index ) ).map_or( 0.0, | reading | reading.currents[ 0 ] ) ).collect()
 	}
 
-	fn view( &self, solution : &Solution ) -> Solution
+	fn view( &self, solution : &Solution, shown : &mut Solution )
 	{
 		let path = self.focus.as_slice();
 		let layer = self.descend( path ).unwrap_or( 0 );
-		let positions : HashMap<u32, usize> = self.elements.iter().enumerate().map( | ( index, element ) | ( element.id, index ) ).collect();
-		let reading = | key : &[ u32 ] | &solution.readings[ positions[ &self.registry.find( key ).unwrap() ] ];
+		let elements = self.layers[ layer ].elements();
+		let reading = | index : Option<usize> | &solution.readings[ index.unwrap() ];
 
-		let readings = self.layers[ layer ].elements().iter().map( | element |
+		shown.readings.resize_with( elements.len(), || Reading { potentials : Vec::new(), currents : Vec::new() } );
+
+		for ( ( element, places ), target ) in elements.iter().zip( &self.places ).zip( &mut shown.readings )
 		{
-			let key = [ path, &[ element.id ] ].concat();
-
-			match element.kind
+			let Kind::Symbol { .. } = element.kind else
 			{
-				Kind::Symbol { layer : inner, .. } =>
-				{
-					let joins : Vec<&Reading> = self.layers[ inner as usize ].elements().iter().filter( | part | part.kind.pin() ).map( | pin | reading( &[ key.as_slice(), &[ pin.id ] ].concat() ) ).collect();
+				let source = reading( places[ 0 ] );
 
-					Reading { potentials : joins.iter().map( | join | join.potentials[ 1 ] ).collect(), currents : joins.iter().map( | join | join.currents[ 1 ] ).collect() }
-				},
-				_ => reading( &key ).clone(),
-			}
-		} ).collect();
+				target.potentials.clone_from( &source.potentials );
+				target.currents.clone_from( &source.currents );
 
-		let branches = solution.branches.iter().filter( | branch | branch.segment.from.x.abs() < STRIDE / 2 ).copied().collect();
+				continue;
+			};
 
-		Solution { readings, branches }
+			target.potentials.clear();
+			target.currents.clear();
+			target.potentials.extend( places.iter().map( | &index | reading( index ).potentials[ 1 ] ) );
+			target.currents.extend( places.iter().map( | &index | reading( index ).currents[ 1 ] ) );
+		}
+
+		shown.branches.clear();
+		shown.branches.extend( solution.branches.iter().filter( | branch | branch.segment.from.x.abs() < STRIDE / 2 ).copied() );
 	}
 }

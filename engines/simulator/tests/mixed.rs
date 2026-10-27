@@ -1,4 +1,4 @@
-use simulator::{ advance, flatten, settle, Catalog, Device, Document, Element, Error, History, Kind, Logic, Model, Operation, Plan, Point, Registry, Segment, Solution };
+use simulator::{ advance, flatten, idle, settle, Catalog, Device, Document, Element, Error, History, Kind, Logic, Model, Operation, Plan, Point, Registry, Segment, Solution };
 
 
 const STEP : f64 = 1e-6;
@@ -26,6 +26,11 @@ impl Circuit
 	fn advance( &mut self, step : f64 ) -> Result<Solution, Error>
 	{
 		advance( &self.elements, &self.devices, &self.plan, &self.models, &History::default(), step, &mut self.logic )
+	}
+
+	fn idle( &self, step : f64 ) -> bool
+	{
+		idle( &self.elements, &self.plan, step, &self.logic )
 	}
 
 	fn at( &self, solution : &Solution, point : ( i32, i32 ) ) -> f64
@@ -271,3 +276,34 @@ fn it_starts_a_gate_from_its_first_row_when_its_kept_state_is_outside_its_table(
 	assert!( circuit.at( &solution, ( 13, 0 ) ) > 2.5 );
 	assert_eq!( circuit.logic.states, vec![ 0 ] );
 }
+
+#[test]
+fn it_stays_idle_until_the_next_edge_of_a_clock()
+{
+	let mut circuit = circuit( &[ ( Kind::Clock { hertz : 1e8 }, ( 4, 0 ), ( 8, 0 ) ), symbol( 10 ), ( Kind::Wire, ( 12, 0 ), ( 14, 0 ) ) ] );
+
+	circuit.settle().unwrap();
+
+	assert!( circuit.idle( 4e-9 ) );
+	assert!( ! circuit.idle( 5e-9 ) );
+}
+
+#[test]
+fn it_is_never_idle_with_a_capacitor()
+{
+	let circuit = circuit( &[ ( Kind::Battery { volts : 5.0 }, ( 0, 4 ), ( 0, 0 ) ), ( Kind::Resistor { ohms : 1000.0 }, ( 0, 0 ), ( 4, 0 ) ), ( Kind::Capacitor { farads : 1e-6 }, ( 4, 0 ), ( 4, 4 ) ), ( Kind::Wire, ( 4, 4 ), ( 0, 4 ) ), ( Kind::Ground, ( 0, 4 ), ( 0, 4 ) ) ] );
+
+	assert!( ! circuit.idle( STEP ) );
+}
+
+#[test]
+fn it_is_not_idle_when_a_clock_on_an_analog_load_changes_its_level()
+{
+	let mut circuit = circuit( &[ ( Kind::Clock { hertz : 1.0 }, ( 0, -2 ), ( 0, 0 ) ), ( Kind::Resistor { ohms : 1000.0 }, ( 0, 0 ), ( 0, 4 ) ), ( Kind::Ground, ( 0, 4 ), ( 0, 4 ) ) ] );
+
+	circuit.settle().unwrap();
+
+	assert!( circuit.idle( 0.25 ) );
+	assert!( ! circuit.idle( 0.5 ) );
+}
+

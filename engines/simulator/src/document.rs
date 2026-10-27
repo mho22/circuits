@@ -133,7 +133,7 @@ impl Document
 
 	fn insert( &mut self, element : Element, index : usize ) -> Result<u32, Error>
 	{
-		if self.index( element.id ).is_ok() { return Err( Error::Taken ); }
+		if element.id < self.next && self.index( element.id ).is_ok() { return Err( Error::Taken ); }
 
 		Document::check( element.kind, element.segment )?;
 

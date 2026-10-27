@@ -31,7 +31,11 @@ fn it_blends_each_reading_and_each_branch_toward_the_next_solution()
 	let segment = Segment { from : Point { x : 0, y : 0 }, to : Point { x : 2, y : 0 } };
 	let solution = | value : f64 | Solution { readings : vec![ Reading { potentials : vec![ value, 0.0 ], currents : vec![ value, - value ] } ], branches : vec![ Branch { segment, voltage : value, current : value } ] };
 
-	assert_eq!( solution( 0.0 ).blend( &solution( 4.0 ), 0.5 ), solution( 2.0 ) );
+	let mut seen = solution( 0.0 );
+
+	seen.blend( &solution( 4.0 ), 0.5 );
+
+	assert_eq!( seen, solution( 2.0 ) );
 }
 
 #[test]
@@ -42,8 +46,10 @@ fn it_takes_the_next_solution_when_its_readings_or_its_branches_differ()
 	let solution = | readings : Vec<Reading>, branches : Vec<Branch> | Solution { readings, branches };
 	let next = solution( vec![ reading( 2 ) ], vec![ branch( 0 ) ] );
 
-	assert_eq!( solution( vec![ reading( 3 ) ], vec![ branch( 0 ) ] ).blend( &next, 0.5 ), next );
-	assert_eq!( solution( vec![], vec![ branch( 0 ) ] ).blend( &next, 0.5 ), next );
-	assert_eq!( solution( vec![ reading( 2 ) ], vec![ branch( 2 ) ] ).blend( &next, 0.5 ), next );
-	assert_eq!( solution( vec![ reading( 2 ) ], vec![] ).blend( &next, 0.5 ), next );
+	let blended = | mut seen : Solution | { seen.blend( &next, 0.5 ); seen };
+
+	assert_eq!( blended( solution( vec![ reading( 3 ) ], vec![ branch( 0 ) ] ) ), next );
+	assert_eq!( blended( solution( vec![], vec![ branch( 0 ) ] ) ), next );
+	assert_eq!( blended( solution( vec![ reading( 2 ) ], vec![ branch( 2 ) ] ) ), next );
+	assert_eq!( blended( solution( vec![ reading( 2 ) ], vec![] ) ), next );
 }

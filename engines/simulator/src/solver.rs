@@ -1,4 +1,4 @@
-use crate::{ companion, distribute, eliminate, Branch, Element, Error, History, Kind, Reading, Segment, Solution, Topology };
+use crate::{ arrange, companion, eliminate, Branch, Element, Error, History, Kind, Reading, Segment, Solution, Topology };
 
 
 const ITERATIONS : usize = 100;
@@ -13,18 +13,18 @@ pub fn solve( elements : &[ Element ], history : &History, step : f64 ) -> Resul
 
 pub fn compute( elements : &[ Element ], topology : &Topology, history : &History, step : f64 ) -> Result<Solution, Error>
 {
-	let Topology { netlist, terminals, unknowns, nodes, batteries } = topology;
+	let Topology { netlist, terminals, unknowns, nodes, batteries, taps, joints, flow, order } = topology;
 	let nodes = *nodes;
 	let size = nodes + batteries.len();
 
 	let assemble = | guesses : &[ [ f64; 2 ] ] | -> Result<Vec<f64>, Error>
 	{
-		let mut matrix = vec![ 0.0; size * size ];
+		let mut entries = Vec::with_capacity( elements.len() * 4 );
 		let mut rhs = vec![ 0.0; size ];
 
 		let mut stamp = | row : Option<usize>, column : Option<usize>, value : f64 |
 		{
-			if let ( Some( row ), Some( column ) ) = ( row, column ) { matrix[ row * size + column ] += value; }
+			if let ( Some( row ), Some( column ) ) = ( row, column ) { entries.push( ( row, column, value ) ); }
 		};
 
 		for ( index, element ) in elements.iter().enumerate()
@@ -64,7 +64,7 @@ pub fn compute( elements : &[ Element ], topology : &Topology, history : &Histor
 			rhs[ nodes + offset ] = volts;
 		}
 
-		eliminate( matrix, rhs )
+		eliminate( size, &entries, rhs, order.get_or_init( || arrange( size, &entries ) ) )
 	};
 
 	let mut guesses : Vec<[ f64; 2 ]> = elements.iter().map( | element | history.get( element.id ) ).collect();
@@ -126,33 +126,16 @@ pub fn compute( elements : &[ Element ], topology : &Topology, history : &Histor
 		Reading { potentials, currents }
 	} ).collect();
 
-	let earth = netlist.points.len();
-	let mut injections = vec![ 0.0; earth + 1 ];
+	let mut injections = vec![ 0.0; netlist.points.len() + 1 ];
 
-	for ( element, reading ) in elements.iter().zip( &readings )
+	for ( points, reading ) in taps.iter().zip( &readings )
 	{
-		if matches!( element.kind, Kind::Wire | Kind::Ground | Kind::Input { .. } | Kind::Output | Kind::Switch { .. } ) { continue; }
-
-		let points : Vec<usize> = match element.kind
-		{
-			Kind::Supply { .. } => vec![ earth, netlist.index( element.segment.from ) ],
-			_ => element.terminals().into_iter().map( | point | netlist.index( point ) ).collect(),
-		};
-
 		for ( &point, current ) in points.iter().zip( &reading.currents ) { injections[ point ] -= current; }
 	}
 
-	let switches : Vec<usize> = ( 0 .. elements.len() ).filter( | &index | elements[ index ].kind == Kind::Switch { closed : true } ).collect();
-	let grounds : Vec<usize> = ( 0 .. elements.len() ).filter( | &index | elements[ index ].kind == Kind::Ground ).collect();
+	let currents = flow.distribute( &injections );
 
-	let mut edges = netlist.edges.clone();
-
-	edges.extend( &netlist.links );
-	edges.extend( grounds.iter().map( | &index | ( netlist.index( elements[ index ].segment.from ), earth ) ) );
-
-	let currents = distribute( earth + 1, &edges, &injections );
-
-	for ( offset, &index ) in switches.iter().chain( &grounds ).enumerate()
+	for ( offset, &index ) in joints.iter().enumerate()
 	{
 		let current = currents[ netlist.edges.len() + offset ];
 

@@ -38,14 +38,22 @@ impl Solution
 		readings && branches
 	}
 
-	pub fn blend( &self, next : &Solution, weight : f64 ) -> Solution
+	pub fn blend( &mut self, next : &Solution, weight : f64 )
 	{
-		if ! self.fits( next ) { return next.clone(); }
+		if ! self.fits( next ) { self.clone_from( next ); return; }
 
-		let values = | a : &[ f64 ], b : &[ f64 ] | a.iter().zip( b ).map( | ( &a, &b ) | mix( a, b, weight ) ).collect();
-		let readings = self.readings.iter().zip( &next.readings ).map( | ( a, b ) | Reading { potentials : values( &a.potentials, &b.potentials ), currents : values( &a.currents, &b.currents ) } ).collect();
-		let branches = self.branches.iter().zip( &next.branches ).map( | ( a, b ) | Branch { segment : b.segment, voltage : mix( a.voltage, b.voltage, weight ), current : mix( a.current, b.current, weight ) } ).collect();
+		let values = | a : &mut [ f64 ], b : &[ f64 ] | for ( a, &b ) in a.iter_mut().zip( b ) { *a = mix( *a, b, weight ); };
 
-		Solution { readings, branches }
+		for ( a, b ) in self.readings.iter_mut().zip( &next.readings )
+		{
+			values( &mut a.potentials, &b.potentials );
+			values( &mut a.currents, &b.currents );
+		}
+
+		for ( a, b ) in self.branches.iter_mut().zip( &next.branches )
+		{
+			a.voltage = mix( a.voltage, b.voltage, weight );
+			a.current = mix( a.current, b.current, weight );
+		}
 	}
 }

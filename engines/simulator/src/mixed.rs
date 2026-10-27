@@ -309,3 +309,11 @@ pub fn advance( elements : &[ Element ], devices : &[ Device ], plan : &Plan, mo
 
 	Ok( run.assemble( solution ) )
 }
+
+pub fn idle( elements : &[ Element ], plan : &Plan, step : f64, logic : &Logic ) -> bool
+{
+	let time = logic.time + step;
+	let constant = | &( index, net ) : &( usize, Option<usize> ) | net.is_some() || emit( elements[ index ].kind, time ) == emit( elements[ index ].kind, logic.time );
+
+	! plan.reactive && ! logic.pending( time ) && plan.generators.iter().all( constant )
+}

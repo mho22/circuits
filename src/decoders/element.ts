@@ -11,11 +11,20 @@ export function decode( data : Float64Array ) : Element[]
 
 	for( let index = 0; index < data.length; )
 	{
-		const [ id, kind, fromX, fromY, toX, toY, value, rotation, count ] = data.subarray( index, index + HEAD );
-		const readings = Array.from( data.subarray( index + HEAD, index + HEAD + 2 * count ) );
-		const mirrored = TRANSISTORS.includes( kind ) && value === 1;
+		const kind = data[ index + 1 ];
+		const value = data[ index + 6 ];
+		const count = data[ index + 8 ];
+		const start = index + HEAD;
+		const potentials : number[] = [];
+		const currents : number[] = [];
 
-		elements.push( { id, kind, from : { x : fromX, y : fromY }, to : { x : toX, y : toY }, value, mirrored, rotation, potentials : readings.slice( 0, count ), currents : readings.slice( count ) } );
+		for( let offset = 0; offset < count; offset++ )
+		{
+			potentials.push( data[ start + offset ] );
+			currents.push( data[ start + count + offset ] );
+		}
+
+		elements.push( { id : data[ index ], kind, from : { x : data[ index + 2 ], y : data[ index + 3 ] }, to : { x : data[ index + 4 ], y : data[ index + 5 ] }, value, mirrored : TRANSISTORS.includes( kind ) && value === 1, rotation : data[ index + 7 ], potentials, currents } );
 
 		index += HEAD + 2 * count;
 	}

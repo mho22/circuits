@@ -29,6 +29,7 @@ pub struct Plan
 	pub outputs : Vec<Vec<Option<usize>>>,
 	pub generators : Vec<( usize, Option<usize> )>,
 	pub topology : Topology,
+	pub reactive : bool,
 }
 
 impl Plan
@@ -139,7 +140,8 @@ impl Plan
 			_ => elements[ index ],
 		} ).collect();
 		let topology = Topology::build( &circuit );
+		let reactive = circuit.iter().any( | element | matches!( element.kind, Kind::Capacitor { .. } | Kind::Inductor { .. } ) );
 
-		Plan { analog, nets, inputs, outputs, generators, topology }
+		Plan { analog, nets, inputs, outputs, generators, topology, reactive }
 	}
 }

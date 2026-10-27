@@ -254,6 +254,21 @@ fn it_rejects_an_insert_with_a_taken_id_or_an_invalid_part()
 }
 
 #[test]
+fn it_inserts_again_the_id_of_a_deleted_part_below_the_highest_id()
+{
+	let mut document = Document::default();
+	let wire = | id | Operation::Insert { element : Element { id, kind : Kind::Wire, segment : Segment { from : FOO, to : BAR }, mirrored : false }, index : 0 };
+
+	document.apply( add( Kind::Wire, FOO, BAR ) ).unwrap();
+	document.apply( add( Kind::Wire, BAR, BAZ ) ).unwrap();
+	document.apply( Operation::Delete { id : 0 } ).unwrap();
+
+	assert_eq!( document.apply( wire( 1 ) ), Err( Error::Taken ) );
+	assert_eq!( document.apply( wire( 0 ) ), Ok( 0 ) );
+	assert_eq!( document.elements().len(), 2 );
+}
+
+#[test]
 fn it_gives_the_operation_that_cancels_each_operation()
 {
 	let mut document = Document::default();

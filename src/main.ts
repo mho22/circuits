@@ -23,7 +23,7 @@ import { flows } from './flows.ts';
 import { FINE, snap } from './grid.ts';
 import { grab } from './grab.ts';
 import { read, shape } from './keyboard.ts';
-import { junctions } from './junctions.ts';
+import { Junctions } from './junctions.ts';
 import { Library } from './library.ts';
 import { Maker } from './maker.ts';
 import { open as fill } from './menus/blank.ts';
@@ -46,6 +46,7 @@ import * as mask from './renderers/mask.ts';
 import * as progress from './renderers/progress.ts';
 import { FROZEN, measure } from './scale.ts';
 import { cover, inside, span } from './selection.ts';
+import { seen } from './sight.ts';
 import { socket } from './socket.ts';
 import { target } from './target.ts';
 import { PART_GROUPS, PIN_GROUPS, Toolbar } from './toolbar.ts';
@@ -79,6 +80,7 @@ const LOAD_BUDGET = 12;
 const LOAD_DELAY = 150;
 const LOAD_DOTS = 16;
 const KINDS = Object.keys( NAMES ).map( Number ) as Kind[];
+const CAPTIONED = [ Kind.Symbol, Kind.Toggle, Kind.Slider, ... PINS ];
 
 const canvas = document.querySelector( 'canvas' )!;
 const context = canvas.getContext( '2d' )!;
@@ -105,6 +107,7 @@ const maker = new Maker( document.body, make, sketch, discard, purge );
 const palette = new Palette( document.querySelector( 'nav' )!, document.body, choose, unsketch );
 const clock = new Clock( STEP_BUDGET );
 const drift = new Drift();
+const joints = new Junctions();
 const view = new View();
 
 let name = 'untitled.circuit';
@@ -582,11 +585,12 @@ function paint( elements : Element[], branches : Branch[], seconds : number ) : 
 
 	grid.draw( context, view.x * stride, view.y * stride, innerWidth * stride, innerHeight * stride, false, stride );
 
-	elements.forEach( item => element.draw( context, item, scale ) );
+	const sight = { low : view.toGrid( 0, 0 ), high : view.toGrid( innerWidth, innerHeight ) };
+	elements.filter( item => CAPTIONED.includes( item.kind ) || seen( sight, item.from, item.to ) ).forEach( item => element.draw( context, item, scale ) );
 
-	junctions( elements ).forEach( item => junction.draw( context, item, scale ) );
+	joints.find( elements ).filter( item => seen( sight, item.point, item.point ) ).forEach( item => junction.draw( context, item, scale ) );
 
-	paths.forEach( ( path, index ) => current.draw( context, path.from, path.to, path.current, scale.current, distances[ index ], circuit.frozen ? current.FROZEN : current.COLOR ) );
+	paths.forEach( ( path, index ) => { if( seen( sight, path.from, path.to ) ) current.draw( context, path.from, path.to, path.current, scale.current, distances[ index ], circuit.frozen ? current.FROZEN : current.COLOR ); } );
 
 	context.globalAlpha = 0.5;
 

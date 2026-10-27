@@ -8,6 +8,7 @@ import type { Point } from './types/point.ts';
 
 const BRANCHES = 3;
 const WIRES = 2;
+const SPAN = 2 ** 32;
 
 
 function ends( element : Element ) : Point[]
@@ -17,27 +18,65 @@ function ends( element : Element ) : Point[]
 	return element.outline ? pins( element.from, element.outline, element.rotation ) : [];
 }
 
-
-export function junctions( elements : Element[] ) : Junction[]
+function key( point : Point ) : number
 {
-	const counts = new Map<string, number>();
-	const meetings = new Map<string, number>();
-	const wires = new Map<string, Junction>();
+	return point.x * SPAN + point.y;
+}
+
+function layout( elements : Element[] ) : number[]
+{
+	const shape : number[] = [];
 
 	for( const element of elements )
 	{
-		for( const key of new Set( ends( element ).map( point => `${ point.x },${ point.y }` ) ) ) counts.set( key, ( counts.get( key ) ?? 0 ) + 1 );
+		shape.push( element.kind, element.from.x, element.from.y, element.to.x, element.to.y, Number( element.mirrored ) );
 
-		if( element.kind !== Kind.Wire ) continue;
-
-		for( const point of [ element.from, element.to ] )
-		{
-			const key = `${ point.x },${ point.y }`;
-
-			meetings.set( key, ( meetings.get( key ) ?? 0 ) + 1 );
-			wires.set( key, { point, potential : element.potentials[ 0 ] } );
-		}
+		if( element.kind === Kind.Symbol ) for( const point of ends( element ) ) shape.push( point.x, point.y );
 	}
 
-	return [ ... wires ].filter( ( [ key ] ) => ( meetings.get( key ) ?? 0 ) >= WIRES || ( counts.get( key ) ?? 0 ) >= BRANCHES ).map( ( [ , junction ] ) => junction );
+	return shape;
+}
+
+
+export class Junctions
+{
+	private shape : number[] = [];
+
+	private found : { point : Point, wire : number }[] = [];
+
+
+	find( elements : Element[] ) : Junction[]
+	{
+		const shape = layout( elements );
+
+		if( shape.length !== this.shape.length || shape.some( ( value, index ) => value !== this.shape[ index ] ) ) { this.shape = shape; this.found = this.locate( elements ); }
+
+		return this.found.map( ( { point, wire } ) => ( { point, potential : elements[ wire ].potentials[ 0 ] } ) );
+	}
+
+	private locate( elements : Element[] ) : { point : Point, wire : number }[]
+	{
+		const counts = new Map<number, number>();
+		const meetings = new Map<number, number>();
+		const wires = new Map<number, { point : Point, wire : number }>();
+
+		elements.forEach( ( element, index ) =>
+		{
+			const keys = ends( element ).map( key );
+
+			keys.forEach( ( at, rank ) => { if( keys.indexOf( at ) === rank ) counts.set( at, ( counts.get( at ) ?? 0 ) + 1 ); } );
+
+			if( element.kind !== Kind.Wire ) return;
+
+			for( const point of [ element.from, element.to ] )
+			{
+				const at = key( point );
+
+				meetings.set( at, ( meetings.get( at ) ?? 0 ) + 1 );
+				wires.set( at, { point, wire : index } );
+			}
+		} );
+
+		return [ ... wires ].filter( ( [ at ] ) => ( meetings.get( at ) ?? 0 ) >= WIRES || ( counts.get( at ) ?? 0 ) >= BRANCHES ).map( ( [ , found ] ) => found );
+	}
 }

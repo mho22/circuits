@@ -1,55 +1,71 @@
 use std::collections::VecDeque;
 
 
-pub fn distribute( vertices : usize, edges : &[ ( usize, usize ) ], injections : &[ f64 ] ) -> Vec<f64>
+#[derive( Clone, Debug, Default, PartialEq )]
+pub struct Flow
 {
-	let mut neighbors = vec![ Vec::new(); vertices ];
+	edges : Vec<( usize, usize )>,
+	order : Vec<usize>,
+	parents : Vec<Option<( usize, usize )>>,
+}
 
-	for ( index, &( a, b ) ) in edges.iter().enumerate()
+impl Flow
+{
+	pub fn build( vertices : usize, edges : &[ ( usize, usize ) ] ) -> Flow
 	{
-		neighbors[ a ].push( ( index, b ) );
-		neighbors[ b ].push( ( index, a ) );
-	}
+		let mut neighbors = vec![ Vec::new(); vertices ];
 
-	let mut parents : Vec<Option<( usize, usize )>> = vec![ None; vertices ];
-	let mut visited = vec![ false; vertices ];
-	let mut order = Vec::with_capacity( vertices );
-
-	for root in 0 .. vertices
-	{
-		if visited[ root ] { continue; }
-
-		visited[ root ] = true;
-
-		let mut queue = VecDeque::from( [ root ] );
-
-		while let Some( vertex ) = queue.pop_front()
+		for ( index, &( a, b ) ) in edges.iter().enumerate()
 		{
-			order.push( vertex );
+			neighbors[ a ].push( ( index, b ) );
+			neighbors[ b ].push( ( index, a ) );
+		}
 
-			for &( edge, neighbor ) in &neighbors[ vertex ]
+		let mut parents : Vec<Option<( usize, usize )>> = vec![ None; vertices ];
+		let mut visited = vec![ false; vertices ];
+		let mut order = Vec::with_capacity( vertices );
+
+		for root in 0 .. vertices
+		{
+			if visited[ root ] { continue; }
+
+			visited[ root ] = true;
+
+			let mut queue = VecDeque::from( [ root ] );
+
+			while let Some( vertex ) = queue.pop_front()
 			{
-				if visited[ neighbor ] { continue; }
+				order.push( vertex );
 
-				visited[ neighbor ] = true;
-				parents[ neighbor ] = Some( ( edge, vertex ) );
+				for &( edge, neighbor ) in &neighbors[ vertex ]
+				{
+					if visited[ neighbor ] { continue; }
 
-				queue.push_back( neighbor );
+					visited[ neighbor ] = true;
+					parents[ neighbor ] = Some( ( edge, vertex ) );
+
+					queue.push_back( neighbor );
+				}
 			}
 		}
+
+		Flow { edges : edges.to_vec(), order, parents }
 	}
 
-	let mut totals = injections.to_vec();
-	let mut currents = vec![ 0.0; edges.len() ];
-
-	for &vertex in order.iter().rev()
+	pub fn distribute( &self, injections : &[ f64 ] ) -> Vec<f64>
 	{
-		let Some( ( edge, parent ) ) = parents[ vertex ] else { continue; };
+		let mut totals = injections.to_vec();
+		let mut currents = vec![ 0.0; self.edges.len() ];
 
-		currents[ edge ] = if edges[ edge ].0 == vertex { totals[ vertex ] } else { - totals[ vertex ] };
+		for &vertex in self.order.iter().rev()
+		{
+			let Some( ( edge, parent ) ) = self.parents[ vertex ] else { continue; };
 
-		totals[ parent ] += totals[ vertex ];
+			currents[ edge ] = if self.edges[ edge ].0 == vertex { totals[ vertex ] } else { - totals[ vertex ] };
+
+			totals[ parent ] += totals[ vertex ];
+		}
+
+		currents
 	}
-
-	currents
 }

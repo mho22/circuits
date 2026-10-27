@@ -40,4 +40,14 @@ describe( 'drift', () =>
 		expect( drift.advance( [ { ...foo, current : NaN } ], 1, 0.05 ) ).toEqual( [ 0 ] );
 		expect( drift.advance( [ foo ], 0, 0.05 ) ).toEqual( [ 0 ] );
 	} );
+
+	it( 'gives two paths on a same segment the distance of the last one', () =>
+	{
+		const drift = new Drift();
+
+		drift.advance( [ foo, { ...foo, current : 2 } ], 1, 0.05 );
+
+		expect( drift.advance( [ foo, foo ], 1, 0.05 ) ).toEqual( [ 12, 12 ] );
+		expect( drift.advance( [ bar, foo ], 1, 0.05 ) ).toEqual( [ -2, 16 ] );
+	} );
 } );
