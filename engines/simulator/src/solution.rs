@@ -1,11 +1,18 @@
 use crate::{ Branch, Point, Reading };
 
 
+const SETTLED : f64 = 1e-15;
+
+
 pub fn mix( from : f64, to : f64, weight : f64 ) -> f64
 {
 	if ! from.is_finite() { return to; }
 
-	from + ( to - from ) * weight
+	let next = from + ( to - from ) * weight;
+
+	if ( to - next ).abs() < SETTLED { return to; }
+
+	next
 }
 
 

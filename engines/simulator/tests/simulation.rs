@@ -601,6 +601,21 @@ fn it_splits_a_wire_under_a_shifted_part()
 }
 
 #[test]
+fn it_splits_again_the_piece_of_a_wire_that_a_first_shifted_part_left()
+{
+	let mut simulation = Simulation::new( STEP );
+
+	add( &mut simulation, Kind::Wire, ( 0, 10 ), ( 10, 10 ) );
+	add( &mut simulation, Kind::Resistor { ohms : 1000.0 }, ( 1, 0 ), ( 3, 0 ) );
+	add( &mut simulation, Kind::Resistor { ohms : 1000.0 }, ( 6, 0 ), ( 8, 0 ) );
+	simulation.shift( 0, point( 1, -1 ), point( 8, 1 ), 0, 10 ).unwrap();
+
+	let wires : Vec<Segment> = simulation.document( 0 ).unwrap().elements().iter().filter( | element | element.kind == Kind::Wire ).map( | element | element.segment ).collect();
+
+	assert_eq!( wires, vec![ segment( ( 0, 10 ), ( 1, 10 ) ), segment( ( 3, 10 ), ( 6, 10 ) ), segment( ( 8, 10 ), ( 10, 10 ) ) ] );
+}
+
+#[test]
 fn it_keeps_the_wire_to_a_terminal_that_a_moved_part_now_covers()
 {
 	let mut simulation = Simulation::new( STEP );

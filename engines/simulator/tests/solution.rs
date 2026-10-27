@@ -20,6 +20,12 @@ fn it_mixes_a_value_toward_the_next_by_a_weight_and_replaces_a_value_that_is_not
 }
 
 #[test]
+fn it_reaches_the_next_value_once_the_gap_is_below_a_femto_unit()
+{
+	assert_eq!( [ mix( 2e-12, 0.0, 0.5 ), mix( 1.5e-15, 0.0, 0.5 ), mix( 1.0, 1.0 + 1e-15, 0.5 ) ], [ 1e-12, 0.0, 1.0 + 1e-15 ] );
+}
+
+#[test]
 fn it_blends_each_reading_and_each_branch_toward_the_next_solution()
 {
 	let segment = Segment { from : Point { x : 0, y : 0 }, to : Point { x : 2, y : 0 } };

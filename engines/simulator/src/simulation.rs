@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{ HashMap, HashSet };
 
 use crate::flatten::STRIDE;
 use crate::shape::FINE;
@@ -127,27 +127,32 @@ impl Simulation
 	{
 		let document = self.document( layer ).ok_or( Error::Layerless )?;
 		let enclosure = enclose( document.elements(), low, high, | element | self.points( element ) )?;
-		let ids : Vec<u32> = enclosure.inner.iter().map( | element | element.id ).collect();
+		let ids : HashSet<u32> = enclosure.inner.iter().map( | element | element.id ).collect();
 		let others : Vec<Element> = document.elements().iter().filter( | element | ! ids.contains( &element.id ) ).copied().collect();
 		let moved : Vec<Element> = enclosure.inner.iter().map( | element | Element { segment : element.segment.shifted( dx, dy ), ..*element } ).collect();
 		let old : Vec<Point> = enclosure.inner.iter().flat_map( | element | self.terminals( element ) ).collect();
 		let new : Vec<Point> = moved.iter().flat_map( | element | self.terminals( element ) ).collect();
 		let mut operations = stretch( &others, &old, &new, Segment { from : low, to : high }.shifted( dx, dy ), | element | self.terminals( element ) );
 		let mut draft = document.clone();
-		let mut laid = Vec::new();
+		let mut laid = HashSet::new();
 
-		for operation in &operations { laid.push( draft.apply( operation.clone() )? ); }
+		for operation in &operations { laid.insert( draft.apply( operation.clone() )? ); }
+
+		let outer = | draft : &Document | -> Vec<Element> { draft.elements().iter().filter( | other | ! ids.contains( &other.id ) && ! laid.contains( &other.id ) ).copied().collect() };
+		let mut outside = outer( &draft );
 
 		for element in moved.iter().filter( | element | element.kind != Kind::Wire )
 		{
-			let outside : Vec<Element> = draft.elements().iter().filter( | other | ! ids.contains( &other.id ) && ! laid.contains( &other.id ) ).copied().collect();
 			let mut cuts = place( &outside, element.kind, element.segment );
 
 			cuts.pop();
 
+			if cuts.is_empty() { continue; }
+
 			for operation in &cuts { draft.apply( operation.clone() )?; }
 
 			operations.extend( cuts );
+			outside = outer( &draft );
 		}
 
 		operations.extend( moved.iter().map( | element | Operation::Move { id : element.id, kind : element.kind, segment : element.segment, mirrored : element.mirrored } ) );
