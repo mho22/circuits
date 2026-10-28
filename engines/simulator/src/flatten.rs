@@ -1,4 +1,5 @@
-use crate::{ driven, Device, Document, Element, Error, Kind, Model, Netlist, Outline, Point, Registry, Segment, UnionFind, FLOOR };
+use std::sync::OnceLock;
+use crate::{ Contacts, Device, Document, Element, Error, Kind, Model, Netlist, Outline, Point, Registry, Segment, UnionFind, FLOOR };
 
 
 pub const STRIDE : i32 = 1 << 16;
@@ -73,6 +74,7 @@ struct Walk<'a>
 	models : &'a [ Option<Model> ],
 	elements : Vec<Element>,
 	devices : Vec<Device>,
+	contacts : Vec<OnceLock<Contacts>>,
 	depth : usize,
 	scopes : i32,
 }
@@ -122,7 +124,7 @@ impl Walk<'_>
 
 				let Kind::Input { high } = pin.kind else { continue; };
 
-				if driven( layers, layer, element.id, end ) { continue; }
+				if self.driven( layer, element.id, end ) { continue; }
 
 				self.drive( &join, shift( pin.segment.to, scope ), high );
 			}
@@ -144,7 +146,7 @@ impl Walk<'_>
 			let join = [ key, &[ pin.id ] ].concat();
 			let hidden = Point { x : scope + index, y : 0 };
 			let segment = Segment { from : hidden, to : shift( end, offset ) };
-			let free = matches!( pin.kind, Kind::Input { .. } ) && ! driven( layers, layer, symbol.id, end );
+			let free = matches!( pin.kind, Kind::Input { .. } ) && ! self.driven( layer, symbol.id, end );
 
 			if pin.kind != Kind::Output && ! free
 			{
@@ -167,6 +169,11 @@ impl Walk<'_>
 		self.devices.push( device );
 	}
 
+	fn driven( &self, layer : usize, id : u32, point : Point ) -> bool
+	{
+		self.contacts[ layer ].get_or_init( || Contacts::of( self.layers, layer ) ).driven( id, point )
+	}
+
 	fn drive( &mut self, key : &[ u32 ], point : Point, high : bool )
 	{
 		let id = self.registry.id( &[ key, &[ 0 ] ].concat() );
@@ -182,7 +189,7 @@ pub fn flatten( layers : &[ Document ], registry : &mut Registry, models : &[ Op
 
 	for layer in 0 .. layers.len() { visit( layers, layer, &mut Vec::new(), &mut done )?; }
 
-	let mut walk = Walk { layers, registry, models, elements : Vec::new(), devices : Vec::new(), depth : path.len(), scopes : 0 };
+	let mut walk = Walk { layers, registry, models, elements : Vec::new(), devices : Vec::new(), contacts : layers.iter().map( | _ | OnceLock::new() ).collect(), depth : path.len(), scopes : 0 };
 
 	walk.expand( layer, path, 0 );
 

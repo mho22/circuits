@@ -1,4 +1,4 @@
-use simulator::{ driven, Document, Kind, Operation, Point, Segment };
+use simulator::{ Contacts, Document, Kind, Operation, Point, Segment };
 
 
 type Part = ( Kind, ( i32, i32 ), ( i32, i32 ) );
@@ -29,10 +29,10 @@ fn it_finds_a_point_driven_by_the_end_of_a_wire_but_not_by_its_middle()
 {
 	let layers = [ layer( &[ ( Kind::Wire, ( 0, 0 ), ( 4, 0 ) ), ( Kind::Resistor { ohms : 1000.0 }, ( 0, 2 ), ( 4, 2 ) ) ] ) ];
 
-	assert!( driven( &layers, 0, 9, point( 0, 0 ) ) );
-	assert!( ! driven( &layers, 0, 9, point( 2, 0 ) ) );
-	assert!( driven( &layers, 0, 9, point( 4, 2 ) ) );
-	assert!( ! driven( &layers, 0, 9, point( 2, 2 ) ) );
+	assert!( Contacts::of( &layers, 0 ).driven( 9, point( 0, 0 ) ) );
+	assert!( ! Contacts::of( &layers, 0 ).driven( 9, point( 2, 0 ) ) );
+	assert!( Contacts::of( &layers, 0 ).driven( 9, point( 4, 2 ) ) );
+	assert!( ! Contacts::of( &layers, 0 ).driven( 9, point( 2, 2 ) ) );
 }
 
 #[test]
@@ -40,7 +40,7 @@ fn it_ignores_the_part_that_asks()
 {
 	let layers = [ layer( &[ ( Kind::Wire, ( 0, 0 ), ( 4, 0 ) ) ] ) ];
 
-	assert!( ! driven( &layers, 0, 0, point( 0, 0 ) ) );
+	assert!( ! Contacts::of( &layers, 0 ).driven( 0, point( 0, 0 ) ) );
 }
 
 #[test]
@@ -48,6 +48,15 @@ fn it_finds_a_point_driven_by_the_pin_of_another_symbol()
 {
 	let layers = [ layer( &[ ( Kind::Symbol { layer : 1, rotation : 0 }, ( 10, 10 ), ( 10, 10 ) ), ( Kind::Symbol { layer : 1, rotation : 0 }, ( 14, 10 ), ( 14, 10 ) ) ] ), pair() ];
 
-	assert!( driven( &layers, 0, 0, point( 12, 10 ) ) );
-	assert!( ! driven( &layers, 0, 0, point( 8, 10 ) ) );
+	assert!( Contacts::of( &layers, 0 ).driven( 0, point( 12, 10 ) ) );
+	assert!( ! Contacts::of( &layers, 0 ).driven( 0, point( 8, 10 ) ) );
+}
+
+#[test]
+fn it_finds_a_point_driven_by_another_part_that_ends_where_the_asking_part_ends()
+{
+	let layers = [ layer( &[ ( Kind::Wire, ( 0, 0 ), ( 4, 0 ) ), ( Kind::Wire, ( 4, 0 ), ( 8, 0 ) ) ] ) ];
+
+	assert!( Contacts::of( &layers, 0 ).driven( 0, point( 4, 0 ) ) );
+	assert!( ! Contacts::of( &layers, 0 ).driven( 0, point( 0, 0 ) ) );
 }
