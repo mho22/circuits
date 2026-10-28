@@ -715,6 +715,7 @@ impl Simulation
 
 		self.view( &solution, &mut shown );
 		self.solution = Ok( shown );
+		self.logic.spare = solution;
 	}
 
 	fn glow( &self, solution : &Solution ) -> Vec<f64>

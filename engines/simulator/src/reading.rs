@@ -1,4 +1,4 @@
-#[derive( Clone, Debug, PartialEq )]
+#[derive( Clone, Debug, Default, PartialEq )]
 pub struct Reading
 {
 	pub potentials : Vec<f64>,

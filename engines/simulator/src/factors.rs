@@ -1,4 +1,5 @@
 use std::cmp::Ordering;
+use std::sync::Arc;
 
 use crate::Error;
 
@@ -22,6 +23,26 @@ struct Cell
 
 
 #[derive( Debug )]
+struct Step
+{
+	column : usize,
+	pivot : usize,
+	candidates : Vec<( usize, usize, usize, bool )>,
+	tail : Vec<( usize, usize )>,
+	targets : Vec<( usize, usize, Vec<usize> )>,
+}
+
+
+#[derive( Debug )]
+struct Elimination
+{
+	cells : Vec<usize>,
+	count : usize,
+	steps : Vec<Step>,
+}
+
+
+#[derive( Debug )]
 pub struct Factors
 {
 	size : usize,
@@ -29,6 +50,7 @@ pub struct Factors
 	lower : Vec<( usize, usize, f64 )>,
 	pivots : Vec<( usize, usize, f64, usize )>,
 	upper : Vec<( usize, f64 )>,
+	elimination : Arc<Elimination>,
 }
 
 impl Factors
@@ -47,6 +69,7 @@ impl Factors
 
 		let mut sorted = vec![ 0; entries.len() ];
 		let mut slots = vec![ NONE; entries.len() ];
+		let mut owners = vec![ ( 0, 0 ); entries.len() ];
 		let mut next = starts.clone();
 
 		for ( index, &( row, _, _ ) ) in entries.iter().enumerate()
@@ -70,6 +93,7 @@ impl Factors
 
 				cells[ places[ column ] ].value += value;
 				cells[ places[ column ] ].magnitude += value.abs();
+				owners[ index ] = ( row, places[ column ] );
 			}
 
 			for cell in cells.iter() { places[ cell.column ] = NONE; }
@@ -85,13 +109,16 @@ impl Factors
 		let mut lower = Vec::new();
 		let mut pivots = Vec::with_capacity( size );
 		let mut upper = Vec::new();
+		let mut steps = Vec::with_capacity( size );
 
 		for ( rank, &column ) in order.iter().enumerate() { ranks[ column ] = rank; }
 
 		for ( rank, &column ) in order.iter().enumerate()
 		{
-			let candidates = std::mem::take( &mut columns[ column ] );
-			let ( noise, active ) : ( Vec<_>, Vec<_> ) = candidates.into_iter().filter( | &( row, _ ) | ! done[ row ] ).partition( | &( row, slot ) | rows[ row ][ slot ].value.abs() <= rows[ row ][ slot ].magnitude * TOLERANCE );
+			let live : Vec<( usize, usize )> = std::mem::take( &mut columns[ column ] ).into_iter().filter( | &( row, _ ) | ! done[ row ] ).collect();
+			let quiet = | &( row, slot ) : &( usize, usize ) | rows[ row ][ slot ].value.abs() <= rows[ row ][ slot ].magnitude * TOLERANCE;
+			let candidates = live.iter().map( | &( row, slot ) | ( row, slot, rows[ row ].len(), ! quiet( &( row, slot ) ) ) ).collect();
+			let ( noise, active ) : ( Vec<_>, Vec<_> ) = live.into_iter().partition( quiet );
 			let largest = active.iter().map( | &( row, slot ) | rows[ row ][ slot ].value.abs() ).max_by( f64::total_cmp ).unwrap_or( 0.0 );
 			let ( pivot, head ) = active.iter().copied().filter( | &( row, slot ) | rows[ row ][ slot ].value.abs().partial_cmp( &( RATIO * largest ) ) != Some( Ordering::Less ) ).min_by_key( | &( row, _ ) | rows[ row ].len() ).ok_or( Error::Singular )?;
 			let divisor = rows[ pivot ][ head ].value;
@@ -102,6 +129,8 @@ impl Factors
 			pivots.push( ( pivot, column, divisor, upper.len() ) );
 
 			let tail : Vec<( usize, f64 )> = rows[ pivot ].iter().filter( | cell | ranks[ cell.column ] > rank ).map( | cell | ( cell.column, cell.value ) ).collect();
+			let places_of_tail = rows[ pivot ].iter().enumerate().filter( | ( _, cell ) | ranks[ cell.column ] > rank ).map( | ( place, cell ) | ( cell.column, place ) ).collect();
+			let mut targets = Vec::with_capacity( active.len() );
 
 			upper.extend_from_slice( &tail );
 
@@ -117,6 +146,7 @@ impl Factors
 
 				let scattered = index.is_empty();
 				let lookup = if scattered { for ( place, cell ) in cells.iter().enumerate() { places[ cell.column ] = place; } &mut places } else { index };
+				let mut reached = Vec::with_capacity( tail.len() );
 
 				for &( other, value ) in &tail
 				{
@@ -132,15 +162,97 @@ impl Factors
 
 					cell.value -= change;
 					cell.magnitude = cell.magnitude.max( change.abs() );
+					reached.push( lookup[ other ] );
 				}
 
 				if scattered { for cell in cells.iter() { lookup[ cell.column ] = NONE; } }
 
 				lower.push( ( row, pivot, factor ) );
+				targets.push( ( row, slot, reached ) );
+			}
+
+			steps.push( Step { column, pivot, candidates, tail : places_of_tail, targets } );
+		}
+
+		let mut offsets = vec![ 0; size + 1 ];
+
+		for ( row, cells ) in rows.iter().enumerate() { offsets[ row + 1 ] = offsets[ row ] + cells.len(); }
+
+		for step in &mut steps
+		{
+			for candidate in &mut step.candidates { candidate.1 += offsets[ candidate.0 ]; }
+
+			for place in &mut step.tail { place.1 += offsets[ step.pivot ]; }
+
+			for ( row, slot, reached ) in &mut step.targets
+			{
+				*slot += offsets[ *row ];
+
+				for place in reached.iter_mut() { *place += offsets[ *row ]; }
 			}
 		}
 
-		Ok( Factors { size, entries : entries.to_vec(), lower, pivots, upper } )
+		let cells = owners.iter().map( | &( row, place ) | offsets[ row ] + place ).collect();
+		let elimination = Arc::new( Elimination { cells, count : offsets[ size ], steps } );
+
+		Ok( Factors { size, entries : entries.to_vec(), lower, pivots, upper, elimination } )
+	}
+
+	pub fn replay( &self, entries : &[ ( usize, usize, f64 ) ] ) -> Option<Factors>
+	{
+		let same = | ( &( row, column, _ ), &( other_row, other_column, _ ) ) : ( &( usize, usize, f64 ), &( usize, usize, f64 ) ) | row == other_row && column == other_column;
+
+		if self.entries.len() != entries.len() || ! self.entries.iter().zip( entries ).all( same ) { return None; }
+
+		let elimination = &self.elimination;
+		let mut values = vec![ 0.0; elimination.count ];
+		let mut magnitudes = vec![ 0.0; elimination.count ];
+		let mut lower = Vec::with_capacity( self.lower.len() );
+		let mut pivots = Vec::with_capacity( self.pivots.len() );
+		let mut upper = Vec::with_capacity( self.upper.len() );
+
+		for ( &( _, _, value ), &cell ) in entries.iter().zip( &elimination.cells )
+		{
+			values[ cell ] += value;
+			magnitudes[ cell ] += value.abs();
+		}
+
+		for step in &elimination.steps
+		{
+			if step.candidates.iter().any( | &( _, slot, _, active ) | ( values[ slot ].abs() <= magnitudes[ slot ] * TOLERANCE ) == active ) { return None; }
+
+			let largest = step.candidates.iter().filter( | candidate | candidate.3 ).map( | candidate | values[ candidate.1 ].abs() ).max_by( f64::total_cmp ).unwrap_or( 0.0 );
+			let chosen = step.candidates.iter().filter( | candidate | candidate.3 && values[ candidate.1 ].abs().partial_cmp( &( RATIO * largest ) ) != Some( Ordering::Less ) ).min_by_key( | candidate | candidate.2 )?;
+
+			if chosen.0 != step.pivot { return None; }
+
+			let divisor = values[ chosen.1 ];
+			let start = upper.len();
+
+			for candidate in step.candidates.iter().filter( | candidate | ! candidate.3 ) { values[ candidate.1 ] = 0.0; }
+
+			pivots.push( ( step.pivot, step.column, divisor, start ) );
+			upper.extend( step.tail.iter().map( | &( column, slot ) | ( column, values[ slot ] ) ) );
+
+			for ( row, slot, reached ) in &step.targets
+			{
+				let factor = values[ *slot ] / divisor;
+
+				values[ *slot ] = 0.0;
+
+				for ( &( _, value ), &target ) in upper[ start .. ].iter().zip( reached )
+				{
+					let change = factor * value;
+
+					values[ target ] -= change;
+					magnitudes[ target ] = magnitudes[ target ].max( change.abs() );
+				}
+
+				lower.push( ( *row, step.pivot, factor ) );
+			}
+		}
+
+		Some( Factors { size : self.size, entries : entries.to_vec(), lower, pivots, upper, elimination : Arc::clone( elimination ) } )
 	}
 
 	pub fn solve( &self, mut rhs : Vec<f64> ) -> Vec<f64>

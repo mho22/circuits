@@ -8,10 +8,10 @@ const RELATIVE : f64 = 1e-5;
 
 pub fn solve( elements : &[ Element ], history : &History, step : f64 ) -> Result<Solution, Error>
 {
-	compute( elements, &Topology::build( elements ), history, step )
+	compute( elements, &Topology::build( elements ), history, step, Solution::default() )
 }
 
-pub fn compute( elements : &[ Element ], topology : &Topology, history : &History, step : f64 ) -> Result<Solution, Error>
+pub fn compute( elements : &[ Element ], topology : &Topology, history : &History, step : f64, spare : Solution ) -> Result<Solution, Error>
 {
 	let Topology { netlist, terminals, unknowns, nodes, batteries, taps, joints, flow, order, factorizations } = topology;
 	let nodes = *nodes;
@@ -21,6 +21,7 @@ pub fn compute( elements : &[ Element ], topology : &Topology, history : &Histor
 	{
 		let mut entries = Vec::with_capacity( elements.len() * 4 );
 		let mut rhs = vec![ 0.0; size ];
+		let mut parts = Vec::with_capacity( 3 );
 
 		let mut stamp = | row : Option<usize>, column : Option<usize>, value : f64 |
 		{
@@ -31,7 +32,10 @@ pub fn compute( elements : &[ Element ], topology : &Topology, history : &Histor
 		{
 			let nets = &terminals[ index ];
 
-			for part in companion( element, history, step, guesses[ index ] )
+			parts.clear();
+			companion( element, history, step, guesses[ index ], &mut parts );
+
+			for part in &parts
 			{
 				let p = unknowns[ nets[ part.across.0 ] ];
 				let q = unknowns[ nets[ part.across.1 ] ];
@@ -105,26 +109,34 @@ pub fn compute( elements : &[ Element ], topology : &Topology, history : &Histor
 
 	let voltage = | net : usize | unknowns[ net ].map_or( 0.0, | unknown | solution[ unknown ] );
 
-	let mut readings : Vec<Reading> = elements.iter().enumerate().map( | ( index, element ) |
-	{
-		let potentials : Vec<f64> = terminals[ index ].iter().map( | &net | voltage( net ) ).collect();
-		let parts = companion( element, history, step, guesses[ index ] );
+	let Solution { mut readings, mut branches } = spare;
 
-		let currents = match element.kind
+	readings.resize_with( elements.len(), Reading::default );
+
+	let mut parts = Vec::with_capacity( 3 );
+
+	for ( index, ( element, Reading { potentials, currents } ) ) in elements.iter().zip( &mut readings ).enumerate()
+	{
+		parts.clear();
+		companion( element, history, step, guesses[ index ], &mut parts );
+
+		potentials.clear();
+		potentials.extend( terminals[ index ].iter().map( | &net | voltage( net ) ) );
+		currents.clear();
+
+		match element.kind
 		{
-			_ if ! parts.is_empty() => ( 0 .. potentials.len() ).map( | terminal | parts.iter().map( | part | part.weights[ terminal ] * part.current( &potentials ) ).sum() ).collect(),
+			_ if ! parts.is_empty() => currents.extend( ( 0 .. potentials.len() ).map( | terminal | parts.iter().map( | part | part.weights[ terminal ] * part.current( potentials ) ).sum::<f64>() ) ),
 			Kind::Battery { .. } | Kind::Supply { .. } =>
 			{
 				let current = solution[ nodes + batteries.binary_search( &index ).unwrap() ];
 
-				vec![ current, - current ]
+				currents.extend( [ current, - current ] );
 			},
-			Kind::Switch { .. } => vec![ 0.0, 0.0 ],
-			_ => vec![ f64::NAN, f64::NAN ],
-		};
-
-		Reading { potentials, currents }
-	} ).collect();
+			Kind::Switch { .. } => currents.extend( [ 0.0, 0.0 ] ),
+			_ => currents.extend( [ f64::NAN, f64::NAN ] ),
+		}
+	}
 
 	let mut injections = vec![ 0.0; netlist.points.len() + 1 ];
 
@@ -139,15 +151,17 @@ pub fn compute( elements : &[ Element ], topology : &Topology, history : &Histor
 	{
 		let current = currents[ netlist.edges.len() + offset ];
 
-		readings[ index ].currents = vec![ current, - current ];
+		readings[ index ].currents.clear();
+		readings[ index ].currents.extend( [ current, - current ] );
 	}
 
-	let branches = netlist.edges.iter().zip( &currents ).map( | ( &( a, b ), &current ) | Branch
+	branches.clear();
+	branches.extend( netlist.edges.iter().zip( &currents ).map( | ( &( a, b ), &current ) | Branch
 	{
 		segment : Segment { from : netlist.points[ a ], to : netlist.points[ b ] },
 		voltage : voltage( netlist.nets[ a ] ),
 		current,
-	} ).collect();
+	} ) );
 
 	Ok( Solution { readings, branches } )
 }

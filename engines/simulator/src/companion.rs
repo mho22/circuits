@@ -11,7 +11,7 @@ const GATE : [ f64; 3 ] = [ 1.0, 0.0, -1.0 ];
 const DRAIN : [ f64; 3 ] = [ 0.0, 1.0, -1.0 ];
 
 
-pub fn companion( element : &Element, history : &History, step : f64, guesses : [ f64; 2 ] ) -> Vec<Stamp>
+pub fn companion( element : &Element, history : &History, step : f64, guesses : [ f64; 2 ], stamps : &mut Vec<Stamp> )
 {
 	let [ stored, _ ] = history.get( element.id );
 
@@ -31,7 +31,7 @@ pub fn companion( element : &Element, history : &History, step : f64, guesses : 
 		let ( current, transconductance, output ) = conduct( gate, drain );
 		let weights = DRAIN.map( | weight | sign * weight );
 
-		vec![
+		[
 			Stamp { across : control, conductance : transconductance, source : 0.0, weights },
 			Stamp { across : path, conductance : output + LEAKAGE, source : transconductance * gate + output * drain - current, weights },
 			Stamp { across : control, conductance : LEAKAGE, source : 0.0, weights : GATE.map( | weight | sign * weight ) },
@@ -40,14 +40,14 @@ pub fn companion( element : &Element, history : &History, step : f64, guesses : 
 
 	match element.kind
 	{
-		Kind::Resistor { ohms } => vec![ through( 1.0 / ohms, 0.0 ) ],
-		Kind::Capacitor { farads } => vec![ through( farads / step, farads / step * stored ) ],
-		Kind::Inductor { henries } => vec![ through( step / henries, - stored ) ],
-		Kind::Diode | Kind::Led { .. } => vec![ junction( 0, THROUGH ) ],
-		Kind::Npn => vec![ junction( 0, FORWARD ), junction( 1, REVERSE ) ],
-		Kind::Pnp => vec![ junction( 0, FORWARD.map( | weight | - weight ) ), junction( 1, REVERSE.map( | weight | - weight ) ) ],
-		Kind::Nmos => channel( 1.0 ),
-		Kind::Pmos => channel( -1.0 ),
-		_ => vec![],
+		Kind::Resistor { ohms } => stamps.extend( [ through( 1.0 / ohms, 0.0 ) ] ),
+		Kind::Capacitor { farads } => stamps.extend( [ through( farads / step, farads / step * stored ) ] ),
+		Kind::Inductor { henries } => stamps.extend( [ through( step / henries, - stored ) ] ),
+		Kind::Diode | Kind::Led { .. } => stamps.extend( [ junction( 0, THROUGH ) ] ),
+		Kind::Npn => stamps.extend( [ junction( 0, FORWARD ), junction( 1, REVERSE ) ] ),
+		Kind::Pnp => stamps.extend( [ junction( 0, FORWARD.map( | weight | - weight ) ), junction( 1, REVERSE.map( | weight | - weight ) ) ] ),
+		Kind::Nmos => stamps.extend( channel( 1.0 ) ),
+		Kind::Pmos => stamps.extend( channel( -1.0 ) ),
+		_ => (),
 	}
 }

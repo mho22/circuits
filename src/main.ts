@@ -78,7 +78,7 @@ import { STRIDES, View } from './view.ts';
 await init();
 
 
-const STEP_BUDGET = 8;
+const STEP_BUDGET = 10;
 const LOAD_BUDGET = 12;
 const LOAD_DELAY = 150;
 const LOAD_DOTS = 16;

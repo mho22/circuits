@@ -1,4 +1,4 @@
-use simulator::{ advance, flatten, idle, settle, Catalog, Device, Document, Drive, Element, Error, History, Kind, Logic, Model, Operation, Plan, Point, Registry, Segment, Solution };
+use simulator::{ advance, flatten, idle, settle, Catalog, Device, Document, Drive, Element, Error, History, Kind, Logic, Model, Operation, Plan, Point, Reading, Registry, Segment, Solution };
 
 
 const STEP : f64 = 1e-6;
@@ -300,6 +300,25 @@ fn it_drives_an_analog_load_with_the_level_of_a_clock()
 
 	assert!( low.abs() < 1e-9 );
 	assert!( ( high.abs() - 5e-3 ).abs() < 1e-9 );
+}
+
+#[test]
+fn it_advances_the_same_with_the_buffers_of_any_spare_solution()
+{
+	let mut circuit = circuit( &[ ( Kind::Clock { hertz : 1.0 }, ( 0, -2 ), ( 0, 0 ) ), ( Kind::Resistor { ohms : 1000.0 }, ( 0, 0 ), ( 0, 4 ) ), ( Kind::Ground, ( 0, 4 ), ( 0, 4 ) ) ] );
+	let settled = circuit.settle().unwrap();
+	let mut reused = circuit.logic.clone();
+	let bits = | solution : &Solution | solution.readings.iter().map( | reading | reading.potentials.iter().chain( &reading.currents ).map( | value | value.to_bits() ).collect() ).collect::<Vec<Vec<u64>>>();
+
+	reused.spare = Solution { readings : vec![ Reading { potentials : vec![ 9.0; 5 ], currents : Vec::new() }; 9 ], branches : settled.branches.repeat( 3 ) };
+
+	let fresh = circuit.advance( 0.75 ).unwrap();
+
+	circuit.logic = reused;
+
+	let refilled = circuit.advance( 0.75 ).unwrap();
+
+	assert_eq!( ( bits( &refilled ), &refilled.branches ), ( bits( &fresh ), &fresh.branches ) );
 }
 
 #[test]

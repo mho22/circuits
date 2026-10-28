@@ -28,7 +28,11 @@ impl Factorizations
 			return Ok( solution );
 		}
 
-		let factors = Factors::new( size, entries, order )?;
+		let factors = match kept.iter().find_map( | factors | factors.replay( entries ) )
+		{
+			Some( factors ) => factors,
+			None => Factors::new( size, entries, order )?,
+		};
 		let solution = factors.solve( rhs );
 
 		kept.insert( 0, factors );

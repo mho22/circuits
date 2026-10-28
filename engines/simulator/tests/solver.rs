@@ -77,11 +77,24 @@ fn it_solves_with_a_topology_built_before_the_values_changed()
 
 	elements[ 0 ].kind = Kind::Battery { volts : 9.0 };
 
-	let computed = compute( &elements, &topology, &History::default(), STEP ).unwrap();
+	let computed = compute( &elements, &topology, &History::default(), STEP, Solution::default() ).unwrap();
 	let solved = solve( &elements, &History::default(), STEP ).unwrap();
 
 	assert_eq!( ( &computed.readings[ 0 ], &computed.readings[ 4 ], &computed.branches ), ( &solved.readings[ 0 ], &solved.readings[ 4 ], &solved.branches ) );
 	assert!( near( computed.readings[ 4 ].currents[ 0 ], 0.0045 ) );
+}
+
+#[test]
+fn it_fills_a_spare_solution_with_the_readings_of_another_circuit()
+{
+	let elements = loop_with( &[ element( Kind::Resistor { ohms : 1000.0 }, ( 4, 0 ), ( 4, 4 ) ) ] );
+	let spare = solve( &parallel(), &History::default(), STEP ).unwrap();
+	let computed = compute( &elements, &Topology::build( &elements ), &History::default(), STEP, spare ).unwrap();
+	let solved = solve( &elements, &History::default(), STEP ).unwrap();
+
+	assert_eq!( computed.readings.len(), solved.readings.len() );
+	assert_eq!( ( &computed.readings[ 0 ], &computed.readings[ 3 ], &computed.readings[ 4 ], &computed.branches ), ( &solved.readings[ 0 ], &solved.readings[ 3 ], &solved.readings[ 4 ], &solved.branches ) );
+	assert_eq!( computed.readings[ 1 ].potentials, solved.readings[ 1 ].potentials );
 }
 
 #[test]

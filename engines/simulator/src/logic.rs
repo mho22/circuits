@@ -1,7 +1,7 @@
 use std::cmp::Reverse;
 use std::collections::{ BinaryHeap, HashMap, VecDeque };
 
-use crate::{ Action, Event };
+use crate::{ Action, Event, Solution };
 
 
 #[derive( Clone, Debug, Default )]
@@ -18,6 +18,7 @@ pub struct Logic
 	pub since : Vec<Option<f64>>,
 	pub queued : Vec<VecDeque<( u64, usize )>>,
 	pub memory : HashMap<u32, ( usize, usize )>,
+	pub spare : Solution,
 	queue : BinaryHeap<Reverse<Event>>,
 	sequence : u64,
 }

@@ -121,3 +121,38 @@ fn it_is_near_a_matrix_whose_entries_differ_by_a_millionth()
 	assert!( ! factors.near( &[ ( 0, 0, 1.00001 ) ] ) );
 	assert!( ! factors.near( &[ ( 0, 0, 1.0 ), ( 0, 0, 0.0 ) ] ) );
 }
+
+#[test]
+fn it_replays_the_factors_of_a_matrix_of_a_same_shape()
+{
+	let factors = Factors::new( 3, &[ ( 0, 0, 4.0 ), ( 0, 1, 1.0 ), ( 1, 0, 1.0 ), ( 1, 1, 3.0 ), ( 1, 2, 1.0 ), ( 2, 1, 1.0 ), ( 2, 2, 2.0 ) ], &[ 0, 1, 2 ] ).unwrap();
+	let entries = [ ( 0, 0, 7.0 ), ( 0, 1, 2.0 ), ( 1, 0, 1.5 ), ( 1, 1, 5.0 ), ( 1, 2, 0.5 ), ( 2, 1, 3.0 ), ( 2, 2, 9.0 ) ];
+	let rhs = vec![ 0.1, 0.2, 0.3 ];
+
+	assert_eq!( factors.replay( &entries ).map( | factors | factors.solve( rhs.clone() ) ), Some( Factors::new( 3, &entries, &[ 0, 1, 2 ] ).unwrap().solve( rhs ) ) );
+}
+
+#[test]
+fn it_does_not_replay_the_factors_of_a_matrix_of_another_shape()
+{
+	let factors = Factors::new( 2, &[ ( 0, 0, 2.0 ), ( 1, 1, 3.0 ) ], &[ 0, 1 ] ).unwrap();
+
+	assert!( factors.replay( &[ ( 0, 0, 2.0 ), ( 0, 1, 3.0 ) ] ).is_none() );
+	assert!( factors.replay( &[ ( 0, 0, 2.0 ), ( 1, 1, 3.0 ), ( 1, 0, 1.0 ) ] ).is_none() );
+}
+
+#[test]
+fn it_does_not_replay_the_factors_when_the_pivot_changes()
+{
+	let factors = Factors::new( 2, &[ ( 0, 0, 2.0 ), ( 0, 1, 1.0 ), ( 1, 0, 1.0 ), ( 1, 1, 3.0 ) ], &[ 0, 1 ] ).unwrap();
+
+	assert!( factors.replay( &[ ( 0, 0, 0.01 ), ( 0, 1, 1.0 ), ( 1, 0, 1.0 ), ( 1, 1, 3.0 ) ] ).is_none() );
+}
+
+#[test]
+fn it_does_not_replay_the_factors_when_a_cell_stops_being_a_rounding_error()
+{
+	let factors = Factors::new( 2, &[ ( 0, 0, 1.0 ), ( 0, 0, -1.0 ), ( 0, 1, 1.0 ), ( 1, 0, 1.0 ) ], &[ 0, 1 ] ).unwrap();
+
+	assert!( factors.replay( &[ ( 0, 0, 1.0 ), ( 0, 0, -0.5 ), ( 0, 1, 1.0 ), ( 1, 0, 1.0 ) ] ).is_none() );
+}

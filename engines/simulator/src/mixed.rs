@@ -109,7 +109,7 @@ impl<'a> Run<'a>
 			self.logic.schedule( ( edges + 1 ) as f64 / ( 2.0 * hertz ), Action::Edge { clock, count : edges + 1 } );
 		}
 
-		self.solve( history, step, time )?;
+		self.solve( history, step, time, Solution::default() )?;
 
 		for device in 0 .. size { self.evaluate( device, time ); }
 
@@ -238,7 +238,7 @@ impl<'a> Run<'a>
 		self.logic.schedule( ( count + 1 ) as f64 / ( 2.0 * hertz ), Action::Edge { clock, count : count + 1 } );
 	}
 
-	fn solve( &mut self, history : &History, step : f64, time : f64 ) -> Result<Solution, Error>
+	fn solve( &mut self, history : &History, step : f64, time : f64, spare : Solution ) -> Result<Solution, Error>
 	{
 		let plan = self.plan;
 
@@ -262,7 +262,7 @@ impl<'a> Run<'a>
 			self.analog[ position ].kind = Kind::Supply { volts : emit( self.elements[ index ].kind, time ) };
 		}
 
-		let solution = compute( &self.analog, &plan.topology, history, step )?;
+		let solution = compute( &self.analog, &plan.topology, history, step, spare )?;
 
 		for ( index, sources ) in plan.inputs.iter().enumerate()
 		{
@@ -283,28 +283,35 @@ impl<'a> Run<'a>
 		Ok( solution )
 	}
 
-	fn assemble( &self, solution : Solution ) -> Solution
+	fn assemble( &self, solution : Solution, mut readings : Vec<Reading> ) -> Solution
 	{
-		let mut analog : Vec<Option<Reading>> = solution.readings.into_iter().map( Some ).collect();
-		let mut readings : Vec<Option<Reading>> = self.positions.iter().map( | position | position.and_then( | position | analog[ position ].take() ) ).collect();
 		let mut branches = solution.branches;
+
+		readings.resize_with( self.elements.len(), Reading::default );
+
+		for ( reading, &index ) in solution.readings.into_iter().zip( &self.plan.analog ) { readings[ index ] = reading; }
 
 		for ( net, &volts ) in self.plan.nets.iter().zip( &self.logic.levels )
 		{
 			for &index in &net.elements
 			{
-				readings[ index ] = Some( match self.elements[ index ].kind
+				let Reading { potentials, currents } = &mut readings[ index ];
+
+				potentials.clear();
+				currents.clear();
+
+				match self.elements[ index ].kind
 				{
-					Kind::Wire | Kind::Output => Reading { potentials : vec![ volts; 2 ], currents : vec![ f64::NAN; 2 ] },
-					Kind::Supply { .. } | Kind::Clock { .. } | Kind::Toggle { .. } | Kind::Slider { .. } => Reading { potentials : vec![ 0.0, volts ], currents : vec![ 0.0; 2 ] },
-					_ => Reading { potentials : vec![ volts; 2 ], currents : vec![ 0.0; 2 ] },
-				} );
+					Kind::Wire | Kind::Output => { potentials.extend( [ volts; 2 ] ); currents.extend( [ f64::NAN; 2 ] ); },
+					Kind::Supply { .. } | Kind::Clock { .. } | Kind::Toggle { .. } | Kind::Slider { .. } => { potentials.extend( [ 0.0, volts ] ); currents.extend( [ 0.0; 2 ] ); },
+					_ => { potentials.extend( [ volts; 2 ] ); currents.extend( [ 0.0; 2 ] ); },
+				}
 			}
 
 			branches.extend( net.pieces.iter().map( | &segment | Branch { segment, voltage : volts, current : 0.0 } ) );
 		}
 
-		Solution { readings : readings.into_iter().flatten().collect(), branches }
+		Solution { readings, branches }
 	}
 }
 
@@ -314,6 +321,7 @@ pub fn settle( elements : &[ Element ], devices : &[ Device ], plan : &Plan, mod
 	let time = logic.time;
 	let mut run = Run::new( elements, devices, plan, models, logic, true )?;
 	let mut round = 0;
+	let mut spare = Solution::default();
 
 	run.start( history, step )?;
 
@@ -323,10 +331,11 @@ pub fn settle( elements : &[ Element ], devices : &[ Device ], plan : &Plan, mod
 
 		run.drain( time )?;
 
-		let solution = run.solve( history, step, time )?;
+		let solution = run.solve( history, step, time, spare )?;
 
-		if ! run.logic.pending( time ) { return Ok( run.assemble( solution ) ); }
+		if ! run.logic.pending( time ) { return Ok( run.assemble( solution, Vec::new() ) ); }
 
+		spare = solution;
 		round += 1;
 	}
 }
@@ -334,15 +343,17 @@ pub fn settle( elements : &[ Element ], devices : &[ Device ], plan : &Plan, mod
 pub fn advance( elements : &[ Element ], devices : &[ Device ], plan : &Plan, models : &[ Option<Model> ], history : &History, step : f64, logic : &mut Logic ) -> Result<Solution, Error>
 {
 	let time = logic.time + step;
+	let Solution { mut readings, branches } = std::mem::take( &mut logic.spare );
 	let mut run = Run::new( elements, devices, plan, models, logic, false )?;
 
 	run.drain( time )?;
 
-	let solution = run.solve( history, step, time )?;
+	let analog = plan.analog.iter().map( | &index | readings.get_mut( index ).map( std::mem::take ).unwrap_or_default() ).collect();
+	let solution = run.solve( history, step, time, Solution { readings : analog, branches } )?;
 
 	run.logic.time = time;
 
-	Ok( run.assemble( solution ) )
+	Ok( run.assemble( solution, readings ) )
 }
 
 pub fn idle( elements : &[ Element ], plan : &Plan, step : f64, logic : &Logic ) -> bool
