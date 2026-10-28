@@ -104,11 +104,54 @@ fn it_lists_each_part_with_its_reading()
 #[wasm_bindgen_test]
 fn it_lists_each_piece_of_wire_with_its_reading()
 {
-	let branches = powered().branches();
+	let branches = powered().branches( -9, -9, 9, 9 );
 
 	assert_eq!( branches.len(), 12 );
 	assert_eq!( &branches[ 0 .. 5 ], &[ 2.0, 0.0, 2.0, 2.0, 0.0 ] );
 	assert!( ( branches[ 5 ].abs() - 0.005 ).abs() < 1e-12 );
+}
+
+#[wasm_bindgen_test]
+fn it_lists_only_the_pieces_of_wire_that_touch_an_area()
+{
+	let circuit = powered();
+
+	assert_eq!( circuit.branches( 0, 2, 1, 3 ), circuit.branches( -9, -9, 9, 9 )[ 6 .. 12 ] );
+	assert_eq!( circuit.branches( 2, 2, 2, 2 ).len(), 12 );
+	assert!( circuit.branches( 3, 0, 9, 9 ).is_empty() );
+}
+
+#[wasm_bindgen_test]
+fn it_reads_the_count_and_the_values_of_the_parts_at_a_list_of_indexes_and_skips_a_missing_index()
+{
+	let circuit = powered();
+	let elements = circuit.elements();
+
+	assert_eq!( circuit.readings( &[ 1, 9, 0 ] ), [ &elements[ 21 .. 26 ], &elements[ 8 .. 13 ] ].concat() );
+}
+
+#[wasm_bindgen_test]
+fn it_gives_the_peak_voltage_and_the_peak_current()
+{
+	let scale = powered().scale();
+
+	assert!( ( scale[ 0 ] - 5.0 ).abs() < 1e-12 );
+	assert!( ( scale[ 1 ] - 0.005 ).abs() < 1e-12 );
+}
+
+#[wasm_bindgen_test]
+fn it_counts_a_new_revision_after_a_change_of_the_parts_only()
+{
+	let mut circuit = powered();
+	let revision = circuit.revision();
+
+	circuit.advance( 10 );
+
+	assert_eq!( circuit.revision(), revision );
+
+	circuit.add( 0, 0.0, 2, 0, 4, 0 ).ok();
+
+	assert_ne!( circuit.revision(), revision );
 }
 
 #[wasm_bindgen_test]
@@ -117,8 +160,8 @@ fn it_finds_parts_and_branches_at_a_point()
 	let circuit = powered();
 
 	assert_eq!( circuit.elements_at( 1, 0 ), vec![ 1 ] );
-	assert_eq!( circuit.branch_at( 1, 2 ), Some( 1 ) );
-	assert_eq!( circuit.branch_at( 9, 9 ), None );
+	assert_eq!( circuit.branch_at( 1, 2 ), circuit.branches( -9, -9, 9, 9 )[ 6 .. 12 ] );
+	assert!( circuit.branch_at( 9, 9 ).is_empty() );
 }
 
 #[wasm_bindgen_test]
@@ -192,9 +235,11 @@ fn it_reports_a_circuit_without_solution()
 	circuit.add( 0, 0.0, 0, 0, 0, 2 ).ok();
 
 	assert!( circuit.error().unwrap().starts_with( "The circuit has no single solution" ) );
-	assert!( circuit.branches().is_empty() );
-	assert_eq!( circuit.branch_at( 0, 1 ), None );
+	assert!( circuit.branches( -9, -9, 9, 9 ).is_empty() );
+	assert!( circuit.branch_at( 0, 1 ).is_empty() );
+	assert_eq!( circuit.scale(), [ 0.0, 0.0 ] );
 	assert!( circuit.elements()[ 11 ].is_nan() );
+	assert!( circuit.readings( &[ 0 ] )[ 4 ].is_nan() );
 }
 
 #[wasm_bindgen_test]
@@ -580,8 +625,8 @@ fn it_enters_a_symbol_and_reads_the_parts_of_its_layer()
 	assert_eq!( elements.len(), 39 );
 	assert_eq!( &elements[ 14 .. 22 ], &[ 1.0, 2.0, 0.0, 6.0, 0.0, 1000.0, 0.0, 2.0 ] );
 	assert!( elements[ 24 ].abs() < 1e-12 );
-	assert!( circuit.branches().is_empty() );
-	assert_eq!( circuit.branch_at( 3, 0 ), None );
+	assert!( circuit.branches( -9, -9, 9, 9 ).is_empty() );
+	assert!( circuit.branch_at( 3, 0 ).is_empty() );
 	assert_eq!( circuit.elements_at( 4, 0 ), vec![ 1 ] );
 	assert_eq!( circuit.set_value( 1, 500.0 ).ok(), Some( 1 ) );
 

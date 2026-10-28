@@ -15,6 +15,11 @@ pub fn mix( from : f64, to : f64, weight : f64 ) -> f64
 	next
 }
 
+fn largest( peak : f64, value : f64 ) -> f64
+{
+	peak.max( value.abs() )
+}
+
 
 #[derive( Clone, Debug, Default, PartialEq )]
 pub struct Solution
@@ -36,6 +41,14 @@ impl Solution
 		let branches = self.branches.len() == other.branches.len() && self.branches.iter().zip( &other.branches ).all( | ( a, b ) | a.segment == b.segment );
 
 		readings && branches
+	}
+
+	pub fn peaks( &self ) -> [ f64; 2 ]
+	{
+		let potential = self.readings.iter().flat_map( | reading | &reading.potentials ).fold( 0.0, | peak, value | largest( peak, *value ) );
+		let current = self.readings.iter().flat_map( | reading | &reading.currents ).chain( self.branches.iter().map( | branch | &branch.current ) ).fold( 0.0, | peak, value | largest( peak, *value ) );
+
+		[ potential, current ]
 	}
 
 	pub fn blend( &mut self, next : &Solution, weight : f64 )

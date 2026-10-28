@@ -61,6 +61,23 @@ fn it_solves_the_circuit_after_each_operation()
 }
 
 #[test]
+fn it_counts_a_new_revision_after_each_change_of_the_parts_only()
+{
+	let mut simulation = series( Kind::Capacitor { farads : 1e-3 } );
+	let revision = simulation.revision();
+
+	simulation.advance( 10 );
+
+	assert_eq!( simulation.revision(), revision );
+	assert!( simulation.apply( 0, Operation::Delete { id : 99 } ).is_err() );
+	assert_eq!( simulation.revision(), revision );
+
+	add( &mut simulation, Kind::Wire, ( 4, 0 ), ( 8, 0 ) );
+
+	assert_eq!( simulation.revision(), revision + 1 );
+}
+
+#[test]
 fn it_charges_a_capacitor_along_the_rc_curve()
 {
 	let mut simulation = series( Kind::Capacitor { farads : 1e-6 } );

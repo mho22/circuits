@@ -1,4 +1,4 @@
-use simulator::{ mix, Document, Element, Kind, Operation, Outline, Point, Reading, Segment, Shape, Simulation, Solution };
+use simulator::{ mix, Branch, Document, Element, Kind, Operation, Outline, Point, Reading, Segment, Shape, Simulation, Solution };
 use wasm_bindgen::prelude::*;
 
 
@@ -7,6 +7,7 @@ const SPEED : f64 = 1e-2;
 const REAL : f64 = 1.0;
 const EYE : f64 = 1.0 / 125.0;
 const ROW : usize = 13;
+const LEAK : f64 = 1e-6;
 
 
 fn points( data : &[ i32 ] ) -> Vec<Point>
@@ -399,9 +400,17 @@ impl Circuit
 	}
 
 	#[wasm_bindgen( js_name = branchAt )]
-	pub fn branch_at( &self, x : i32, y : i32 ) -> Option<u32>
+	pub fn branch_at( &self, x : i32, y : i32 ) -> Vec<f64>
 	{
-		self.simulation.solution().ok()?.branch_at( Point { x, y } ).map( | index | index as u32 )
+		let found = self.simulation.solution().ok().and_then( | solution | solution.branch_at( Point { x, y } ) );
+
+		found.and_then( | index | self.shown()?.branches.get( index ) ).map_or( Vec::new(), | branch | Circuit::row( branch ).to_vec() )
+	}
+
+	#[wasm_bindgen( getter )]
+	pub fn revision( &self ) -> u32
+	{
+		self.simulation.revision()
 	}
 
 	pub fn elements( &self ) -> Vec<f64>
@@ -411,16 +420,42 @@ impl Circuit
 		self.rows( self.document(), readings )
 	}
 
-	pub fn branches( &self ) -> Vec<f64>
+	pub fn readings( &self, indexes : &[ u32 ] ) -> Vec<f64>
+	{
+		let readings = self.shown().map_or( &[][ .. ], | solution | solution.readings.as_slice() );
+		let elements = self.document().elements();
+		let mut values = Vec::new();
+
+		for &index in indexes
+		{
+			let Some( element ) = elements.get( index as usize ) else { continue; };
+			let reading = readings.get( index as usize );
+			let count = self.count( element, reading );
+
+			values.push( count as f64 );
+
+			Circuit::read( reading, count, &mut values );
+		}
+
+		values
+	}
+
+	pub fn scale( &self ) -> Vec<f64>
+	{
+		let Some( solution ) = self.shown() else { return vec![ 0.0, 0.0 ]; };
+
+		let [ peak, current ] = solution.peaks();
+
+		vec![ if peak < LEAK { 0.0 } else { peak }, current ]
+	}
+
+	pub fn branches( &self, low_x : i32, low_y : i32, high_x : i32, high_y : i32 ) -> Vec<f64>
 	{
 		let Some( solution ) = self.shown() else { return vec![]; };
 
-		solution.branches.iter().flat_map( | branch |
-		{
-			let segment = branch.segment;
+		let inside = | segment : Segment | segment.from.x.max( segment.to.x ) >= low_x && segment.from.x.min( segment.to.x ) <= high_x && segment.from.y.max( segment.to.y ) >= low_y && segment.from.y.min( segment.to.y ) <= high_y;
 
-			[ segment.from.x as f64, segment.from.y as f64, segment.to.x as f64, segment.to.y as f64, branch.voltage, branch.current ]
-		} ).collect()
+		solution.branches.iter().filter( | branch | inside( branch.segment ) ).flat_map( Circuit::row ).collect()
 	}
 
 	pub fn listening( &self ) -> Vec<u32>
@@ -478,25 +513,41 @@ impl Circuit
 			};
 
 			let segment = element.segment;
-			let head = | count : usize | [ element.id as f64, code, segment.from.x as f64, segment.from.y as f64, segment.to.x as f64, segment.to.y as f64, value, rotation as f64, count as f64 ];
+			let reading = readings.get( index );
+			let count = self.count( element, reading );
 
-			if let Some( reading ) = readings.get( index )
-			{
-				rows.extend( head( reading.potentials.len() ) );
-				rows.extend( &reading.potentials );
-				rows.extend( &reading.currents );
+			rows.extend( [ element.id as f64, code, segment.from.x as f64, segment.from.y as f64, segment.to.x as f64, segment.to.y as f64, value, rotation as f64, count as f64 ] );
 
-				continue;
-			}
-
-			let count = self.simulation.terminals( element ).len();
-
-			rows.extend( head( count ) );
-			rows.extend( std::iter::repeat_n( 0.0, count ) );
-			rows.extend( std::iter::repeat_n( f64::NAN, count ) );
+			Circuit::read( reading, count, &mut rows );
 		}
 
 		rows
+	}
+
+	fn count( &self, element : &Element, reading : Option<&Reading> ) -> usize
+	{
+		reading.map_or_else( || self.simulation.terminals( element ).len(), | reading | reading.potentials.len() )
+	}
+
+	fn read( reading : Option<&Reading>, count : usize, values : &mut Vec<f64> )
+	{
+		if let Some( reading ) = reading
+		{
+			values.extend( &reading.potentials );
+			values.extend( &reading.currents );
+
+			return;
+		}
+
+		values.extend( std::iter::repeat_n( 0.0, count ) );
+		values.extend( std::iter::repeat_n( f64::NAN, count ) );
+	}
+
+	fn row( branch : &Branch ) -> [ f64; 6 ]
+	{
+		let segment = branch.segment;
+
+		[ segment.from.x as f64, segment.from.y as f64, segment.to.x as f64, segment.to.y as f64, branch.voltage, branch.current ]
 	}
 
 	fn shown( &self ) -> Option<&Solution>

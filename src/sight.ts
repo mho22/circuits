@@ -5,7 +5,12 @@ import type { Point } from './types/point.ts';
 const MARGIN = 4;
 
 
-export function seen( sight : Area, from : Point, to : Point ) : boolean
+export function sight( low : Point, high : Point ) : Area
 {
-	return Math.max( from.x, to.x ) >= sight.low.x - MARGIN && Math.min( from.x, to.x ) <= sight.high.x + MARGIN && Math.max( from.y, to.y ) >= sight.low.y - MARGIN && Math.min( from.y, to.y ) <= sight.high.y + MARGIN;
+	return { low : { x : Math.floor( low.x ) - MARGIN, y : Math.floor( low.y ) - MARGIN }, high : { x : Math.ceil( high.x ) + MARGIN, y : Math.ceil( high.y ) + MARGIN } };
+}
+
+export function seen( area : Area, from : Point, to : Point ) : boolean
+{
+	return Math.max( from.x, to.x ) >= area.low.x && Math.min( from.x, to.x ) <= area.high.x && Math.max( from.y, to.y ) >= area.low.y && Math.min( from.y, to.y ) <= area.high.y;
 }

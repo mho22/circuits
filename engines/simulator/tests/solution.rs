@@ -53,3 +53,13 @@ fn it_takes_the_next_solution_when_its_readings_or_its_branches_differ()
 	assert_eq!( blended( solution( vec![ reading( 2 ) ], vec![ branch( 2 ) ] ) ), next );
 	assert_eq!( blended( solution( vec![ reading( 2 ) ], vec![] ) ), next );
 }
+
+#[test]
+fn it_gives_the_largest_potential_and_the_largest_current_in_size_and_ignores_an_undefined_current()
+{
+	let segment = Segment { from : Point { x : 0, y : 0 }, to : Point { x : 2, y : 0 } };
+	let solution = Solution { readings : vec![ Reading { potentials : vec![ -9.0, 3.0 ], currents : vec![ -0.02, f64::NAN ] } ], branches : vec![ Branch { segment, voltage : 12.0, current : 0.01 } ] };
+
+	assert_eq!( solution.peaks(), [ 9.0, 0.02 ] );
+	assert_eq!( Solution::default().peaks(), [ 0.0, 0.0 ] );
+}

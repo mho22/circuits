@@ -58,6 +58,7 @@ pub struct Simulation
 	places : Vec<Vec<Option<usize>>>,
 	glows : Vec<Option<usize>>,
 	captions : Vec<String>,
+	revision : u32,
 	base : f64,
 	step : f64,
 	undos : Vec<Vec<( usize, Operation )>>,
@@ -70,7 +71,7 @@ impl Simulation
 {
 	pub fn new( step : f64 ) -> Simulation
 	{
-		Simulation { layers : vec![ Document::default() ], registry : Registry::default(), elements : Vec::new(), devices : Vec::new(), plan : Plan::default(), models : Vec::new(), sources : Vec::new(), focus : Vec::new(), history : History::default(), logic : Logic::default(), solution : Ok( Solution::default() ), lights : Vec::new(), places : Vec::new(), glows : Vec::new(), captions : Vec::new(), base : step, step, undos : Vec::new(), redos : Vec::new(), loading : None, measuring : None }
+		Simulation { layers : vec![ Document::default() ], registry : Registry::default(), elements : Vec::new(), devices : Vec::new(), plan : Plan::default(), models : Vec::new(), sources : Vec::new(), focus : Vec::new(), history : History::default(), logic : Logic::default(), solution : Ok( Solution::default() ), lights : Vec::new(), places : Vec::new(), glows : Vec::new(), captions : Vec::new(), revision : 0, base : step, step, undos : Vec::new(), redos : Vec::new(), loading : None, measuring : None }
 	}
 
 	pub fn create( &mut self ) -> usize
@@ -442,6 +443,11 @@ impl Simulation
 		&self.lights
 	}
 
+	pub fn revision( &self ) -> u32
+	{
+		self.revision
+	}
+
 	pub fn step( &self ) -> f64
 	{
 		self.step
@@ -647,6 +653,7 @@ impl Simulation
 		self.plan = if self.frozen() { Plan::default() } else { Plan::build( &elements, &devices ) };
 		self.elements = elements;
 		self.devices = devices;
+		self.revision = self.revision.wrapping_add( 1 );
 
 		self.locate();
 		self.start();

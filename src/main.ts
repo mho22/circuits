@@ -9,6 +9,7 @@ import { decode as decodeElements } from './decoders/element.ts';
 import { decode as decodeFile } from './decoders/file.ts';
 import { decode as decodeLayout } from './decoders/layout.ts';
 import { decode as decodeOutline } from './decoders/outline.ts';
+import { decode as decodeReadings } from './decoders/reading.ts';
 import { Drift } from './drift.ts';
 import { download } from './download.ts';
 import { edit as entitle } from './editors/text.ts';
@@ -23,7 +24,7 @@ import { flows } from './flows.ts';
 import { FINE, snap } from './grid.ts';
 import { grab } from './grab.ts';
 import { read, shape } from './keyboard.ts';
-import { Junctions } from './junctions.ts';
+import { junctions } from './junctions.ts';
 import { Library } from './library.ts';
 import { Maker } from './maker.ts';
 import { open as fill } from './menus/blank.ts';
@@ -44,13 +45,14 @@ import * as grid from './renderers/grid.ts';
 import * as junction from './renderers/junction.ts';
 import * as mask from './renderers/mask.ts';
 import * as progress from './renderers/progress.ts';
-import { FROZEN, measure } from './scale.ts';
+import { FROZEN } from './scale.ts';
 import { cover, inside, span } from './selection.ts';
-import { seen } from './sight.ts';
+import { sight } from './sight.ts';
 import { socket } from './socket.ts';
 import { target } from './target.ts';
 import { PART_GROUPS, PIN_GROUPS, Toolbar } from './toolbar.ts';
 import { Trail } from './trail.ts';
+import { Watch } from './watch.ts';
 import { CarryTool } from './tools/carry.ts';
 import { DrawTool } from './tools/draw.ts';
 import { MoveTool } from './tools/move.ts';
@@ -68,6 +70,7 @@ import type { Definition } from './types/definition.ts';
 import type { Edit } from './types/edit.ts';
 import type { Element } from './types/element.ts';
 import type { Point } from './types/point.ts';
+import type { Scene } from './types/scene.ts';
 import type { Shape } from './types/shape.ts';
 import { STRIDES, View } from './view.ts';
 
@@ -80,7 +83,6 @@ const LOAD_BUDGET = 12;
 const LOAD_DELAY = 150;
 const LOAD_DOTS = 16;
 const KINDS = Object.keys( NAMES ).map( Number ) as Kind[];
-const CAPTIONED = [ Kind.Symbol, Kind.Toggle, Kind.Slider, ... PINS ];
 
 const canvas = document.querySelector( 'canvas' )!;
 const context = canvas.getContext( '2d' )!;
@@ -107,7 +109,7 @@ const maker = new Maker( document.body, make, sketch, discard, purge );
 const palette = new Palette( document.querySelector( 'nav' )!, document.body, choose, unsketch );
 const clock = new Clock( STEP_BUDGET );
 const drift = new Drift();
-const joints = new Junctions();
+const watch = new Watch();
 const view = new View();
 
 let name = 'untitled.circuit';
@@ -124,6 +126,7 @@ let origin : Point = { x : 0, y : 0 };
 let aim : Point | null = null;
 let picked : { area : Area, menu : HTMLElement } | null = null;
 let loading : { name : string, since : number, progress : number } | null = null;
+let scene : Scene | null = null;
 
 
 function select( kind : Kind | null ) : void
@@ -184,19 +187,39 @@ function captioned( elements : Element[] ) : Element[]
 	return elements.map( item => item.kind === Kind.Toggle || item.kind === Kind.Slider ? { ... item, label : captions[ index++ ] } : item );
 }
 
-function lit( elements : Element[] ) : Element[]
+function arrange() : Scene
 {
-	const lights = Array.from( circuit.lights() );
-	let index = 0;
+	if( scene?.revision === circuit.revision ) return scene;
 
-	return elements.map( item => item.outline ? { ... item, lights : lights.slice( index, index += item.outline.lights.length ) } : item );
+	const listening = new Set( circuit.listening() );
+	const elements = captioned( labelled( decodeElements( circuit.elements() ), circuit.layer ) ).map( outlined ).map( item => listening.has( item.id ) ? { ... item, listening : true } : item );
+	const starts : number[] = [];
+
+	elements.reduce( ( start, item ) => { starts.push( start ); return start + ( item.outline?.lights.length ?? 0 ); }, 0 );
+
+	scene = { revision : circuit.revision, elements, starts, junctions : junctions( elements ) };
+
+	return scene;
 }
 
 function parts() : Element[]
 {
-	const listening = Array.from( circuit.listening() );
+	return arrange().elements;
+}
 
-	return lit( captioned( labelled( decodeElements( circuit.elements() ), circuit.layer ) ).map( outlined ) ).map( item => listening.includes( item.id ) ? { ... item, listening : true } : item );
+function refresh( indexes : number[] ) : Map<number, Element>
+{
+	const { elements, starts } = arrange();
+	const readings = decodeReadings( circuit.readings( new Uint32Array( indexes ) ) );
+	const lights = circuit.lights();
+
+	return new Map( indexes.map( ( index, rank ) =>
+	{
+		const item = elements[ index ];
+		const glow = item.outline ? { lights : Array.from( lights.subarray( starts[ index ], starts[ index ] + item.outline.lights.length ) ) } : {};
+
+		return [ index, { ... item, ... readings[ rank ], ... glow } ];
+	} ) );
 }
 
 function layered( layer : number ) : Element[]
@@ -568,11 +591,13 @@ function present() : void
 	context.globalAlpha = 1;
 }
 
-function paint( elements : Element[], branches : Branch[], seconds : number ) : void
+function paint( shown : Map<number, Element>, branches : Branch[], joints : Scene[ 'junctions' ], seconds : number ) : void
 {
 	if( sketching ) { present(); return; }
 
-	const scale = circuit.frozen ? FROZEN : measure( elements, branches );
+	const [ voltage, peak ] = circuit.scale();
+	const scale = circuit.frozen ? FROZEN : { voltage, current : peak };
+	const elements = [ ... shown.values() ];
 	const draft = selector.preview() ? null : tool.preview();
 	const previews = draft ? [ ... mover.preview(), draft ] : mover.preview();
 	const selection = selector.preview() ?? mover.zone() ?? ( marked?.menu.isConnected ? marked.area : null );
@@ -585,12 +610,11 @@ function paint( elements : Element[], branches : Branch[], seconds : number ) : 
 
 	grid.draw( context, view.x * stride, view.y * stride, innerWidth * stride, innerHeight * stride, false, stride );
 
-	const sight = { low : view.toGrid( 0, 0 ), high : view.toGrid( innerWidth, innerHeight ) };
-	elements.filter( item => CAPTIONED.includes( item.kind ) || seen( sight, item.from, item.to ) ).forEach( item => element.draw( context, item, scale ) );
+	elements.forEach( item => element.draw( context, item, scale ) );
 
-	joints.find( elements ).filter( item => seen( sight, item.point, item.point ) ).forEach( item => junction.draw( context, item, scale ) );
+	joints.forEach( ( { point, wire } ) => { if( shown.has( wire ) ) junction.draw( context, { point, potential : shown.get( wire )!.potentials[ 0 ] }, scale ); } );
 
-	paths.forEach( ( path, index ) => { if( seen( sight, path.from, path.to ) ) current.draw( context, path.from, path.to, path.current, scale.current, distances[ index ], circuit.frozen ? current.FROZEN : current.COLOR ); } );
+	paths.forEach( ( path, index ) => current.draw( context, path.from, path.to, path.current, scale.current, distances[ index ], circuit.frozen ? current.FROZEN : current.COLOR ) );
 
 	context.globalAlpha = 0.5;
 
@@ -600,7 +624,7 @@ function paint( elements : Element[], branches : Branch[], seconds : number ) : 
 
 	if( selection ) area.draw( context, selection );
 
-	const zoned = zone( elements );
+	const zoned = zone( parts() );
 
 	if( zoned )
 	{
@@ -630,10 +654,12 @@ function frame( time : number ) : void
 
 	scope();
 
-	const elements = parts();
-	const branches = decodeBranches( circuit.branches() );
+	const range = sight( view.toGrid( 0, 0 ), view.toGrid( innerWidth, innerHeight ) );
+	const { indexes, junctions : joints } = watch.look( arrange(), range );
+	const shown = refresh( indexes );
+	const elements = [ ... shown.values() ];
 
-	paint( elements, branches, seconds );
+	paint( shown, decodeBranches( circuit.branches( range.low.x, range.low.y, range.high.x, range.high.y ) ), joints, seconds );
 
 	indicate();
 
@@ -665,9 +691,9 @@ function frame( time : number ) : void
 	const ids = hover ? Array.from( circuit.elementsAt( hover.x, hover.y ) ) : [];
 	const plugged = elements.find( item => ids.includes( item.id ) && hover && socket( item, hover ) >= 0 );
 	const hovered = plugged ?? elements.find( item => item.id === ids[ 0 ] );
-	const branch = hover ? circuit.branchAt( hover.x, hover.y ) : undefined;
+	const branch = hover ? decodeBranches( circuit.branchAt( hover.x, hover.y ) )[ 0 ] : undefined;
 
-	report( error ?? notice ?? ( hovered && ! circuit.frozen ? describe( hovered, branch === undefined ? undefined : branches[ branch ], hover ) : '' ), error !== undefined || notice !== null );
+	report( error ?? notice ?? ( hovered && ! circuit.frozen ? describe( hovered, branch, hover ) : '' ), error !== undefined || notice !== null );
 
 	requestAnimationFrame( frame );
 }
