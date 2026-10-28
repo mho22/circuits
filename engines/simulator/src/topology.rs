@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
-use crate::{ Element, Flow, Kind, Netlist, UnionFind };
+use crate::{ Element, Factorizations, Flow, Kind, Netlist, UnionFind };
 
 
 #[derive( Clone, Debug, Default, PartialEq )]
@@ -16,6 +16,7 @@ pub struct Topology
 	pub joints : Vec<usize>,
 	pub flow : Flow,
 	pub order : OnceLock<Vec<usize>>,
+	pub factorizations : Factorizations,
 }
 
 impl Topology
@@ -70,6 +71,6 @@ impl Topology
 		let joints = switches.chain( grounds ).collect();
 		let flow = Flow::build( earth + 1, &edges );
 
-		Topology { netlist, terminals, unknowns, nodes, batteries, taps, joints, flow, order : OnceLock::new() }
+		Topology { netlist, terminals, unknowns, nodes, batteries, taps, joints, flow, order : OnceLock::new(), factorizations : Factorizations::default() }
 	}
 }

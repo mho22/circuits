@@ -1,4 +1,4 @@
-use crate::{ arrange, companion, eliminate, Branch, Element, Error, History, Kind, Reading, Segment, Solution, Topology };
+use crate::{ arrange, companion, Branch, Element, Error, History, Kind, Reading, Segment, Solution, Topology };
 
 
 const ITERATIONS : usize = 100;
@@ -13,7 +13,7 @@ pub fn solve( elements : &[ Element ], history : &History, step : f64 ) -> Resul
 
 pub fn compute( elements : &[ Element ], topology : &Topology, history : &History, step : f64 ) -> Result<Solution, Error>
 {
-	let Topology { netlist, terminals, unknowns, nodes, batteries, taps, joints, flow, order } = topology;
+	let Topology { netlist, terminals, unknowns, nodes, batteries, taps, joints, flow, order, factorizations } = topology;
 	let nodes = *nodes;
 	let size = nodes + batteries.len();
 
@@ -64,7 +64,7 @@ pub fn compute( elements : &[ Element ], topology : &Topology, history : &Histor
 			rhs[ nodes + offset ] = volts;
 		}
 
-		eliminate( size, &entries, rhs, order.get_or_init( || arrange( size, &entries ) ) )
+		factorizations.solve( size, &entries, rhs, order.get_or_init( || arrange( size, &entries ) ) )
 	};
 
 	let mut guesses : Vec<[ f64; 2 ]> = elements.iter().map( | element | history.get( element.id ) ).collect();
@@ -115,7 +115,7 @@ pub fn compute( elements : &[ Element ], topology : &Topology, history : &Histor
 			_ if ! parts.is_empty() => ( 0 .. potentials.len() ).map( | terminal | parts.iter().map( | part | part.weights[ terminal ] * part.current( &potentials ) ).sum() ).collect(),
 			Kind::Battery { .. } | Kind::Supply { .. } =>
 			{
-				let current = solution[ nodes + batteries.iter().position( | &battery | battery == index ).unwrap() ];
+				let current = solution[ nodes + batteries.binary_search( &index ).unwrap() ];
 
 				vec![ current, - current ]
 			},
