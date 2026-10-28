@@ -1,4 +1,4 @@
-use simulator::{ advance, flatten, idle, settle, Catalog, Device, Document, Element, Error, History, Kind, Logic, Model, Operation, Plan, Point, Registry, Segment, Solution };
+use simulator::{ advance, flatten, idle, settle, Catalog, Device, Document, Drive, Element, Error, History, Kind, Logic, Model, Operation, Plan, Point, Registry, Segment, Solution };
 
 
 const STEP : f64 = 1e-6;
@@ -89,6 +89,37 @@ fn inverter() -> Document
 	] )
 }
 
+fn flipflop() -> Document
+{
+	layer( &[
+		( Kind::Input { high : false }, ( -1, 0 ), ( 0, 0 ) ),
+		( Kind::Input { high : false }, ( -1, 2 ), ( 0, 2 ) ),
+		( Kind::Output, ( 6, 0 ), ( 5, 0 ) ),
+	] )
+}
+
+fn toggler( delay : f64 ) -> Model
+{
+	let mut rows = Vec::new();
+	let mut next = Vec::new();
+
+	for state in 0 .. 4
+	{
+		let ( high, clocked ) = ( state >> 1 == 1, state & 1 == 1 );
+
+		for row in 0 .. 4
+		{
+			let ( clock, clear ) = ( row & 1 == 1, row >> 1 == 1 );
+			let after = ! clear && high != ( clock && ! clocked );
+
+			rows.push( vec![ Drive { volts : if after { 5.0 } else { 0.0 }, ohms : 1e-3 } ] );
+			next.push( ( after as usize ) << 1 | clock as usize );
+		}
+	}
+
+	Model { rows, next, delay }
+}
+
 fn symbol( x : i32 ) -> Part
 {
 	( Kind::Symbol { layer : 1, rotation : 0 }, ( x, 0 ), ( x, 0 ) )
@@ -102,6 +133,16 @@ fn circuit( parts : &[ Part ] ) -> Circuit
 	while catalog.advance( &layers ) {}
 
 	let ( models, _ ) = catalog.finish();
+	let ( elements, devices ) = flatten( &layers, &mut Registry::default(), &models, 0, &[] ).unwrap();
+	let plan = Plan::build( &elements, &devices );
+
+	Circuit { elements, devices, plan, models, logic : Logic::default() }
+}
+
+fn cleared( clock : f64, clear : f64, delay : f64 ) -> Circuit
+{
+	let layers = [ layer( &[ ( Kind::Clock { hertz : clock }, ( 4, -1 ), ( 8, -1 ) ), ( Kind::Clock { hertz : clear }, ( 4, 1 ), ( 8, 1 ) ), symbol( 10 ), ( Kind::Wire, ( 12, 0 ), ( 14, 0 ) ) ] ), flipflop() ];
+	let models = vec![ None, Some( toggler( delay ) ) ];
 	let ( elements, devices ) = flatten( &layers, &mut Registry::default(), &models, 0, &[] ).unwrap();
 	let plan = Plan::build( &elements, &devices );
 
@@ -207,6 +248,43 @@ fn it_ignores_a_pulse_shorter_than_the_delay()
 	circuit.settle().unwrap();
 
 	assert!( ( 0 .. 400 ).all( | _ | { let solution = circuit.advance( 5e-11 ).unwrap(); circuit.at( &solution, ( 13, 0 ) ) > 2.5 } ) );
+}
+
+#[test]
+fn it_ignores_a_clock_edge_that_a_device_with_memory_receives_while_it_is_cleared()
+{
+	let mut circuit = cleared( 1.0 / 19e-9, 1e8, 1e-9 );
+
+	circuit.settle().unwrap();
+
+	let solution = ( 0 .. 12 ).map( | _ | circuit.advance( 1e-9 ).unwrap() ).last().unwrap();
+
+	assert!( circuit.at( &solution, ( 13, 0 ) ) < 2.5 );
+}
+
+#[test]
+fn it_changes_the_output_of_a_device_with_memory_one_delay_after_each_change_of_its_inputs()
+{
+	let mut circuit = cleared( 1e8, 1.0 / 18e-9, 2e-9 );
+
+	circuit.settle().unwrap();
+
+	let levels : Vec<bool> = ( 0 .. 23 ).map( | _ | { let solution = circuit.advance( 5e-10 ).unwrap(); circuit.at( &solution, ( 13, 0 ) ) > 2.5 } ).collect();
+
+	assert!( levels[ 14 ] );
+	assert!( ! levels[ 22 ] );
+}
+
+#[test]
+fn it_merges_the_input_changes_that_a_device_with_memory_receives_at_a_same_instant()
+{
+	let mut circuit = cleared( 1e8, 1e8, 2e-9 );
+
+	circuit.settle().unwrap();
+
+	for _ in 0 .. 12 { circuit.advance( 5e-10 ).unwrap(); }
+
+	assert!( circuit.logic.queued[ 0 ].is_empty() );
 }
 
 #[test]

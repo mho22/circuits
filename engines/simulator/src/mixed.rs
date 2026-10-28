@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use crate::flatten::HIGH;
 use crate::{ compute, Action, Branch, Device, Element, Error, History, Kind, Logic, Model, Plan, Reading, Solution, Source, FLOOR, THRESHOLD };
 
@@ -71,6 +73,8 @@ impl<'a> Run<'a>
 		self.logic.states = vec![ 0; size ];
 		self.logic.sensed = self.plan.inputs.iter().map( | sources | vec![ false; sources.len() ] ).collect();
 		self.logic.stamps = vec![ 0; size ];
+		self.logic.since = vec![ None; size ];
+		self.logic.queued = vec![ VecDeque::new(); size ];
 		self.logic.clear();
 
 		for device in 0 .. size
@@ -132,9 +136,17 @@ impl<'a> Run<'a>
 
 		if row == self.logic.rows[ device ] { return; }
 
+		if self.logic.since[ device ].is_some_and( | since | since < time ) && self.remembers( device )
+		{
+			let entry = self.commit( device );
+
+			self.logic.queued[ device ].push_back( ( self.logic.stamps[ device ], entry ) );
+		}
+
 		let delay = if self.instant { 0.0 } else { self.tables[ device ].delay };
 
 		self.logic.rows[ device ] = row;
+		self.logic.since[ device ] = Some( time );
 		self.logic.stamps[ device ] += 1;
 		self.logic.schedule( time + delay, Action::Fire { device, stamp : self.logic.stamps[ device ] } );
 	}
@@ -155,7 +167,7 @@ impl<'a> Run<'a>
 	{
 		while let Some( event ) = self.logic.next( until )
 		{
-			if let Action::Fire { device, stamp } = event.action && stamp != self.logic.stamps[ device ] { continue; }
+			if let Action::Fire { device, stamp } = event.action && ! self.live( device, stamp ) { continue; }
 
 			self.events += 1;
 
@@ -169,7 +181,7 @@ impl<'a> Run<'a>
 
 			match event.action
 			{
-				Action::Fire { device, .. } => self.fire( device, event.time ),
+				Action::Fire { device, stamp } => self.fire( device, stamp, event.time ),
 				Action::Edge { clock, count } => self.tick( clock, count, event.time ),
 			}
 		}
@@ -177,14 +189,37 @@ impl<'a> Run<'a>
 		Ok( () )
 	}
 
-	fn fire( &mut self, device : usize, time : f64 )
+	fn remembers( &self, device : usize ) -> bool
+	{
+		self.tables[ device ].rows.len() > 1 << self.plan.inputs[ device ].len()
+	}
+
+	fn live( &self, device : usize, stamp : u64 ) -> bool
+	{
+		stamp == self.logic.stamps[ device ] || self.logic.queued[ device ].front().is_some_and( | &( first, _ ) | first == stamp )
+	}
+
+	fn commit( &mut self, device : usize ) -> usize
+	{
+		let entry = self.logic.states[ device ] * ( 1 << self.plan.inputs[ device ].len() ) + self.logic.rows[ device ];
+
+		self.logic.states[ device ] = self.tables[ device ].next[ entry ];
+		self.logic.since[ device ] = None;
+
+		entry
+	}
+
+	fn fire( &mut self, device : usize, stamp : u64, time : f64 )
 	{
 		let table = self.tables[ device ];
 		let plan = self.plan;
-		let entry = self.logic.states[ device ] * ( 1 << plan.inputs[ device ].len() ) + self.logic.rows[ device ];
+		let entry = match self.logic.queued[ device ].front()
+		{
+			Some( &( first, entry ) ) if first == stamp => { self.logic.queued[ device ].pop_front(); entry },
+			_ => self.commit( device ),
+		};
 
 		self.logic.applied[ device ] = entry;
-		self.logic.states[ device ] = table.next[ entry ];
 
 		for ( drive, &net ) in table.rows[ entry ].iter().zip( &plan.outputs[ device ] )
 		{
