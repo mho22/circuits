@@ -51,22 +51,24 @@ impl Solution
 		[ potential, current ]
 	}
 
-	pub fn blend( &mut self, next : &Solution, weight : f64 )
+	pub fn blend( &mut self, next : &Solution, weight : f64 ) -> [ f64; 2 ]
 	{
-		if ! self.fits( next ) { self.clone_from( next ); return; }
-
-		let values = | a : &mut [ f64 ], b : &[ f64 ] | for ( a, &b ) in a.iter_mut().zip( b ) { *a = mix( *a, b, weight ); };
+		let mut peaks = [ 0.0; 2 ];
+		let values = | a : &mut [ f64 ], b : &[ f64 ], peak : &mut f64 | for ( a, &b ) in a.iter_mut().zip( b ) { *a = mix( *a, b, weight ); *peak = largest( *peak, *a ); };
 
 		for ( a, b ) in self.readings.iter_mut().zip( &next.readings )
 		{
-			values( &mut a.potentials, &b.potentials );
-			values( &mut a.currents, &b.currents );
+			values( &mut a.potentials, &b.potentials, &mut peaks[ 0 ] );
+			values( &mut a.currents, &b.currents, &mut peaks[ 1 ] );
 		}
 
 		for ( a, b ) in self.branches.iter_mut().zip( &next.branches )
 		{
 			a.voltage = mix( a.voltage, b.voltage, weight );
 			a.current = mix( a.current, b.current, weight );
+			peaks[ 1 ] = largest( peaks[ 1 ], a.current );
 		}
+
+		peaks
 	}
 }

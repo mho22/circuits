@@ -174,6 +174,23 @@ fn it_sets_a_value_and_solves_again()
 }
 
 #[wasm_bindgen_test]
+fn it_blends_from_the_shown_solution_after_a_change_of_a_value()
+{
+	let mut circuit = powered();
+
+	circuit.advance( 10 );
+	circuit.set_value( 0, 10.0 ).ok();
+
+	assert!( ( circuit.elements()[ 24 ] - 0.005 ).abs() < 1e-12 );
+	assert!( ( circuit.scale()[ 1 ] - 0.005 ).abs() < 1e-12 );
+
+	circuit.advance( 1000 );
+
+	assert!( ( circuit.elements()[ 24 ] - 0.01 ).abs() < 1e-12 );
+	assert!( ( circuit.scale()[ 1 ] - 0.01 ).abs() < 1e-12 );
+}
+
+#[wasm_bindgen_test]
 fn it_deletes_a_part()
 {
 	let mut circuit = powered();
@@ -917,6 +934,12 @@ fn it_shows_the_solution_of_an_edit_at_once_when_it_changes_the_parts()
 
 	circuit.advance( 10 );
 	circuit.add( 1, 1000.0, 2, 0, 2, 2 ).ok();
+
+	let elements = circuit.elements();
+
+	assert!( ( elements[ elements.len() - 2 ] - 0.0025 ).abs() < 1e-9 );
+
+	circuit.advance( 1 );
 
 	let elements = circuit.elements();
 

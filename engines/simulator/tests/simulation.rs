@@ -78,6 +78,19 @@ fn it_counts_a_new_revision_after_each_change_of_the_parts_only()
 }
 
 #[test]
+fn it_is_idle_with_resistors_and_never_with_a_capacitor_or_without_a_solution()
+{
+	let mut simulation = series( Kind::Resistor { ohms : 1000.0 } );
+
+	assert!( simulation.idle() );
+	assert!( ! series( Kind::Capacitor { farads : 1e-3 } ).idle() );
+
+	add( &mut simulation, Kind::Switch { closed : true }, ( 0, 4 ), ( 0, 0 ) );
+
+	assert!( ! simulation.idle() );
+}
+
+#[test]
 fn it_charges_a_capacitor_along_the_rc_curve()
 {
 	let mut simulation = series( Kind::Capacitor { farads : 1e-6 } );

@@ -363,7 +363,7 @@ impl Simulation
 
 		for _ in 0 .. count
 		{
-			if self.solution.is_ok() && idle( &self.elements, &self.plan, self.step, &self.logic ) { self.logic.time += self.step; continue; }
+			if self.idle() { self.logic.time += self.step; continue; }
 
 			let solution = advance( &self.elements, &self.devices, &self.plan, &self.models, &self.history, self.step, &mut self.logic );
 
@@ -373,6 +373,11 @@ impl Simulation
 
 			if self.solution.is_err() { return; }
 		}
+	}
+
+	pub fn idle( &self ) -> bool
+	{
+		self.solution.is_ok() && idle( &self.elements, &self.plan, self.step, &self.logic )
 	}
 
 	pub fn document( &self, layer : usize ) -> Option<&Document>

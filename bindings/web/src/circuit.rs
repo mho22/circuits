@@ -65,7 +65,7 @@ pub struct Circuit
 {
 	simulation : Simulation,
 	clipboard : Vec<( Element, String )>,
-	seen : Option<( Solution, Vec<f64> )>,
+	seen : Option<( u32, Solution, Vec<f64>, [ f64; 2 ] )>,
 }
 
 #[wasm_bindgen]
@@ -376,21 +376,19 @@ impl Circuit
 	{
 		if self.simulation.frozen() { return; }
 
-		let weight = 1.0 - ( - 1.0 / ( self.rate() * EYE ) ).exp();
+		let mut steps = 0;
 
 		for _ in 0 .. count
 		{
+			if ! self.simulation.idle() { self.blend( steps ); steps = 0; }
+
 			self.simulation.advance( 1 );
+			steps += 1;
 
-			let Ok( solution ) = self.simulation.solution() else { self.seen = None; return; };
-			let lights = self.simulation.lights();
-
-			let Some( ( seen, glow ) ) = self.seen.as_mut().filter( | ( _, glow ) | glow.len() == lights.len() ) else { self.seen = Some( ( solution.clone(), lights.to_vec() ) ); continue; };
-
-			seen.blend( solution, weight );
-
-			for ( from, &to ) in glow.iter_mut().zip( lights ) { *from = mix( *from, to, weight ); }
+			if self.simulation.solution().is_err() { self.seen = None; return; }
 		}
+
+		self.blend( steps );
 	}
 
 	#[wasm_bindgen( js_name = elementsAt )]
@@ -442,9 +440,9 @@ impl Circuit
 
 	pub fn scale( &self ) -> Vec<f64>
 	{
-		let Some( solution ) = self.shown() else { return vec![ 0.0, 0.0 ]; };
+		let Ok( solution ) = self.simulation.solution() else { return vec![ 0.0, 0.0 ]; };
 
-		let [ peak, current ] = solution.peaks();
+		let [ peak, current ] = self.blended().map_or_else( || solution.peaks(), | ( _, _, _, peaks ) | *peaks );
 
 		vec![ if peak < LEAK { 0.0 } else { peak }, current ]
 	}
@@ -467,7 +465,7 @@ impl Circuit
 	{
 		let lights = self.simulation.lights();
 
-		self.seen.as_ref().map( | ( _, glow ) | glow ).filter( | glow | glow.len() == lights.len() ).map_or( lights, | glow | glow ).to_vec()
+		self.seen.as_ref().map( | ( _, _, glow, _ ) | glow ).filter( | glow | glow.len() == lights.len() ).map_or( lights, | glow | glow ).to_vec()
 	}
 
 	pub fn captions( &self ) -> Vec<String>
@@ -550,11 +548,35 @@ impl Circuit
 		[ segment.from.x as f64, segment.from.y as f64, segment.to.x as f64, segment.to.y as f64, branch.voltage, branch.current ]
 	}
 
+	fn blend( &mut self, steps : u32 )
+	{
+		let ( Ok( solution ), true ) = ( self.simulation.solution(), steps > 0 ) else { return; };
+		let revision = self.simulation.revision();
+		let lights = self.simulation.lights();
+		let weight = 1.0 - ( - f64::from( steps ) / ( self.rate() * EYE ) ).exp();
+
+		let Some( ( stamp, seen, glow, peaks ) ) = self.seen.as_mut().filter( | ( _, _, glow, _ ) | glow.len() == lights.len() ) else { self.seen = Some( ( revision, solution.clone(), lights.to_vec(), solution.peaks() ) ); return; };
+
+		if *stamp != revision && ! seen.fits( solution ) { seen.clone_from( solution ); }
+
+		*stamp = revision;
+		*peaks = seen.blend( solution, weight );
+
+		for ( from, &to ) in glow.iter_mut().zip( lights ) { *from = mix( *from, to, weight ); }
+	}
+
 	fn shown( &self ) -> Option<&Solution>
 	{
 		let solution = self.simulation.solution().ok()?;
 
-		Some( self.seen.as_ref().map( | ( seen, _ ) | seen ).filter( | seen | seen.fits( solution ) ).unwrap_or( solution ) )
+		Some( self.blended().map_or( solution, | ( _, seen, _, _ ) | seen ) )
+	}
+
+	fn blended( &self ) -> Option<&( u32, Solution, Vec<f64>, [ f64; 2 ] )>
+	{
+		let solution = self.simulation.solution().ok()?;
+
+		self.seen.as_ref().filter( | ( stamp, seen, _, _ ) | *stamp == self.simulation.revision() || seen.fits( solution ) )
 	}
 
 	fn current( &self ) -> usize

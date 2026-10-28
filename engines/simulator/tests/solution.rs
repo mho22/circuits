@@ -39,19 +39,18 @@ fn it_blends_each_reading_and_each_branch_toward_the_next_solution()
 }
 
 #[test]
-fn it_takes_the_next_solution_when_its_readings_or_its_branches_differ()
+fn it_fits_a_solution_only_with_the_same_count_of_values_in_each_reading_and_the_same_branches()
 {
 	let branch = | x : i32 | Branch { segment : Segment { from : Point { x, y : 0 }, to : Point { x : x + 2, y : 0 } }, voltage : 1.0, current : 1.0 };
 	let reading = | count : usize | Reading { potentials : vec![ 1.0; count ], currents : vec![ 1.0; count ] };
 	let solution = | readings : Vec<Reading>, branches : Vec<Branch> | Solution { readings, branches };
 	let next = solution( vec![ reading( 2 ) ], vec![ branch( 0 ) ] );
 
-	let blended = | mut seen : Solution | { seen.blend( &next, 0.5 ); seen };
-
-	assert_eq!( blended( solution( vec![ reading( 3 ) ], vec![ branch( 0 ) ] ) ), next );
-	assert_eq!( blended( solution( vec![], vec![ branch( 0 ) ] ) ), next );
-	assert_eq!( blended( solution( vec![ reading( 2 ) ], vec![ branch( 2 ) ] ) ), next );
-	assert_eq!( blended( solution( vec![ reading( 2 ) ], vec![] ) ), next );
+	assert!( solution( vec![ reading( 2 ) ], vec![ branch( 0 ) ] ).fits( &next ) );
+	assert!( ! solution( vec![ reading( 3 ) ], vec![ branch( 0 ) ] ).fits( &next ) );
+	assert!( ! solution( vec![], vec![ branch( 0 ) ] ).fits( &next ) );
+	assert!( ! solution( vec![ reading( 2 ) ], vec![ branch( 2 ) ] ).fits( &next ) );
+	assert!( ! solution( vec![ reading( 2 ) ], vec![] ).fits( &next ) );
 }
 
 #[test]
@@ -62,4 +61,13 @@ fn it_gives_the_largest_potential_and_the_largest_current_in_size_and_ignores_an
 
 	assert_eq!( solution.peaks(), [ 9.0, 0.02 ] );
 	assert_eq!( Solution::default().peaks(), [ 0.0, 0.0 ] );
+}
+
+#[test]
+fn it_gives_the_peaks_of_the_blended_solution()
+{
+	let segment = Segment { from : Point { x : 0, y : 0 }, to : Point { x : 2, y : 0 } };
+	let solution = | value : f64, current : f64 | Solution { readings : vec![ Reading { potentials : vec![ value, 0.0 ], currents : vec![ value, - value ] } ], branches : vec![ Branch { segment, voltage : value, current } ] };
+
+	assert_eq!( solution( 0.0, 0.0 ).blend( &solution( 4.0, 12.0 ), 0.5 ), [ 2.0, 6.0 ] );
 }
