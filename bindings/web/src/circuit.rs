@@ -1,4 +1,4 @@
-use simulator::{ mix, Branch, Document, Element, Kind, Operation, Outline, Point, Reading, Segment, Shape, Simulation, Solution };
+use simulator::{ mix, Branch, Document, Element, Kind, Mode, Operation, Outline, Point, Reading, Segment, Shape, Simulation, Solution };
 use wasm_bindgen::prelude::*;
 
 
@@ -375,6 +375,17 @@ impl Circuit
 	pub fn advance( &mut self, count : u32 )
 	{
 		if self.simulation.frozen() { return; }
+
+		if self.simulation.mode() == Mode::Digital
+		{
+			self.simulation.advance( count );
+
+			if self.simulation.solution().is_err() { self.seen = None; return; }
+
+			self.blend( count );
+
+			return;
+		}
 
 		let mut steps = 0;
 

@@ -263,16 +263,31 @@ fn it_leaves_a_layer_without_a_transistor_or_a_gate_analog()
 }
 
 #[test]
-fn it_leaves_a_layer_with_a_capacitor_an_inductor_a_clock_or_an_led_analog()
+fn it_leaves_a_layer_with_a_capacitor_an_inductor_or_a_clock_analog()
 {
 	let capacitor = inverter( &[ ( Kind::Capacitor { farads : 1e-6 }, ( 5, 1 ), ( 5, 3 ) ), ( Kind::Ground, ( 5, 3 ), ( 5, 3 ) ) ] );
 	let inductor = inverter( &[ ( Kind::Inductor { henries : 1.0 }, ( 5, 1 ), ( 5, 3 ) ) ] );
 	let clock = inverter( &[ ( Kind::Clock { hertz : 1.0 }, ( 8, 4 ), ( 8, 6 ) ) ] );
-	let led = inverter( &[ ( Kind::Led { color : 0 }, ( 5, 1 ), ( 5, 3 ) ), ( Kind::Ground, ( 5, 3 ), ( 5, 3 ) ) ] );
 
 	assert_eq!( characterize( &[ Document::default(), capacitor ], &[], 1 ), None );
 	assert_eq!( characterize( &[ Document::default(), inductor ], &[], 1 ), None );
 	assert_eq!( characterize( &[ Document::default(), clock ], &[], 1 ), None );
+}
+
+#[test]
+fn it_measures_a_layer_with_an_led_between_two_pins_as_a_gate()
+{
+	let led = inverter( &[ ( Kind::Resistor { ohms : 1000.0 }, ( 5, 0 ), ( 9, 0 ) ), ( Kind::Led { color : 0 }, ( 9, 0 ), ( 9, 4 ) ), ( Kind::Wire, ( 9, 4 ), ( 9, 6 ) ), ( Kind::Wire, ( 9, 6 ), ( -2, 6 ) ), ( Kind::Wire, ( -2, 6 ), ( -2, 0 ) ), ( Kind::Wire, ( -2, 0 ), ( 0, 0 ) ) ] );
+	let model = characterize( &[ Document::default(), led ], &[], 1 ).unwrap();
+
+	assert_eq!( model.rows.iter().map( | row | row[ 0 ].high() ).collect::<Vec<_>>(), vec![ true, false ] );
+}
+
+#[test]
+fn it_leaves_a_layer_with_an_led_on_ground_analog()
+{
+	let led = inverter( &[ ( Kind::Led { color : 0 }, ( 5, 1 ), ( 5, 3 ) ), ( Kind::Resistor { ohms : 1000.0 }, ( 5, 3 ), ( 5, 5 ) ), ( Kind::Ground, ( 5, 5 ), ( 5, 5 ) ) ] );
+
 	assert_eq!( characterize( &[ Document::default(), led ], &[], 1 ), None );
 }
 

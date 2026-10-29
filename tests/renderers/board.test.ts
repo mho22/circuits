@@ -28,25 +28,15 @@ describe( 'board renderer', () =>
 		expect( calls.filter( call => call[ 0 ] === 'fillText' ) ).toEqual( [ [ 'fillText', 'foo', 8, 100 ], [ 'fillText', 'bar', 192, 140 ] ] );
 	} );
 
-	it( 'draws a light as a filled square of the size of a pin in its color without a border and without a label', () =>
+	it( 'draws a light as a dark filled square of the size of a pin without a border and without a label', () =>
 	{
 		const { context, calls } = record();
 
 		draw( context, board, [ { point : { x : 1, y : -1 }, output : false, label : '', light : Color.Blue } ], null );
 
-		expect( calls ).toContainEqual( [ 'set', 'fillStyle', 'rgb(48, 128, 255)' ] );
+		expect( calls ).toContainEqual( [ 'set', 'fillStyle', '#1a1a1a' ] );
 		expect( calls ).toContainEqual( [ 'fillRect', 131, 51, 18, 18 ] );
 		expect( calls.some( call => call[ 0 ] === 'roundRect' || call[ 0 ] === 'fillText' ) ).toBe( false );
-	} );
-
-	it( 'fills the square of lights that share a point with the mix of their colors', () =>
-	{
-		const { context, calls } = record();
-		const lights = [ Color.Red, Color.Green, Color.Blue ].map( light => ( { point : { x : 1, y : -1 }, output : false, label : '', light } ) );
-
-		draw( context, board, lights, null );
-
-		expect( calls.filter( call => call[ 1 ] === 'fillStyle' && call[ 2 ] !== '#9e9e9e' ).map( call => call[ 2 ] ) ).toEqual( [ 'rgb(255, 255, 255)', 'rgb(255, 255, 255)', 'rgb(255, 255, 255)' ] );
 	} );
 
 	it( 'rings the fine point under the cursor', () =>

@@ -356,6 +356,25 @@ pub fn advance( elements : &[ Element ], devices : &[ Device ], plan : &Plan, mo
 	Ok( run.assemble( solution, readings ) )
 }
 
+pub fn rush( elements : &[ Element ], devices : &[ Device ], plan : &Plan, models : &[ Option<Model> ], step : f64, count : u32, logic : &mut Logic ) -> Result<Solution, Error>
+{
+	let Solution { readings, mut branches } = std::mem::take( &mut logic.spare );
+	let mut run = Run::new( elements, devices, plan, models, logic, false )?;
+
+	branches.clear();
+
+	for _ in 0 .. count
+	{
+		let time = run.logic.time + step;
+
+		run.events = 0;
+		run.drain( time )?;
+		run.logic.time = time;
+	}
+
+	Ok( run.assemble( Solution { readings : Vec::new(), branches }, readings ) )
+}
+
 pub fn idle( elements : &[ Element ], plan : &Plan, step : f64, logic : &Logic ) -> bool
 {
 	let time = logic.time + step;

@@ -1,4 +1,4 @@
-use simulator::{ advance, flatten, idle, settle, Catalog, Device, Document, Drive, Element, Error, History, Kind, Logic, Model, Operation, Plan, Point, Reading, Registry, Segment, Solution };
+use simulator::{ advance, flatten, idle, rush, settle, Catalog, Device, Document, Drive, Element, Error, History, Kind, Logic, Model, Operation, Plan, Point, Reading, Registry, Segment, Solution };
 
 
 const STEP : f64 = 1e-6;
@@ -319,6 +319,23 @@ fn it_advances_the_same_with_the_buffers_of_any_spare_solution()
 	let refilled = circuit.advance( 0.75 ).unwrap();
 
 	assert_eq!( ( bits( &refilled ), &refilled.branches ), ( bits( &fresh ), &fresh.branches ) );
+}
+
+#[test]
+fn it_rushes_a_digital_circuit_over_several_steps_to_the_solution_of_its_last_step()
+{
+	let mut stepped = ring();
+	let mut rushed = ring();
+	let bits = | solution : &Solution | solution.readings.iter().map( | reading | reading.potentials.iter().chain( &reading.currents ).map( | value | value.to_bits() ).collect() ).collect::<Vec<Vec<u64>>>();
+
+	stepped.settle().unwrap();
+	rushed.settle().unwrap();
+
+	let last = ( 0 .. 25 ).map( | _ | stepped.advance( 0.4e-9 ).unwrap() ).last().unwrap();
+	let solution = rush( &rushed.elements, &rushed.devices, &rushed.plan, &rushed.models, 0.4e-9, 25, &mut rushed.logic ).unwrap();
+
+	assert!( rushed.plan.analog.is_empty() );
+	assert_eq!( ( bits( &solution ), &solution.branches, rushed.logic.time ), ( bits( &last ), &last.branches, stepped.logic.time ) );
 }
 
 #[test]

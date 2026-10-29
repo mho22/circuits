@@ -877,6 +877,44 @@ fn it_gives_the_current_of_each_led_inside_each_symbol_of_the_page_in_the_order_
 }
 
 #[test]
+fn it_lights_an_led_inside_a_gate_when_the_pin_on_its_anode_is_high_and_the_pin_on_its_cathode_is_low()
+{
+	let mut simulation = Simulation::new( STEP );
+	let layer = define( &mut simulation, &[
+		( Kind::Input { high : false }, ( -1, 0 ), ( 0, 0 ) ),
+		( Kind::Supply { volts : 5.0 }, ( 3, -1 ), ( 3, -1 ) ),
+		( Kind::Output, ( 6, 0 ), ( 5, 0 ) ),
+		( Kind::Wire, ( 0, -2 ), ( 0, 0 ) ),
+		( Kind::Wire, ( 0, 0 ), ( 0, 2 ) ),
+		( Kind::Pmos, ( 0, -2 ), ( 2, -2 ) ),
+		( Kind::Nmos, ( 0, 2 ), ( 2, 2 ) ),
+		( Kind::Wire, ( 3, -3 ), ( 5, -3 ) ),
+		( Kind::Wire, ( 5, -3 ), ( 5, 0 ) ),
+		( Kind::Wire, ( 5, 0 ), ( 5, 1 ) ),
+		( Kind::Wire, ( 5, 1 ), ( 3, 1 ) ),
+		( Kind::Ground, ( 3, 3 ), ( 3, 3 ) ),
+		( Kind::Resistor { ohms : 1000.0 }, ( 5, 0 ), ( 9, 0 ) ),
+		( Kind::Led { color : 0 }, ( 9, 0 ), ( 9, 4 ) ),
+		( Kind::Wire, ( 9, 4 ), ( 9, 6 ) ),
+		( Kind::Wire, ( 9, 6 ), ( -2, 6 ) ),
+		( Kind::Wire, ( -2, 6 ), ( -2, 0 ) ),
+		( Kind::Wire, ( -2, 0 ), ( 0, 0 ) ),
+	] );
+	let end = Outline::of( simulation.document( layer as usize ).unwrap() ).terminals( point( 10, 10 ), 0 )[ 0 ];
+
+	add( &mut simulation, Kind::Symbol { layer, rotation : 0 }, ( 10, 10 ), ( 10, 10 ) );
+
+	let toggle = add( &mut simulation, Kind::Toggle { high : false }, ( end.x - 1, end.y ), ( end.x, end.y ) );
+
+	assert_eq!( simulation.mode(), Mode::Digital );
+	assert!( simulation.lights()[ 0 ] > 1e-3 );
+
+	simulation.apply( 0, Operation::SetHigh { id : toggle, high : true } ).unwrap();
+
+	assert_eq!( simulation.lights(), [ 0.0 ] );
+}
+
+#[test]
 fn it_gives_no_current_of_an_led_while_its_symbol_is_measured()
 {
 	let mut simulation = Simulation::new( STEP );

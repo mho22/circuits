@@ -1,5 +1,4 @@
-import { mix } from '../colors/light.ts';
-import type { Color } from '../enums/color.ts';
+import { DARK } from '../colors/light.ts';
 import { FINE } from '../grid.ts';
 import type { Board } from '../types/board.ts';
 import type { Pin } from '../types/pin.ts';
@@ -32,9 +31,7 @@ export function draw( context : CanvasRenderingContext2D, board : Board, pins : 
 
 		if( pin.light !== undefined )
 		{
-			const glows = pins.flatMap( ( other ) : [ Color, number ][] => other.light !== undefined && other.point.x === pin.point.x && other.point.y === pin.point.y ? [ [ other.light, 1 ] ] : [] );
-
-			context.fillStyle = `rgb(${ mix( glows ) })`;
+			context.fillStyle = DARK;
 			context.fillRect( px - LIGHT, py - LIGHT, 2 * LIGHT, 2 * LIGHT );
 			context.fillStyle = COLOR;
 

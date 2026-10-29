@@ -2,10 +2,11 @@ use std::collections::{ HashMap, HashSet };
 
 use crate::flatten::STRIDE;
 use crate::shape::FINE;
-use crate::{ advance, enclose, flatten, idle, place, settle, stretch, Catalog, Device, Document, Element, Enclosure, Error, History, Kind, Logic, Mode, Model, Netlist, Operation, Outline, Plan, Point, Reading, Registry, Segment, Shape, Solution };
+use crate::{ advance, enclose, flatten, idle, leads, place, rush, settle, stretch, Catalog, Device, Document, Element, Enclosure, Error, History, Kind, Logic, Mode, Model, Netlist, Operation, Outline, Plan, Point, Reading, Registry, Segment, Shape, Solution, THRESHOLD };
 
 
 const DIVISIONS : f64 = 20.0;
+const GLOW : f64 = 5e-3;
 
 
 type Loading = ( Vec<Document>, Vec<( usize, Operation )>, Catalog );
@@ -57,6 +58,7 @@ pub struct Simulation
 	lights : Vec<f64>,
 	places : Vec<Vec<Option<usize>>>,
 	glows : Vec<Option<usize>>,
+	ends : Vec<Option<( usize, usize )>>,
 	captions : Vec<String>,
 	revision : u32,
 	base : f64,
@@ -71,7 +73,7 @@ impl Simulation
 {
 	pub fn new( step : f64 ) -> Simulation
 	{
-		Simulation { layers : vec![ Document::default() ], registry : Registry::default(), elements : Vec::new(), devices : Vec::new(), plan : Plan::default(), models : Vec::new(), sources : Vec::new(), focus : Vec::new(), history : History::default(), logic : Logic::default(), solution : Ok( Solution::default() ), lights : Vec::new(), places : Vec::new(), glows : Vec::new(), captions : Vec::new(), revision : 0, base : step, step, undos : Vec::new(), redos : Vec::new(), loading : None, measuring : None }
+		Simulation { layers : vec![ Document::default() ], registry : Registry::default(), elements : Vec::new(), devices : Vec::new(), plan : Plan::default(), models : Vec::new(), sources : Vec::new(), focus : Vec::new(), history : History::default(), logic : Logic::default(), solution : Ok( Solution::default() ), lights : Vec::new(), places : Vec::new(), glows : Vec::new(), ends : Vec::new(), captions : Vec::new(), revision : 0, base : step, step, undos : Vec::new(), redos : Vec::new(), loading : None, measuring : None }
 	}
 
 	pub fn create( &mut self ) -> usize
@@ -360,6 +362,8 @@ impl Simulation
 	pub fn advance( &mut self, count : u32 )
 	{
 		if self.frozen() { return; }
+
+		if self.mode() == Mode::Digital { let solution = rush( &self.elements, &self.devices, &self.plan, &self.models, self.step, count, &mut self.logic ); self.show( solution ); return; }
 
 		for _ in 0 .. count
 		{
@@ -670,9 +674,9 @@ impl Simulation
 		let layer = self.descend( path ).unwrap_or( 0 );
 		let positions : HashMap<u32, usize> = self.elements.iter().enumerate().map( | ( index, element ) | ( element.id, index ) ).collect();
 		let position = | key : &[ u32 ] | self.registry.find( key ).and_then( | id | positions.get( &id ).copied() );
-		let symbols : Vec<( u32, usize )> = self.layers[ layer ].elements().iter().filter_map( | element | match element.kind { Kind::Symbol { layer : inner, .. } => Some( ( element.id, inner as usize ) ), _ => None } ).collect();
+		let symbols : Vec<( usize, u32, usize )> = self.layers[ layer ].elements().iter().enumerate().filter_map( | ( at, element ) | match element.kind { Kind::Symbol { layer : inner, .. } => Some( ( at, element.id, inner as usize ) ), _ => None } ).collect();
 
-		self.glows = symbols.iter().flat_map( | &( id, inner ) | self.layers[ inner ].elements().iter().filter( | part | matches!( part.kind, Kind::Led { .. } ) ).map( move | led | ( id, led.id ) ) ).map( | ( id, led ) | position( &[ path, &[ id, led ] ].concat() ) ).collect();
+		self.glows = symbols.iter().flat_map( | &( _, id, inner ) | self.layers[ inner ].elements().iter().filter( | part | matches!( part.kind, Kind::Led { .. } ) ).map( move | led | ( id, led.id ) ) ).map( | ( id, led ) | position( &[ path, &[ id, led ] ].concat() ) ).collect();
 		self.places = self.layers[ layer ].elements().iter().map( | element |
 		{
 			let key = [ path, &[ element.id ] ].concat();
@@ -684,7 +688,14 @@ impl Simulation
 			}
 		} ).collect();
 
+		self.ends = symbols.iter().flat_map( | &( at, _, inner ) | self.leads( inner, &self.places[ at ] ) ).collect();
+
 		self.captions = self.caption();
+	}
+
+	fn leads( &self, layer : usize, places : &[ Option<usize> ] ) -> Vec<Option<( usize, usize )>>
+	{
+		leads( self.layers[ layer ].elements() ).into_iter().map( | ends | ends.and_then( | ( anode, cathode ) | places[ anode ].zip( places[ cathode ] ) ) ).collect()
 	}
 
 	fn edit( &mut self, layer : usize, operation : Operation ) -> Result<( u32, Operation ), Error>
@@ -720,7 +731,10 @@ impl Simulation
 
 	fn glow( &self, solution : &Solution ) -> Vec<f64>
 	{
-		self.glows.iter().map( | &index | index.and_then( | index | solution.readings.get( index ) ).map_or( 0.0, | reading | reading.currents[ 0 ] ) ).collect()
+		let high = | index : usize | solution.readings[ index ].potentials[ 1 ] > THRESHOLD;
+		let lit = | ( anode, cathode ) : ( usize, usize ) | if high( anode ) && ! high( cathode ) { GLOW } else { 0.0 };
+
+		self.glows.iter().zip( &self.ends ).map( | ( &index, &ends ) | index.and_then( | index | solution.readings.get( index ) ).map( | reading | reading.currents[ 0 ] ).or_else( || ends.map( lit ) ).unwrap_or( 0.0 ) ).collect()
 	}
 
 	fn view( &self, solution : &Solution, shown : &mut Solution )

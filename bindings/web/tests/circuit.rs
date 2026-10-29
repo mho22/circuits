@@ -55,6 +55,16 @@ fn glowing( hertz : f64 ) -> Vec<f64>
 	( 0 .. 2000 ).map( | _ | { circuit.advance( 1 ); circuit.lights()[ 0 ] } ).collect()
 }
 
+fn inverting( hertz : f64 ) -> ( String, Vec<f64> )
+{
+	let mut circuit = Circuit::new();
+	let data = [ 0.0, 14.0, 1.0, 0.0, 5.0, 5.0, 5.0, 5.0, 0.0, 18.0, hertz, 0.0, 1.0, 5.0, 3.0, 5.0, 1.0, 13.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 12.0, 5.0, 0.0, 3.0, -1.0, 3.0, -1.0, 1.0, 15.0, 0.0, 0.0, 6.0, 0.0, 5.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, -2.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0, 11.0, 0.0, 0.0, 0.0, -2.0, 2.0, -2.0, 1.0, 10.0, 0.0, 0.0, 0.0, 2.0, 2.0, 2.0, 1.0, 0.0, 0.0, 0.0, 3.0, -3.0, 5.0, -3.0, 1.0, 0.0, 0.0, 0.0, 5.0, -3.0, 5.0, 0.0, 1.0, 0.0, 0.0, 0.0, 5.0, 0.0, 5.0, 1.0, 1.0, 0.0, 0.0, 0.0, 5.0, 1.0, 3.0, 1.0, 1.0, 3.0, 0.0, 0.0, 3.0, 3.0, 3.0, 3.0, 1.0, 1.0, 1000.0, 0.0, 5.0, 0.0, 9.0, 0.0, 1.0, 17.0, 1.0, 0.0, 9.0, 0.0, 9.0, 4.0, 1.0, 0.0, 0.0, 0.0, 9.0, 4.0, 9.0, 6.0, 1.0, 0.0, 0.0, 0.0, 9.0, 6.0, -2.0, 6.0, 1.0, 0.0, 0.0, 0.0, -2.0, 6.0, -2.0, 0.0, 1.0, 0.0, 0.0, 0.0, -2.0, 0.0, 0.0, 0.0 ];
+
+	open( &mut circuit, &data, Vec::new(), &[ 1 ], vec![ "foo".to_string() ], &[ 0 ], &[ 3, -2, 0, 2, 0, 0, 2 ] ).ok();
+
+	( circuit.mode(), ( 0 .. 200 ).map( | _ | { circuit.advance( 10 ); circuit.lights()[ 0 ] } ).collect() )
+}
+
 fn laddered() -> Circuit
 {
 	let mut circuit = Circuit::new();
@@ -925,6 +935,19 @@ fn it_shows_the_steady_mean_of_an_led_inside_a_symbol_that_blinks_faster_than_th
 	assert!( peak > 1e-3 );
 	assert!( slow.iter().copied().fold( f64::INFINITY, f64::min ) < 0.01 * peak );
 	assert!( fast[ 1980 .. ].iter().all( | &current | ( current / peak - 0.5 ).abs() < 0.1 ) );
+}
+
+#[wasm_bindgen_test]
+fn it_shows_the_steady_mean_of_an_led_inside_a_gate_that_blinks_faster_than_the_eye()
+{
+	let ( mode, slow ) = inverting( 1.0 );
+	let ( _, fast ) = inverting( 1e3 );
+	let peak = slow.iter().copied().fold( 0.0, f64::max );
+
+	assert_eq!( mode, "Digital" );
+	assert!( peak > 1e-3 );
+	assert!( slow.iter().copied().fold( f64::INFINITY, f64::min ) < 0.01 * peak );
+	assert!( fast[ 198 .. ].iter().all( | &current | ( current / peak - 0.5 ).abs() < 0.1 ) );
 }
 
 #[wasm_bindgen_test]
