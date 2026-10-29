@@ -17,6 +17,7 @@ pub struct Net
 	pub elements : Vec<usize>,
 	pub readers : Vec<usize>,
 	pub pieces : Vec<Segment>,
+	pub lights : Vec<usize>,
 }
 
 
@@ -111,7 +112,12 @@ impl Plan
 		let lights : Vec<( usize, usize, usize )> = leds.iter().filter_map( | &index | { let ( anode, cathode ) = ends( index ); Some( ( index, number( anode )?, number( cathode )? ) ) } ).collect();
 		let mut digital = vec![ false; elements.len() ];
 
-		for &( index, _, _ ) in &lights { digital[ index ] = true; }
+		for ( light, &( index, anode, cathode ) ) in lights.iter().enumerate()
+		{
+			digital[ index ] = true;
+			nets[ anode ].lights.push( light );
+			nets[ cathode ].lights.push( light );
+		}
 
 		let mut claim = | nets : &mut Vec<Net>, net : usize, index : usize | { nets[ net ].elements.push( index ); digital[ index ] = true; };
 

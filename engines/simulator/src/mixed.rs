@@ -1,12 +1,11 @@
 use std::collections::VecDeque;
 
 use crate::flatten::HIGH;
-use crate::{ compute, Action, Branch, Device, Drive, Element, Error, History, Junction, Kind, Logic, Machine, Model, Plan, Reading, Solution, Source, FLOOR, THRESHOLD };
+use crate::{ compute, Action, Branch, Device, Drive, Element, Error, Exposure, History, Kind, Logic, Machine, Model, Plan, Reading, Solution, Source, FLOOR, THRESHOLD };
 
 
 const ROUNDS : usize = 100;
 const EVENTS : usize = 64;
-const HALVINGS : usize = 60;
 
 
 fn count( hertz : f64, time : f64 ) -> u64
@@ -17,23 +16,6 @@ fn count( hertz : f64, time : f64 ) -> u64
 fn level( count : u64 ) -> f64
 {
 	if count % 2 == 1 { HIGH } else { 0.0 }
-}
-
-fn light( junction : Junction, volts : f64, ohms : f64 ) -> f64
-{
-	if volts <= 0.0 || ! ohms.is_finite() { return 0.0; }
-
-	let current = | drop : f64 | junction.saturation * ( ( drop / junction.thermal ).exp() - 1.0 );
-	let ( mut low, mut high ) = ( 0.0, volts );
-
-	for _ in 0 .. HALVINGS
-	{
-		let middle = 0.5 * ( low + high );
-
-		if middle + current( middle ) * ohms > volts { high = middle; } else { low = middle; }
-	}
-
-	current( low )
 }
 
 fn emit( kind : Kind, time : f64 ) -> f64
@@ -98,6 +80,8 @@ impl<'a> Run<'a>
 		self.logic.clear();
 		self.resting = vec![ rest; size ];
 
+		let mut ohms = vec![ f64::INFINITY; self.plan.nets.len() ];
+
 		for device in 0 .. size
 		{
 			let table = self.tables[ device ];
@@ -116,6 +100,7 @@ impl<'a> Run<'a>
 				let Some( net ) = net else { continue; };
 
 				self.logic.levels[ net ] = drive.volts;
+				ohms[ net ] = drive.ohms.max( FLOOR );
 			}
 		}
 
@@ -124,6 +109,7 @@ impl<'a> Run<'a>
 			let Some( net ) = net else { continue; };
 
 			self.logic.levels[ net ] = emit( self.elements[ index ].kind, time );
+			ohms[ net ] = FLOOR;
 
 			let Kind::Clock { hertz, on : true } = self.elements[ index ].kind else { continue; };
 			let edges = count( hertz, time );
@@ -131,6 +117,7 @@ impl<'a> Run<'a>
 			self.logic.schedule( ( edges + 1 ) as f64 / ( 2.0 * hertz ), Action::Edge { clock, count : edges + 1 } );
 		}
 
+		self.logic.exposure = Exposure::new( self.plan, self.elements, &self.logic.levels, ohms, time );
 		self.solve( history, step, time, Solution::default() )?;
 
 		for device in 0 .. size { self.evaluate( device, time ); }
@@ -173,11 +160,12 @@ impl<'a> Run<'a>
 		self.logic.schedule( time + delay, Action::Fire { device, stamp : self.logic.stamps[ device ] } );
 	}
 
-	fn set( &mut self, net : usize, volts : f64, time : f64 )
+	fn set( &mut self, net : usize, volts : f64, ohms : f64, time : f64 )
 	{
 		let changed = ( volts > THRESHOLD ) != ( self.logic.levels[ net ] > THRESHOLD );
 		let plan = self.plan;
 
+		self.logic.exposure.change( plan, &self.logic.levels, net, volts, ohms );
 		self.logic.levels[ net ] = volts;
 
 		if ! changed { return; }
@@ -207,6 +195,8 @@ impl<'a> Run<'a>
 				Action::Edge { clock, count } => self.tick( clock, count, event.time ),
 			}
 		}
+
+		self.logic.exposure.flush( self.plan, self.elements, &self.logic.levels, until );
 
 		Ok( () )
 	}
@@ -260,7 +250,7 @@ impl<'a> Run<'a>
 		{
 			let Some( net ) = net else { continue; };
 
-			self.set( net, drive.volts, time );
+			self.set( net, drive.volts, drive.ohms.max( FLOOR ), time );
 		}
 	}
 
@@ -269,7 +259,7 @@ impl<'a> Run<'a>
 		let ( index, net ) = self.plan.generators[ clock ];
 		let ( Kind::Clock { hertz, .. }, Some( net ) ) = ( self.elements[ index ].kind, net ) else { return; };
 
-		self.set( net, level( count ), time );
+		self.set( net, level( count ), FLOOR, time );
 		self.logic.schedule( ( count + 1 ) as f64 / ( 2.0 * hertz ), Action::Edge { clock, count : count + 1 } );
 	}
 
@@ -318,7 +308,7 @@ impl<'a> Run<'a>
 		Ok( solution )
 	}
 
-	fn assemble( &self, solution : Solution, mut readings : Vec<Reading> ) -> Solution
+	fn assemble( &mut self, solution : Solution, mut readings : Vec<Reading> ) -> Solution
 	{
 		let mut branches = solution.branches;
 
@@ -346,43 +336,15 @@ impl<'a> Run<'a>
 			branches.extend( net.pieces.iter().map( | &segment | Branch { segment, voltage : volts, current : 0.0 } ) );
 		}
 
-		let mut ohms = vec![ f64::INFINITY; self.plan.nets.len() ];
-		let mut shares = vec![ 0.0; self.plan.nets.len() ];
+		let means = self.logic.exposure.expose( self.logic.time );
 
-		for ( device, outputs ) in self.plan.outputs.iter().enumerate()
+		for ( &( index, anode, cathode ), current ) in self.plan.lights.iter().zip( means )
 		{
-			for ( drive, &net ) in self.tables[ device ].rows[ self.logic.applied[ device ] ].iter().zip( outputs )
-			{
-				let Some( net ) = net else { continue; };
-
-				ohms[ net ] = drive.ohms.max( FLOOR );
-			}
-		}
-
-		for &( _, net ) in &self.plan.generators
-		{
-			let Some( net ) = net else { continue; };
-
-			ohms[ net ] = FLOOR;
-		}
-
-		for &( _, anode, cathode ) in &self.plan.lights
-		{
-			if self.logic.levels[ anode ] <= self.logic.levels[ cathode ] { continue; }
-
-			shares[ anode ] += 1.0;
-			shares[ cathode ] += 1.0;
-		}
-
-		for &( index, anode, cathode ) in &self.plan.lights
-		{
-			let ( high, low ) = ( self.logic.levels[ anode ], self.logic.levels[ cathode ] );
-			let current = light( self.elements[ index ].kind.junction(), high - low, shares[ anode ] * ohms[ anode ] + shares[ cathode ] * ohms[ cathode ] );
 			let Reading { potentials, currents } = &mut readings[ index ];
 
 			potentials.clear();
 			currents.clear();
-			potentials.extend( [ high, low ] );
+			potentials.extend( [ self.logic.levels[ anode ], self.logic.levels[ cathode ] ] );
 			currents.extend( [ current, - current ] );
 		}
 
