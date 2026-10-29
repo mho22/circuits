@@ -1,4 +1,4 @@
-use simulator::{ advance, flatten, idle, rush, settle, Catalog, Device, Document, Drive, Element, Error, History, Kind, Logic, Model, Operation, Plan, Point, Reading, Registry, Segment, Solution };
+use simulator::{ advance, flatten, idle, rush, settle, Catalog, Device, Document, Drive, Element, Error, History, Kind, Logic, Machine, Model, Operation, Plan, Point, Reading, Registry, Segment, Solution };
 
 
 const STEP : f64 = 1e-6;
@@ -20,12 +20,12 @@ impl Circuit
 {
 	fn settle( &mut self ) -> Result<Solution, Error>
 	{
-		settle( &self.elements, &self.devices, &self.plan, &self.models, &History::default(), STEP, &mut self.logic, true )
+		settle( Machine { elements : &self.elements, devices : &self.devices, plan : &self.plan, models : &self.models }, &History::default(), STEP, &mut self.logic, true )
 	}
 
 	fn advance( &mut self, step : f64 ) -> Result<Solution, Error>
 	{
-		advance( &self.elements, &self.devices, &self.plan, &self.models, &History::default(), step, &mut self.logic )
+		advance( Machine { elements : &self.elements, devices : &self.devices, plan : &self.plan, models : &self.models }, &History::default(), step, &mut self.logic )
 	}
 
 	fn idle( &self, step : f64 ) -> bool
@@ -344,7 +344,7 @@ fn it_rushes_a_digital_circuit_over_several_steps_to_the_solution_of_its_last_st
 	rushed.settle().unwrap();
 
 	let last = ( 0 .. 25 ).map( | _ | stepped.advance( 0.4e-9 ).unwrap() ).last().unwrap();
-	let solution = rush( &rushed.elements, &rushed.devices, &rushed.plan, &rushed.models, 0.4e-9, 25, &mut rushed.logic ).unwrap();
+	let solution = rush( Machine { elements : &rushed.elements, devices : &rushed.devices, plan : &rushed.plan, models : &rushed.models }, 0.4e-9, 25, &mut rushed.logic ).unwrap();
 
 	assert!( rushed.plan.analog.is_empty() );
 	assert_eq!( ( bits( &solution ), &solution.branches, rushed.logic.time ), ( bits( &last ), &last.branches, stepped.logic.time ) );
@@ -411,7 +411,7 @@ fn it_starts_a_new_device_with_memory_at_rest_with_its_lowest_outputs_and_keeps_
 	let ( elements, devices ) = flatten( &layers, &mut Registry::default(), &models, 0, &[] ).unwrap();
 	let plan = Plan::build( &elements, &devices );
 	let mut circuit = Circuit { elements, devices, plan, models, logic : Logic::default() };
-	let edged = settle( &circuit.elements, &circuit.devices, &circuit.plan, &circuit.models, &History::default(), STEP, &mut Logic::default(), false ).unwrap();
+	let edged = settle( Machine { elements : &circuit.elements, devices : &circuit.devices, plan : &circuit.plan, models : &circuit.models }, &History::default(), STEP, &mut Logic::default(), false ).unwrap();
 	let rested = circuit.settle().unwrap();
 
 	circuit.logic.applied = vec![ 13 ];

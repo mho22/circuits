@@ -1,5 +1,5 @@
 use crate::flatten::STRIDE;
-use crate::{ flatten, flip, settle, stages, Device, Document, Drive, Element, History, Kind, Logic, Model, Netlist, Plan, Point, Registry, Segment, Solution, DELAY, FLOOR, THRESHOLD };
+use crate::{ flatten, flip, settle, stages, Device, Document, Drive, Element, History, Kind, Logic, Machine, Model, Netlist, Plan, Point, Registry, Segment, Solution, DELAY, FLOOR, THRESHOLD };
 
 
 pub const INPUTS : usize = 8;
@@ -18,7 +18,7 @@ type Entry = ( Vec<Drive>, Vec<f64>, usize );
 fn run( elements : &[ Element ], devices : &[ Device ], plan : &Plan, models : &[ Option<Model> ], step : f64, seed : &Logic ) -> Option<( Solution, Logic )>
 {
 	let mut logic = seed.clone();
-	let solution = settle( elements, devices, plan, models, &History::default(), step, &mut logic, false ).ok()?;
+	let solution = settle( Machine { elements, devices, plan, models }, &History::default(), step, &mut logic, false ).ok()?;
 
 	Some( ( solution, logic ) )
 }

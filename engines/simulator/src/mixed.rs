@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use crate::flatten::HIGH;
-use crate::{ compute, Action, Branch, Device, Drive, Element, Error, History, Junction, Kind, Logic, Model, Plan, Reading, Solution, Source, FLOOR, THRESHOLD };
+use crate::{ compute, Action, Branch, Device, Drive, Element, Error, History, Junction, Kind, Logic, Machine, Model, Plan, Reading, Solution, Source, FLOOR, THRESHOLD };
 
 
 const ROUNDS : usize = 100;
@@ -65,8 +65,9 @@ struct Run<'a>
 
 impl<'a> Run<'a>
 {
-	fn new( elements : &'a [ Element ], devices : &'a [ Device ], plan : &'a Plan, models : &'a [ Option<Model> ], logic : &'a mut Logic, instant : bool ) -> Result<Run<'a>, Error>
+	fn new( machine : Machine<'a>, logic : &'a mut Logic, instant : bool ) -> Result<Run<'a>, Error>
 	{
+		let Machine { elements, devices, plan, models } = machine;
 		let tables = devices.iter().map( | device | models.get( device.layer ).and_then( Option::as_ref ) ).collect::<Option<_>>().ok_or( Error::Layerless )?;
 		let mut positions = vec![ None; elements.len() ];
 
@@ -390,10 +391,10 @@ impl<'a> Run<'a>
 }
 
 
-pub fn settle( elements : &[ Element ], devices : &[ Device ], plan : &Plan, models : &[ Option<Model> ], history : &History, step : f64, logic : &mut Logic, rest : bool ) -> Result<Solution, Error>
+pub fn settle( machine : Machine, history : &History, step : f64, logic : &mut Logic, rest : bool ) -> Result<Solution, Error>
 {
 	let time = logic.time;
-	let mut run = Run::new( elements, devices, plan, models, logic, true )?;
+	let mut run = Run::new( machine, logic, true )?;
 	let mut round = 0;
 	let mut spare = Solution::default();
 
@@ -414,15 +415,15 @@ pub fn settle( elements : &[ Element ], devices : &[ Device ], plan : &Plan, mod
 	}
 }
 
-pub fn advance( elements : &[ Element ], devices : &[ Device ], plan : &Plan, models : &[ Option<Model> ], history : &History, step : f64, logic : &mut Logic ) -> Result<Solution, Error>
+pub fn advance( machine : Machine, history : &History, step : f64, logic : &mut Logic ) -> Result<Solution, Error>
 {
 	let time = logic.time + step;
 	let Solution { mut readings, branches } = std::mem::take( &mut logic.spare );
-	let mut run = Run::new( elements, devices, plan, models, logic, false )?;
+	let mut run = Run::new( machine, logic, false )?;
 
 	run.drain( time )?;
 
-	let analog = plan.analog.iter().map( | &index | readings.get_mut( index ).map( std::mem::take ).unwrap_or_default() ).collect();
+	let analog = machine.plan.analog.iter().map( | &index | readings.get_mut( index ).map( std::mem::take ).unwrap_or_default() ).collect();
 	let solution = run.solve( history, step, time, Solution { readings : analog, branches } )?;
 
 	run.logic.time = time;
@@ -430,10 +431,10 @@ pub fn advance( elements : &[ Element ], devices : &[ Device ], plan : &Plan, mo
 	Ok( run.assemble( solution, readings ) )
 }
 
-pub fn rush( elements : &[ Element ], devices : &[ Device ], plan : &Plan, models : &[ Option<Model> ], step : f64, count : u32, logic : &mut Logic ) -> Result<Solution, Error>
+pub fn rush( machine : Machine, step : f64, count : u32, logic : &mut Logic ) -> Result<Solution, Error>
 {
 	let Solution { readings, mut branches } = std::mem::take( &mut logic.spare );
-	let mut run = Run::new( elements, devices, plan, models, logic, false )?;
+	let mut run = Run::new( machine, logic, false )?;
 
 	branches.clear();
 

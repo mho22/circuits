@@ -2,7 +2,7 @@ use std::collections::{ HashMap, HashSet };
 
 use crate::flatten::STRIDE;
 use crate::shape::FINE;
-use crate::{ advance, enclose, flatten, idle, place, rush, settle, stretch, Catalog, Device, Document, Element, Enclosure, Error, History, Kind, Logic, Mode, Model, Netlist, Operation, Outline, Plan, Point, Reading, Registry, Segment, Shape, Solution };
+use crate::{ advance, enclose, flatten, idle, place, rush, settle, stretch, Catalog, Device, Document, Element, Enclosure, Error, History, Kind, Logic, Machine, Mode, Model, Netlist, Operation, Outline, Plan, Point, Reading, Registry, Segment, Shape, Solution };
 
 
 const DIVISIONS : f64 = 20.0;
@@ -362,13 +362,13 @@ impl Simulation
 	{
 		if self.frozen() { return; }
 
-		if self.mode() == Mode::Digital { let solution = rush( &self.elements, &self.devices, &self.plan, &self.models, self.step, count, &mut self.logic ); self.show( solution ); return; }
+		if self.mode() == Mode::Digital { let solution = rush( Machine { elements : &self.elements, devices : &self.devices, plan : &self.plan, models : &self.models }, self.step, count, &mut self.logic ); self.show( solution ); return; }
 
 		for _ in 0 .. count
 		{
 			if self.idle() { self.logic.time += self.step; continue; }
 
-			let solution = advance( &self.elements, &self.devices, &self.plan, &self.models, &self.history, self.step, &mut self.logic );
+			let solution = advance( Machine { elements : &self.elements, devices : &self.devices, plan : &self.plan, models : &self.models }, &self.history, self.step, &mut self.logic );
 
 			if let Ok( solution ) = &solution { self.history = History::record( &self.elements, solution ); }
 
@@ -714,7 +714,7 @@ impl Simulation
 
 		self.step = self.period().map_or( self.base, | period | period / DIVISIONS );
 
-		let solution = settle( &self.elements, &self.devices, &self.plan, &self.models, &self.history, self.step, &mut self.logic, true );
+		let solution = settle( Machine { elements : &self.elements, devices : &self.devices, plan : &self.plan, models : &self.models }, &self.history, self.step, &mut self.logic, true );
 
 		self.show( solution );
 	}
