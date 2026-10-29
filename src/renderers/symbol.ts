@@ -40,12 +40,23 @@ export function draw( context : CanvasRenderingContext2D, element : Element, sca
 		context.stroke();
 	}
 
-	outline.lights.forEach( light =>
+	const groups = new Map<string, number[]>();
+
+	outline.lights.forEach( ( light, index ) =>
 	{
-		const point = turn( light.point, element.rotation );
+		const key = `${ light.point.x },${ light.point.y }`;
+		const group = groups.get( key ) ?? [];
+
+		group.push( index );
+		groups.set( key, group );
+	} );
+
+	groups.forEach( indexes =>
+	{
+		const point = turn( outline.lights[ indexes[ 0 ] ].point, element.rotation );
 		const x = toScreen( element.from.x + point.x );
 		const y = toScreen( element.from.y + point.y );
-		const glows = outline.lights.flatMap( ( other, index ) : [ Color, number ][] => other.point.x === light.point.x && other.point.y === light.point.y ? [ [ other.color, brightness( element.lights?.[ index ] ?? 0 ) ] ] : [] ).filter( ( [ , glow ] ) => glow > 0 );
+		const glows = indexes.map( ( index ) : [ Color, number ] => [ outline.lights[ index ].color, brightness( element.lights?.[ index ] ?? 0 ) ] ).filter( ( [ , glow ] ) => glow > 0 );
 
 		context.fillStyle = glows.length ? `rgb(${ mix( glows ) })` : DARK;
 		context.fillRect( x - SQUARE, y - SQUARE, 2 * SQUARE, 2 * SQUARE );

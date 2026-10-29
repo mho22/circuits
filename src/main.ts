@@ -614,7 +614,7 @@ function paint( shown : Map<number, Element>, branches : Branch[], joints : Scen
 
 	elements.forEach( item => element.draw( context, item, scale ) );
 
-	joints.forEach( ( { point, wire } ) => { if( shown.has( wire ) ) junction.draw( context, { point, potential : shown.get( wire )!.potentials[ 0 ] }, scale ); } );
+	junction.draw( context, joints.filter( ( { wire } ) => shown.has( wire ) ).map( ( { point, wire } ) => ( { point, potential : shown.get( wire )!.potentials[ 0 ] } ) ), scale );
 
 	paths.forEach( ( path, index ) => current.draw( context, path.from, path.to, path.current, scale.current, distances[ index ], circuit.frozen ? current.FROZEN : current.COLOR ) );
 
