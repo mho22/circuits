@@ -6,6 +6,7 @@ const STEP : f64 = 1e-5;
 const SPEED : f64 = 1e-2;
 const REAL : f64 = 1.0;
 const EYE : f64 = 1.0 / 125.0;
+const HOLD : f64 = 1.0 / 16.0;
 const ROW : usize = 13;
 const LEAK : f64 = 1e-6;
 
@@ -66,6 +67,7 @@ pub struct Circuit
 	simulation : Simulation,
 	clipboard : Vec<( Element, String )>,
 	seen : Option<( u32, Solution, Vec<f64>, [ f64; 2 ] )>,
+	held : Vec<( f64, f64 )>,
 }
 
 #[wasm_bindgen]
@@ -74,7 +76,7 @@ impl Circuit
 	#[wasm_bindgen( constructor )]
 	pub fn new() -> Circuit
 	{
-		Circuit { simulation : Simulation::new( STEP ), clipboard : Vec::new(), seen : None }
+		Circuit { simulation : Simulation::new( STEP ), clipboard : Vec::new(), seen : None, held : Vec::new() }
 	}
 
 	pub fn snap( from_x : i32, from_y : i32, cursor_x : i32, cursor_y : i32 ) -> Vec<i32>
@@ -565,16 +567,27 @@ impl Circuit
 		let ( Ok( solution ), true ) = ( self.simulation.solution(), steps > 0 ) else { return; };
 		let revision = self.simulation.revision();
 		let lights = self.simulation.lights();
-		let weight = 1.0 - ( - f64::from( steps ) / ( self.rate() * EYE ) ).exp();
+		let elapsed = f64::from( steps ) / self.rate();
+		let weight = 1.0 - ( - elapsed / EYE ).exp();
 
-		let Some( ( stamp, seen, glow, peaks ) ) = self.seen.as_mut().filter( | ( _, _, glow, _ ) | glow.len() == lights.len() ) else { self.seen = Some( ( revision, solution.clone(), lights.to_vec(), solution.peaks() ) ); return; };
+		let Some( ( stamp, seen, glow, peaks ) ) = self.seen.as_mut().filter( | ( _, _, glow, _ ) | glow.len() == lights.len() ) else
+		{
+			self.seen = Some( ( revision, solution.clone(), lights.to_vec(), solution.peaks() ) );
+			self.held = lights.iter().map( | &light | ( light, 0.0 ) ).collect();
+
+			return;
+		};
 
 		if *stamp != revision && ! seen.fits( solution ) { seen.clone_from( solution ); }
 
 		*stamp = revision;
 		*peaks = seen.blend( solution, weight );
 
-		for ( from, &to ) in glow.iter_mut().zip( lights ) { *from = mix( *from, to, weight ); }
+		for ( ( from, &to ), held ) in glow.iter_mut().zip( lights ).zip( &mut self.held )
+		{
+			*held = if to > LEAK { ( to, 0.0 ) } else { ( held.0, held.1 + elapsed ) };
+			*from = mix( *from, if held.1 <= HOLD { held.0 } else { to }, weight );
+		}
 	}
 
 	fn shown( &self ) -> Option<&Solution>

@@ -941,7 +941,7 @@ fn it_shows_each_blink_of_a_slow_led_and_the_steady_mean_of_an_led_that_blinks_f
 }
 
 #[wasm_bindgen_test]
-fn it_shows_the_steady_mean_of_an_led_inside_a_symbol_that_blinks_faster_than_the_eye()
+fn it_holds_the_light_of_an_led_inside_a_symbol_that_blinks_faster_than_the_eye()
 {
 	let slow = glowing( 1.0 );
 	let fast = glowing( 1e3 );
@@ -949,11 +949,22 @@ fn it_shows_the_steady_mean_of_an_led_inside_a_symbol_that_blinks_faster_than_th
 
 	assert!( peak > 1e-3 );
 	assert!( slow.iter().copied().fold( f64::INFINITY, f64::min ) < 0.01 * peak );
-	assert!( fast[ 1980 .. ].iter().all( | &current | ( current / peak - 0.5 ).abs() < 0.1 ) );
+	assert!( fast[ 1980 .. ].iter().all( | &current | ( current / peak - 1.0 ).abs() < 0.1 ) );
 }
 
 #[wasm_bindgen_test]
-fn it_shows_the_steady_mean_of_an_led_inside_a_gate_that_blinks_faster_than_the_eye()
+fn it_holds_the_light_of_an_led_for_a_sixteenth_of_a_second_after_it_goes_off()
+{
+	let peak = glowing( 1.0 ).iter().copied().fold( 0.0, f64::max );
+	let held = glowing( 20.0 );
+	let dropped = glowing( 4.0 );
+
+	assert!( held[ 1980 .. ].iter().all( | &current | ( current / peak - 1.0 ).abs() < 0.1 ) );
+	assert!( dropped[ 1900 .. ].iter().copied().fold( f64::INFINITY, f64::min ) < 0.01 * peak );
+}
+
+#[wasm_bindgen_test]
+fn it_holds_the_light_of_an_led_inside_a_gate_that_blinks_faster_than_the_eye()
 {
 	let ( mode, slow ) = inverting( 1.0 );
 	let ( _, fast ) = inverting( 1e3 );
@@ -962,7 +973,7 @@ fn it_shows_the_steady_mean_of_an_led_inside_a_gate_that_blinks_faster_than_the_
 	assert_eq!( mode, "Digital" );
 	assert!( peak > 1e-3 );
 	assert!( slow.iter().copied().fold( f64::INFINITY, f64::min ) < 0.01 * peak );
-	assert!( fast[ 198 .. ].iter().all( | &current | ( current / peak - 0.5 ).abs() < 0.1 ) );
+	assert!( fast[ 198 .. ].iter().all( | &current | ( current / peak - 1.0 ).abs() < 0.1 ) );
 }
 
 #[wasm_bindgen_test]

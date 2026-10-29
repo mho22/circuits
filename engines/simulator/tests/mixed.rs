@@ -351,16 +351,17 @@ fn it_rushes_a_digital_circuit_over_several_steps_to_the_solution_of_its_last_st
 }
 
 #[test]
-fn it_gives_the_mean_current_of_a_digital_led_over_the_steps_it_rushes()
+fn it_gives_the_highest_current_of_a_digital_led_over_the_steps_it_rushes()
 {
 	let mut circuit = circuit( &[ ( Kind::Clock { hertz : 1000.0, on : true }, ( 4, 0 ), ( 8, 0 ) ), symbol( 10 ), ( Kind::Led { color : 0 }, ( 12, 0 ), ( 12, 4 ) ), ( Kind::Toggle { high : false }, ( 16, 4 ), ( 12, 4 ) ) ] );
 	let led = circuit.elements.iter().position( | element | matches!( element.kind, Kind::Led { .. } ) ).unwrap();
 	let lit = circuit.settle().unwrap().readings[ led ].currents[ 0 ];
-	let solution = rush( Machine { elements : &circuit.elements, devices : &circuit.devices, plan : &circuit.plan, models : &circuit.models }, 1e-5, 1000, &mut circuit.logic ).unwrap();
+	let solution = rush( Machine { elements : &circuit.elements, devices : &circuit.devices, plan : &circuit.plan, models : &circuit.models }, 1e-5, 75, &mut circuit.logic ).unwrap();
 
 	assert!( circuit.plan.analog.is_empty() );
 	assert!( lit > 1e-3 );
-	assert!( ( solution.readings[ led ].currents[ 0 ] / lit - 0.5 ).abs() < 2e-3 );
+	assert_eq!( solution.readings[ led ].currents[ 0 ], lit );
+	assert!( circuit.advance( 1e-5 ).unwrap().readings[ led ].currents[ 0 ] < 1e-9 );
 }
 
 #[test]

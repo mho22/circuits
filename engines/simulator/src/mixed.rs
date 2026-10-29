@@ -117,7 +117,7 @@ impl<'a> Run<'a>
 			self.logic.schedule( ( edges + 1 ) as f64 / ( 2.0 * hertz ), Action::Edge { clock, count : edges + 1 } );
 		}
 
-		self.logic.exposure = Exposure::new( self.plan, self.elements, &self.logic.levels, ohms, time );
+		self.logic.exposure = Exposure::new( self.plan, self.elements, &self.logic.levels, ohms );
 		self.solve( history, step, time, Solution::default() )?;
 
 		for device in 0 .. size { self.evaluate( device, time ); }
@@ -196,7 +196,7 @@ impl<'a> Run<'a>
 			}
 		}
 
-		self.logic.exposure.flush( self.plan, self.elements, &self.logic.levels, until );
+		self.logic.exposure.flush( self.plan, self.elements, &self.logic.levels );
 
 		Ok( () )
 	}
@@ -336,9 +336,9 @@ impl<'a> Run<'a>
 			branches.extend( net.pieces.iter().map( | &segment | Branch { segment, voltage : volts, current : 0.0 } ) );
 		}
 
-		let means = self.logic.exposure.expose( self.logic.time );
+		let peaks = self.logic.exposure.expose();
 
-		for ( &( index, anode, cathode ), current ) in self.plan.lights.iter().zip( means )
+		for ( &( index, anode, cathode ), current ) in self.plan.lights.iter().zip( peaks )
 		{
 			let Reading { potentials, currents } = &mut readings[ index ];
 
@@ -370,7 +370,12 @@ pub fn settle( machine : Machine, history : &History, step : f64, logic : &mut L
 
 		let solution = run.solve( history, step, time, spare )?;
 
-		if ! run.logic.pending( time ) { return Ok( run.assemble( solution, Vec::new() ) ); }
+		if ! run.logic.pending( time )
+		{
+			run.logic.exposure.reset();
+
+			return Ok( run.assemble( solution, Vec::new() ) );
+		}
 
 		spare = solution;
 		round += 1;

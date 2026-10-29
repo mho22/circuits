@@ -55,9 +55,7 @@ pub struct Exposure
 	shares : Vec<usize>,
 	lit : Vec<bool>,
 	currents : Vec<f64>,
-	sums : Vec<f64>,
-	marks : Vec<f64>,
-	opened : f64,
+	peaks : Vec<f64>,
 	dirty : Vec<usize>,
 	marked : Vec<bool>,
 	cache : HashMap<( u64, u64, u64 ), f64, BuildHasherDefault<Fold>>,
@@ -65,11 +63,11 @@ pub struct Exposure
 
 impl Exposure
 {
-	pub fn new( plan : &Plan, elements : &[ Element ], levels : &[ f64 ], ohms : Vec<f64>, time : f64 ) -> Exposure
+	pub fn new( plan : &Plan, elements : &[ Element ], levels : &[ f64 ], ohms : Vec<f64> ) -> Exposure
 	{
 		let count = plan.lights.len();
 		let nets = plan.nets.len();
-		let mut exposure = Exposure { ohms, shares : vec![ 0; nets ], lit : vec![ false; count ], currents : vec![ 0.0; count ], sums : vec![ 0.0; count ], marks : vec![ time; count ], opened : time, dirty : Vec::new(), marked : vec![ false; nets ], cache : HashMap::default() };
+		let mut exposure = Exposure { ohms, shares : vec![ 0; nets ], lit : vec![ false; count ], currents : vec![ 0.0; count ], peaks : vec![ 0.0; count ], dirty : Vec::new(), marked : vec![ false; nets ], cache : HashMap::default() };
 
 		for ( light, &( _, anode, cathode ) ) in plan.lights.iter().enumerate()
 		{
@@ -80,7 +78,7 @@ impl Exposure
 			exposure.shares[ cathode ] += 1;
 		}
 
-		for light in 0 .. count { exposure.refresh( plan, elements, levels, light, time ); }
+		for light in 0 .. count { exposure.refresh( plan, elements, levels, light ); }
 
 		exposure
 	}
@@ -93,19 +91,17 @@ impl Exposure
 		self.mark( net );
 	}
 
-	pub fn expose( &mut self, time : f64 ) -> Vec<f64>
+	pub fn expose( &mut self ) -> Vec<f64>
 	{
-		let span = time - self.opened;
-		let means = self.currents.iter().zip( &self.sums ).zip( &self.marks ).map( | ( ( &current, &sum ), &mark ) | if span > 0.0 { ( sum + current * ( time - mark ) ) / span } else { current } ).collect();
-
-		self.sums.fill( 0.0 );
-		self.marks.fill( time );
-		self.opened = time;
-
-		means
+		std::mem::replace( &mut self.peaks, self.currents.clone() )
 	}
 
-	pub fn flush( &mut self, plan : &Plan, elements : &[ Element ], levels : &[ f64 ], time : f64 )
+	pub fn reset( &mut self )
+	{
+		self.peaks.clone_from( &self.currents );
+	}
+
+	pub fn flush( &mut self, plan : &Plan, elements : &[ Element ], levels : &[ f64 ] )
 	{
 		let changed = self.dirty.len();
 
@@ -140,7 +136,7 @@ impl Exposure
 
 				if self.marked[ anode ] || self.marked[ cathode ] || ( ! self.lit[ light ] && self.currents[ light ] == 0.0 ) { continue; }
 
-				self.refresh( plan, elements, levels, light, time );
+				self.refresh( plan, elements, levels, light );
 			}
 		}
 
@@ -156,15 +152,14 @@ impl Exposure
 		self.dirty.push( net );
 	}
 
-	fn refresh( &mut self, plan : &Plan, elements : &[ Element ], levels : &[ f64 ], light : usize, time : f64 )
+	fn refresh( &mut self, plan : &Plan, elements : &[ Element ], levels : &[ f64 ], light : usize )
 	{
 		let ( index, anode, cathode ) = plan.lights[ light ];
 		let junction = elements[ index ].kind.junction();
 		let volts = levels[ anode ] - levels[ cathode ];
 		let ohms = self.shares[ anode ] as f64 * self.ohms[ anode ] + self.shares[ cathode ] as f64 * self.ohms[ cathode ];
 
-		self.sums[ light ] += self.currents[ light ] * ( time - self.marks[ light ] );
-		self.marks[ light ] = time;
 		self.currents[ light ] = *self.cache.entry( ( junction.saturation.to_bits(), volts.to_bits(), ohms.to_bits() ) ).or_insert_with( || shine( junction, volts, ohms ) );
+		self.peaks[ light ] = self.peaks[ light ].max( self.currents[ light ] );
 	}
 }
