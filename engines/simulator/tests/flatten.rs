@@ -182,10 +182,10 @@ fn it_keeps_a_slider_at_its_voltage_at_the_end_of_its_lead_and_turns_it_into_a_p
 #[test]
 fn it_keeps_a_clock_at_the_end_of_its_lead()
 {
-	let drawing = layer( &[ ( Kind::Clock { hertz : 1e6 }, ( 1, 0 ), ( 3, 0 ) ) ] );
+	let drawing = layer( &[ ( Kind::Clock { hertz : 1e6, on : true }, ( 1, 0 ), ( 3, 0 ) ) ] );
 	let elements = flatten( &[ drawing ], &mut Registry::default(), &[], 0, &[] ).unwrap().0;
 
-	assert_eq!( elements, vec![ Element { id : 0, kind : Kind::Clock { hertz : 1e6 }, segment : segment( ( 3, 0 ), ( 3, 0 ) ), mirrored : false } ] );
+	assert_eq!( elements, vec![ Element { id : 0, kind : Kind::Clock { hertz : 1e6, on : true }, segment : segment( ( 3, 0 ), ( 3, 0 ) ), mirrored : false } ] );
 }
 
 #[test]

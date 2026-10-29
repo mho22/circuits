@@ -267,7 +267,7 @@ fn it_leaves_a_layer_with_a_capacitor_an_inductor_or_a_clock_analog()
 {
 	let capacitor = inverter( &[ ( Kind::Capacitor { farads : 1e-6 }, ( 5, 1 ), ( 5, 3 ) ), ( Kind::Ground, ( 5, 3 ), ( 5, 3 ) ) ] );
 	let inductor = inverter( &[ ( Kind::Inductor { henries : 1.0 }, ( 5, 1 ), ( 5, 3 ) ) ] );
-	let clock = inverter( &[ ( Kind::Clock { hertz : 1.0 }, ( 8, 4 ), ( 8, 6 ) ) ] );
+	let clock = inverter( &[ ( Kind::Clock { hertz : 1.0, on : true }, ( 8, 4 ), ( 8, 6 ) ) ] );
 
 	assert_eq!( characterize( &[ Document::default(), capacitor ], &[], 1 ), None );
 	assert_eq!( characterize( &[ Document::default(), inductor ], &[], 1 ), None );

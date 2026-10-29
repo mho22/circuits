@@ -1,4 +1,4 @@
-import { TRANSISTORS } from '../enums/kind.ts';
+import { Kind, TRANSISTORS } from '../enums/kind.ts';
 import type { Element } from '../types/element.ts';
 
 
@@ -24,7 +24,7 @@ export function decode( data : Float64Array ) : Element[]
 			currents.push( data[ start + count + offset ] );
 		}
 
-		elements.push( { id : data[ index ], kind, from : { x : data[ index + 2 ], y : data[ index + 3 ] }, to : { x : data[ index + 4 ], y : data[ index + 5 ] }, value, mirrored : TRANSISTORS.includes( kind ) && value === 1, rotation : data[ index + 7 ], potentials, currents } );
+		elements.push( { id : data[ index ], kind, from : { x : data[ index + 2 ], y : data[ index + 3 ] }, to : { x : data[ index + 4 ], y : data[ index + 5 ] }, value, mirrored : TRANSISTORS.includes( kind ) && value === 1, rotation : data[ index + 7 ], potentials, currents, ... kind === Kind.Clock ? { on : data[ index + 7 ] === 1 } : {} } );
 
 		index += HEAD + 2 * count;
 	}

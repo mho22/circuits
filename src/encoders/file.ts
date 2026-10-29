@@ -17,6 +17,8 @@ function detail( element : Element ) : string
 
 	if( element.kind === Kind.Toggle ) return element.value ? ', "level" : 1' : '';
 
+	if( element.kind === Kind.Clock ) return `, "hertz" : ${ element.value }${ element.on === false ? ', "level" : 0' : '' }`;
+
 	if( element.kind === Kind.Led ) return element.value ? `, "color" : "${ COLORS[ element.value as Color ].toLowerCase() }"` : '';
 
 	if( PINS.includes( element.kind ) ) return [ element.label ? `, "label" : ${ JSON.stringify( element.label ) }` : '', element.value ? ', "level" : 1' : '' ].join( '' );

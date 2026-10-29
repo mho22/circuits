@@ -24,6 +24,13 @@ describe( 'element decoder', () =>
 		] );
 	} );
 
+	it( 'reads the state of a clock from its eighth number', () =>
+	{
+		const data = new Float64Array( [ 0, 18, 0, 0, 2, 0, 1e6, 1, 0, 1, 18, 0, 2, 2, 2, 1e6, 0, 0 ] );
+
+		expect( decode( data ).map( item => item.on ) ).toEqual( [ true, false ] );
+	} );
+
 	it( 'reads no part from empty data', () =>
 	{
 		expect( decode( new Float64Array() ) ).toEqual( [] );

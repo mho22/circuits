@@ -145,6 +145,13 @@ describe( 'file decoder', () =>
 	{
 		const clock = element( { kind : Kind.Clock, value : 6e7, from : { x : 0, y : 0 }, to : { x : 2, y : 0 } } );
 
+		expect( Array.from( decode( encode( [ clock ] ) ).parts ) ).toEqual( [ 0, Kind.Clock, 6e7, 1, 0, 0, 2, 0 ] );
+	} );
+
+	it( 'reads a clock that is off with a state of 0', () =>
+	{
+		const clock = element( { kind : Kind.Clock, value : 6e7, on : false, from : { x : 0, y : 0 }, to : { x : 2, y : 0 } } );
+
 		expect( Array.from( decode( encode( [ clock ] ) ).parts ) ).toEqual( [ 0, Kind.Clock, 6e7, 0, 0, 0, 2, 0 ] );
 	} );
 

@@ -20,7 +20,7 @@ impl Circuit
 {
 	fn settle( &mut self ) -> Result<Solution, Error>
 	{
-		settle( &self.elements, &self.devices, &self.plan, &self.models, &History::default(), STEP, &mut self.logic )
+		settle( &self.elements, &self.devices, &self.plan, &self.models, &History::default(), STEP, &mut self.logic, true )
 	}
 
 	fn advance( &mut self, step : f64 ) -> Result<Solution, Error>
@@ -141,7 +141,7 @@ fn circuit( parts : &[ Part ] ) -> Circuit
 
 fn cleared( clock : f64, clear : f64, delay : f64 ) -> Circuit
 {
-	let layers = [ layer( &[ ( Kind::Clock { hertz : clock }, ( 4, -1 ), ( 8, -1 ) ), ( Kind::Clock { hertz : clear }, ( 4, 1 ), ( 8, 1 ) ), symbol( 10 ), ( Kind::Wire, ( 12, 0 ), ( 14, 0 ) ) ] ), flipflop() ];
+	let layers = [ layer( &[ ( Kind::Clock { hertz : clock, on : true }, ( 4, -1 ), ( 8, -1 ) ), ( Kind::Clock { hertz : clear, on : true }, ( 4, 1 ), ( 8, 1 ) ), symbol( 10 ), ( Kind::Wire, ( 12, 0 ), ( 14, 0 ) ) ] ), flipflop() ];
 	let models = vec![ None, Some( toggler( delay ) ) ];
 	let ( elements, devices ) = flatten( &layers, &mut Registry::default(), &models, 0, &[] ).unwrap();
 	let plan = Plan::build( &elements, &devices );
@@ -231,7 +231,7 @@ fn it_rejects_a_ring_of_gates_that_switches_too_often_in_one_step()
 #[test]
 fn it_switches_a_gate_one_delay_after_each_edge_of_a_clock()
 {
-	let mut circuit = circuit( &[ ( Kind::Clock { hertz : 1e8 }, ( 4, 0 ), ( 8, 0 ) ), symbol( 10 ), ( Kind::Wire, ( 12, 0 ), ( 14, 0 ) ) ] );
+	let mut circuit = circuit( &[ ( Kind::Clock { hertz : 1e8, on : true }, ( 4, 0 ), ( 8, 0 ) ), symbol( 10 ), ( Kind::Wire, ( 12, 0 ), ( 14, 0 ) ) ] );
 	let solutions : Vec<Solution> = [ circuit.settle() ].into_iter().chain( ( 0 .. 13 ).map( | _ | circuit.advance( 5e-10 ) ) ).map( Result::unwrap ).collect();
 	let levels : Vec<f64> = solutions.iter().map( | solution | circuit.at( solution, ( 13, 0 ) ) ).collect();
 
@@ -241,9 +241,19 @@ fn it_switches_a_gate_one_delay_after_each_edge_of_a_clock()
 }
 
 #[test]
+fn it_holds_the_level_of_a_clock_that_is_off_at_0()
+{
+	let mut circuit = circuit( &[ ( Kind::Clock { hertz : 1e8, on : false }, ( 4, 0 ), ( 8, 0 ) ), symbol( 10 ), ( Kind::Wire, ( 12, 0 ), ( 14, 0 ) ) ] );
+	let solution = circuit.settle().unwrap();
+
+	assert!( circuit.at( &solution, ( 13, 0 ) ) > 2.5 );
+	assert_eq!( circuit.rises( ( 13, 0 ), 5e-10, 2000 ), 0 );
+}
+
+#[test]
 fn it_ignores_a_pulse_shorter_than_the_delay()
 {
-	let mut circuit = circuit( &[ ( Kind::Clock { hertz : 1.25e9 }, ( 4, 0 ), ( 8, 0 ) ), symbol( 10 ), ( Kind::Wire, ( 12, 0 ), ( 14, 0 ) ) ] );
+	let mut circuit = circuit( &[ ( Kind::Clock { hertz : 1.25e9, on : true }, ( 4, 0 ), ( 8, 0 ) ), symbol( 10 ), ( Kind::Wire, ( 12, 0 ), ( 14, 0 ) ) ] );
 
 	circuit.settle().unwrap();
 
@@ -290,7 +300,7 @@ fn it_merges_the_input_changes_that_a_device_with_memory_receives_at_a_same_inst
 #[test]
 fn it_drives_an_analog_load_with_the_level_of_a_clock()
 {
-	let mut circuit = circuit( &[ ( Kind::Clock { hertz : 1.0 }, ( 0, -2 ), ( 0, 0 ) ), ( Kind::Resistor { ohms : 1000.0 }, ( 0, 0 ), ( 0, 4 ) ), ( Kind::Ground, ( 0, 4 ), ( 0, 4 ) ) ] );
+	let mut circuit = circuit( &[ ( Kind::Clock { hertz : 1.0, on : true }, ( 0, -2 ), ( 0, 0 ) ), ( Kind::Resistor { ohms : 1000.0 }, ( 0, 0 ), ( 0, 4 ) ), ( Kind::Ground, ( 0, 4 ), ( 0, 4 ) ) ] );
 	let resistor = circuit.elements.iter().position( | element | element.kind == Kind::Resistor { ohms : 1000.0 } ).unwrap();
 	let low = circuit.settle().unwrap().readings[ resistor ].currents[ 0 ];
 
@@ -305,7 +315,7 @@ fn it_drives_an_analog_load_with_the_level_of_a_clock()
 #[test]
 fn it_advances_the_same_with_the_buffers_of_any_spare_solution()
 {
-	let mut circuit = circuit( &[ ( Kind::Clock { hertz : 1.0 }, ( 0, -2 ), ( 0, 0 ) ), ( Kind::Resistor { ohms : 1000.0 }, ( 0, 0 ), ( 0, 4 ) ), ( Kind::Ground, ( 0, 4 ), ( 0, 4 ) ) ] );
+	let mut circuit = circuit( &[ ( Kind::Clock { hertz : 1.0, on : true }, ( 0, -2 ), ( 0, 0 ) ), ( Kind::Resistor { ohms : 1000.0 }, ( 0, 0 ), ( 0, 4 ) ), ( Kind::Ground, ( 0, 4 ), ( 0, 4 ) ) ] );
 	let settled = circuit.settle().unwrap();
 	let mut reused = circuit.logic.clone();
 	let bits = | solution : &Solution | solution.readings.iter().map( | reading | reading.potentials.iter().chain( &reading.currents ).map( | value | value.to_bits() ).collect() ).collect::<Vec<Vec<u64>>>();
@@ -392,9 +402,28 @@ fn it_starts_a_gate_from_its_first_row_when_its_kept_state_is_outside_its_table(
 }
 
 #[test]
+fn it_starts_a_new_device_with_memory_at_rest_with_its_lowest_outputs_and_keeps_the_state_of_a_known_one()
+{
+	let layers = [ layer( &[ ( Kind::Toggle { high : true }, ( 7, -1 ), ( 8, -1 ) ), ( Kind::Toggle { high : false }, ( 7, 1 ), ( 8, 1 ) ), symbol( 10 ), ( Kind::Wire, ( 12, 0 ), ( 14, 0 ) ) ] ), flipflop() ];
+	let models = vec![ None, Some( toggler( 1e-9 ) ) ];
+	let ( elements, devices ) = flatten( &layers, &mut Registry::default(), &models, 0, &[] ).unwrap();
+	let plan = Plan::build( &elements, &devices );
+	let mut circuit = Circuit { elements, devices, plan, models, logic : Logic::default() };
+	let edged = settle( &circuit.elements, &circuit.devices, &circuit.plan, &circuit.models, &History::default(), STEP, &mut Logic::default(), false ).unwrap();
+	let rested = circuit.settle().unwrap();
+
+	circuit.logic.applied = vec![ 13 ];
+	circuit.logic.states = vec![ 3 ];
+
+	let kept = circuit.settle().unwrap();
+
+	assert_eq!( [ circuit.at( &edged, ( 13, 0 ) ), circuit.at( &rested, ( 13, 0 ) ), circuit.at( &kept, ( 13, 0 ) ) ], [ 5.0, 0.0, 5.0 ] );
+}
+
+#[test]
 fn it_stays_idle_until_the_next_edge_of_a_clock()
 {
-	let mut circuit = circuit( &[ ( Kind::Clock { hertz : 1e8 }, ( 4, 0 ), ( 8, 0 ) ), symbol( 10 ), ( Kind::Wire, ( 12, 0 ), ( 14, 0 ) ) ] );
+	let mut circuit = circuit( &[ ( Kind::Clock { hertz : 1e8, on : true }, ( 4, 0 ), ( 8, 0 ) ), symbol( 10 ), ( Kind::Wire, ( 12, 0 ), ( 14, 0 ) ) ] );
 
 	circuit.settle().unwrap();
 
@@ -413,7 +442,7 @@ fn it_is_never_idle_with_a_capacitor()
 #[test]
 fn it_is_not_idle_when_a_clock_on_an_analog_load_changes_its_level()
 {
-	let mut circuit = circuit( &[ ( Kind::Clock { hertz : 1.0 }, ( 0, -2 ), ( 0, 0 ) ), ( Kind::Resistor { ohms : 1000.0 }, ( 0, 0 ), ( 0, 4 ) ), ( Kind::Ground, ( 0, 4 ), ( 0, 4 ) ) ] );
+	let mut circuit = circuit( &[ ( Kind::Clock { hertz : 1.0, on : true }, ( 0, -2 ), ( 0, 0 ) ), ( Kind::Resistor { ohms : 1000.0 }, ( 0, 0 ), ( 0, 4 ) ), ( Kind::Ground, ( 0, 4 ), ( 0, 4 ) ) ] );
 
 	circuit.settle().unwrap();
 

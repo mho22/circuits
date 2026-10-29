@@ -21,8 +21,8 @@ fn it_accepts_valid_values()
 	assert_eq!( Kind::Input { high : false }.check(), Ok( () ) );
 	assert_eq!( Kind::Output.check(), Ok( () ) );
 	assert_eq!( Kind::Symbol { layer : 1, rotation : 3 }.check(), Ok( () ) );
-	assert_eq!( Kind::Clock { hertz : 1e7 }.check(), Ok( () ) );
-	assert_eq!( Kind::Clock { hertz : 1e10 }.check(), Ok( () ) );
+	assert_eq!( Kind::Clock { hertz : 1e7, on : true }.check(), Ok( () ) );
+	assert_eq!( Kind::Clock { hertz : 1e10, on : true }.check(), Ok( () ) );
 	assert_eq!( Kind::Led { color : 2 }.check(), Ok( () ) );
 }
 
@@ -35,10 +35,10 @@ fn it_rejects_an_led_color_past_blue()
 #[test]
 fn it_rejects_a_frequency_that_is_not_positive_or_above_ten_gigahertz()
 {
-	assert_eq!( Kind::Clock { hertz : 0.0 }.check(), Err( Error::Frequency ) );
-	assert_eq!( Kind::Clock { hertz : f64::INFINITY }.check(), Err( Error::Frequency ) );
-	assert_eq!( Kind::Clock { hertz : f64::NAN }.check(), Err( Error::Frequency ) );
-	assert_eq!( Kind::Clock { hertz : 1.000001e10 }.check(), Err( Error::Frequency ) );
+	assert_eq!( Kind::Clock { hertz : 0.0, on : true }.check(), Err( Error::Frequency ) );
+	assert_eq!( Kind::Clock { hertz : f64::INFINITY, on : true }.check(), Err( Error::Frequency ) );
+	assert_eq!( Kind::Clock { hertz : f64::NAN, on : true }.check(), Err( Error::Frequency ) );
+	assert_eq!( Kind::Clock { hertz : 1.000001e10, on : true }.check(), Err( Error::Frequency ) );
 }
 
 #[test]
@@ -96,7 +96,7 @@ fn it_reads_the_value_of_a_part()
 	assert_eq!( Kind::Supply { volts : 3.3 }.value(), Some( 3.3 ) );
 	assert_eq!( Kind::Capacitor { farads : 1e-6 }.value(), Some( 1e-6 ) );
 	assert_eq!( Kind::Inductor { henries : 1e-3 }.value(), Some( 1e-3 ) );
-	assert_eq!( Kind::Clock { hertz : 1e7 }.value(), Some( 1e7 ) );
+	assert_eq!( Kind::Clock { hertz : 1e7, on : true }.value(), Some( 1e7 ) );
 	assert_eq!( Kind::Slider { volts : 2.4 }.value(), Some( 2.4 ) );
 	assert_eq!( Kind::Led { color : 1 }.value(), Some( 1.0 ) );
 	assert_eq!( Kind::Wire.value(), None );
@@ -115,7 +115,7 @@ fn it_replaces_the_value_of_a_part()
 	assert_eq!( Kind::Supply { volts : 5.0 }.with_value( 3.3 ), Ok( Kind::Supply { volts : 3.3 } ) );
 	assert_eq!( Kind::Capacitor { farads : 1.0 }.with_value( 1e-6 ), Ok( Kind::Capacitor { farads : 1e-6 } ) );
 	assert_eq!( Kind::Inductor { henries : 1.0 }.with_value( 1e-3 ), Ok( Kind::Inductor { henries : 1e-3 } ) );
-	assert_eq!( Kind::Clock { hertz : 1.0 }.with_value( 6e7 ), Ok( Kind::Clock { hertz : 6e7 } ) );
+	assert_eq!( Kind::Clock { hertz : 1.0, on : true }.with_value( 6e7 ), Ok( Kind::Clock { hertz : 6e7, on : true } ) );
 	assert_eq!( Kind::Slider { volts : 0.0 }.with_value( 3.7 ), Ok( Kind::Slider { volts : 3.7 } ) );
 	assert_eq!( Kind::Led { color : 0 }.with_value( 2.0 ), Ok( Kind::Led { color : 2 } ) );
 }
@@ -128,8 +128,8 @@ fn it_rejects_an_invalid_new_value()
 	assert_eq!( Kind::Supply { volts : 5.0 }.with_value( f64::NAN ), Err( Error::Voltage ) );
 	assert_eq!( Kind::Capacitor { farads : 1.0 }.with_value( 0.0 ), Err( Error::Capacitance ) );
 	assert_eq!( Kind::Inductor { henries : 1.0 }.with_value( -1.0 ), Err( Error::Inductance ) );
-	assert_eq!( Kind::Clock { hertz : 1.0 }.with_value( 0.0 ), Err( Error::Frequency ) );
-	assert_eq!( Kind::Clock { hertz : 1.0 }.with_value( 2e10 ), Err( Error::Frequency ) );
+	assert_eq!( Kind::Clock { hertz : 1.0, on : true }.with_value( 0.0 ), Err( Error::Frequency ) );
+	assert_eq!( Kind::Clock { hertz : 1.0, on : true }.with_value( 2e10 ), Err( Error::Frequency ) );
 	assert_eq!( Kind::Slider { volts : 0.0 }.with_value( 6.0 ), Err( Error::Range ) );
 	assert_eq!( Kind::Led { color : 0 }.with_value( 3.0 ), Err( Error::Color ) );
 	assert_eq!( Kind::Led { color : 0 }.with_value( 0.5 ), Err( Error::Color ) );
@@ -174,6 +174,14 @@ fn it_sets_the_level_of_a_toggle()
 {
 	assert_eq!( Kind::Toggle { high : false }.with_high( true ), Ok( Kind::Toggle { high : true } ) );
 	assert_eq!( Kind::Toggle { high : true }.with_high( false ), Ok( Kind::Toggle { high : false } ) );
+}
+
+#[test]
+fn it_switches_a_clock_off_and_on_and_keeps_its_state_with_a_new_frequency()
+{
+	assert_eq!( Kind::Clock { hertz : 1.0, on : true }.with_high( false ), Ok( Kind::Clock { hertz : 1.0, on : false } ) );
+	assert_eq!( Kind::Clock { hertz : 1.0, on : false }.with_high( true ), Ok( Kind::Clock { hertz : 1.0, on : true } ) );
+	assert_eq!( Kind::Clock { hertz : 1.0, on : false }.with_value( 2.0 ), Ok( Kind::Clock { hertz : 2.0, on : false } ) );
 }
 
 #[test]

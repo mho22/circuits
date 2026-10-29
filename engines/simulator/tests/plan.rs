@@ -92,8 +92,8 @@ fn it_leaves_a_net_with_an_analog_part_or_two_outputs_in_the_analog_circuit()
 #[test]
 fn it_keeps_a_net_that_a_clock_drives_alone_out_of_the_analog_circuit()
 {
-	let driven = plan( layer( &[ ( Kind::Clock { hertz : 1e6 }, ( 4, 0 ), ( 8, 0 ) ), symbol( 10 ) ] ) );
-	let loaded = plan( layer( &[ ( Kind::Clock { hertz : 1e6 }, ( 4, 0 ), ( 8, 0 ) ), ( Kind::Resistor { ohms : 1000.0 }, ( 8, 0 ), ( 8, 4 ) ) ] ) );
+	let driven = plan( layer( &[ ( Kind::Clock { hertz : 1e6, on : true }, ( 4, 0 ), ( 8, 0 ) ), symbol( 10 ) ] ) );
+	let loaded = plan( layer( &[ ( Kind::Clock { hertz : 1e6, on : true }, ( 4, 0 ), ( 8, 0 ) ), ( Kind::Resistor { ohms : 1000.0 }, ( 8, 0 ), ( 8, 4 ) ) ] ) );
 
 	assert_eq!( driven.generators.len(), 1 );
 	assert_eq!( driven.inputs[ 0 ], vec![ Source::Net( driven.generators[ 0 ].1.unwrap() ) ] );
@@ -118,7 +118,7 @@ fn it_keeps_a_net_that_a_toggle_drives_alone_out_of_the_analog_circuit()
 #[test]
 fn it_solves_a_clock_a_toggle_or_a_slider_on_the_analog_circuit_as_a_supply()
 {
-	for kind in [ Kind::Clock { hertz : 1e6 }, Kind::Toggle { high : true }, Kind::Slider { volts : 2.5 } ]
+	for kind in [ Kind::Clock { hertz : 1e6, on : true }, Kind::Toggle { high : true }, Kind::Slider { volts : 2.5 } ]
 	{
 		let loaded = plan( layer( &[ ( kind, ( 4, 0 ), ( 8, 0 ) ), ( Kind::Resistor { ohms : 1000.0 }, ( 8, 0 ), ( 8, 4 ) ) ] ) );
 		let position = loaded.analog.iter().position( | &index | index == loaded.generators[ 0 ].0 ).unwrap();

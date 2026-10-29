@@ -9,11 +9,11 @@ import { element } from '../stubs/element.ts';
 
 describe( 'clock renderer', () =>
 {
-	function drawn( potential : number ) : unknown[][]
+	function drawn( potential : number, on = true ) : unknown[][]
 	{
 		const { context, calls } = record();
 
-		draw( context, element( { kind : Kind.Clock, value : 1e6, from : { x : 1, y : 1 }, to : { x : 3, y : 1 }, potentials : [ 0, potential ] } ), { voltage : 5, current : 0 } );
+		draw( context, element( { kind : Kind.Clock, value : 1e6, on, from : { x : 1, y : 1 }, to : { x : 3, y : 1 }, potentials : [ 0, potential ] } ), { voltage : 5, current : 0 } );
 
 		return calls;
 	}
@@ -43,5 +43,13 @@ describe( 'clock renderer', () =>
 			[ 'lineTo', SPACING + 3, SPACING + 3 ],
 			[ 'lineTo', SPACING + 6, SPACING + 3 ],
 		] );
+	} );
+
+	it( 'draws a flat line inside the capsule when it is off', () =>
+	{
+		const calls = drawn( 0, false );
+		const start = calls.findIndex( call => call[ 0 ] === 'moveTo' && call[ 1 ] === SPACING - 6 );
+
+		expect( calls.slice( start, start + 3 ) ).toEqual( [ [ 'moveTo', SPACING - 6, SPACING + 3 ], [ 'lineTo', SPACING + 6, SPACING + 3 ], [ 'stroke' ] ] );
 	} );
 } );

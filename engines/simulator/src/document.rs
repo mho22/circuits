@@ -58,7 +58,7 @@ impl Document
 			},
 			Operation::SetHigh { id, .. } =>
 			{
-				let ( Kind::Input { high } | Kind::Toggle { high } ) = self.elements[ self.index( id )? ].kind else { return Err( Error::Inputless ); };
+				let ( Kind::Input { high } | Kind::Toggle { high } | Kind::Clock { on : high, .. } ) = self.elements[ self.index( id )? ].kind else { return Err( Error::Inputless ); };
 
 				Ok( Operation::SetHigh { id, high } )
 			},

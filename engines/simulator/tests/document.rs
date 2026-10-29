@@ -216,6 +216,18 @@ fn it_sets_the_level_of_a_toggle()
 }
 
 #[test]
+fn it_switches_a_clock_off()
+{
+	let mut document = Document::default();
+
+	document.apply( add( Kind::Clock { hertz : 1.0, on : true }, FOO, BAR ) ).unwrap();
+
+	assert_eq!( document.inverse( &Operation::SetHigh { id : 0, high : false } ), Ok( Operation::SetHigh { id : 0, high : true } ) );
+	assert_eq!( document.apply( Operation::SetHigh { id : 0, high : false } ), Ok( 0 ) );
+	assert_eq!( document.elements()[ 0 ].kind, Kind::Clock { hertz : 1.0, on : false } );
+}
+
+#[test]
 fn it_inserts_a_part_back_at_its_place_with_its_id()
 {
 	let mut document = Document::default();

@@ -1098,11 +1098,22 @@ fn it_steps_by_a_twentieth_of_the_period_of_the_fastest_clock()
 
 	assert_eq!( ( simulation.period(), simulation.step() ), ( None, STEP ) );
 
-	add( &mut simulation, Kind::Clock { hertz : 1e6 }, ( 0, 0 ), ( 2, 0 ) );
-	add( &mut simulation, Kind::Clock { hertz : 1e7 }, ( 0, 4 ), ( 2, 4 ) );
+	add( &mut simulation, Kind::Clock { hertz : 1e6, on : true }, ( 0, 0 ), ( 2, 0 ) );
+	add( &mut simulation, Kind::Clock { hertz : 1e7, on : true }, ( 0, 4 ), ( 2, 4 ) );
 
 	assert!( near( simulation.period().unwrap(), 1e-7, 1e-21 ) );
 	assert!( near( simulation.step(), 5e-9, 1e-21 ) );
+}
+
+#[test]
+fn it_steps_by_the_base_step_when_its_only_clock_is_off()
+{
+	let mut simulation = Simulation::new( STEP );
+	let clock = add( &mut simulation, Kind::Clock { hertz : 1e6, on : true }, ( 0, 0 ), ( 2, 0 ) );
+
+	simulation.apply( 0, Operation::SetHigh { id : clock, high : false } ).unwrap();
+
+	assert_eq!( ( simulation.period(), simulation.step() ), ( None, STEP ) );
 }
 
 #[test]
@@ -1116,7 +1127,7 @@ fn it_names_the_engine_that_runs_the_view()
 
 	assert_eq!( simulation.mode(), Mode::Mixed );
 
-	add( &mut simulation, Kind::Clock { hertz : 1e6 }, ( 4, 10 ), ( 8, 10 ) );
+	add( &mut simulation, Kind::Clock { hertz : 1e6, on : true }, ( 4, 10 ), ( 8, 10 ) );
 
 	assert_eq!( simulation.mode(), Mode::Digital );
 }
@@ -1725,7 +1736,7 @@ fn counter() -> Simulation
 	let mut simulation = Simulation::new( STEP );
 	let mut parts : Vec<Part> = ( 0 .. 4 ).map( | bit | ( Kind::Symbol { layer : 2, rotation : 0 }, ( 20 * bit, 0 ), ( 20 * bit, 0 ) ) ).collect();
 
-	parts.push( ( Kind::Clock { hertz : 1e6 }, ( -8, 1 ), ( -2, 1 ) ) );
+	parts.push( ( Kind::Clock { hertz : 1e6, on : true }, ( -8, 1 ), ( -2, 1 ) ) );
 	parts.extend( ( 0 .. 4 ).map( | bit | 20 * bit ).flat_map( | x | [ ( Kind::Wire, ( x + 2, 1 ), ( x + 2, 4 ) ), ( Kind::Wire, ( x + 2, 4 ), ( x - 4, 4 ) ), ( Kind::Wire, ( x - 4, 4 ), ( x - 4, -1 ) ), ( Kind::Wire, ( x - 4, -1 ), ( x - 2, -1 ) ) ] ) );
 	parts.extend( ( 0 .. 3 ).map( | bit | ( Kind::Wire, ( 20 * bit + 2, 1 ), ( 20 * bit + 18, 1 ) ) ) );
 

@@ -464,7 +464,7 @@ impl Simulation
 
 	pub fn period( &self ) -> Option<f64>
 	{
-		self.elements.iter().filter_map( | element | match element.kind { Kind::Clock { hertz } => Some( 1.0 / hertz ), _ => None } ).reduce( f64::min )
+		self.elements.iter().filter_map( | element | match element.kind { Kind::Clock { hertz, on : true } => Some( 1.0 / hertz ), _ => None } ).reduce( f64::min )
 	}
 
 	pub fn mode( &self ) -> Mode
@@ -712,7 +712,7 @@ impl Simulation
 
 		self.step = self.period().map_or( self.base, | period | period / DIVISIONS );
 
-		let solution = settle( &self.elements, &self.devices, &self.plan, &self.models, &self.history, self.step, &mut self.logic );
+		let solution = settle( &self.elements, &self.devices, &self.plan, &self.models, &self.history, self.step, &mut self.logic, true );
 
 		self.show( solution );
 	}

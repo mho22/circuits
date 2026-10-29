@@ -9,9 +9,12 @@ export function toggle( circuit : Circuit, point : Point ) : boolean
 	const elements = decode( circuit.elements() );
 	const ids = Array.from( circuit.elementsAt( point.x, point.y ) );
 	const target = elements.find( item => item.kind === Kind.Switch && ids.includes( item.id ) );
+	const clock = elements.find( item => item.kind === Kind.Clock && ids.includes( item.id ) );
 	const source = elements.find( item => LEVELS.includes( item.kind ) && ids.includes( item.id ) );
 
 	if( target ) { circuit.setClosed( target.id, target.value !== 1 ); return true; }
+
+	if( clock ) { circuit.setHigh( clock.id, clock.on === false ); return true; }
 
 	if( ! source || circuit.listening().includes( source.id ) ) return false;
 

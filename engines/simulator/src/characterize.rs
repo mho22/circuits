@@ -14,7 +14,7 @@ const STATES : usize = 64;
 fn run( elements : &[ Element ], devices : &[ Device ], plan : &Plan, models : &[ Option<Model> ], step : f64, seed : &Logic ) -> Option<( Solution, Logic )>
 {
 	let mut logic = seed.clone();
-	let solution = settle( elements, devices, plan, models, &History::default(), step, &mut logic ).ok()?;
+	let solution = settle( elements, devices, plan, models, &History::default(), step, &mut logic, false ).ok()?;
 
 	Some( ( solution, logic ) )
 }

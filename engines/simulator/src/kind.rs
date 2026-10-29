@@ -27,7 +27,7 @@ pub enum Kind
 	Symbol { layer : u32, rotation : u8 },
 	Toggle { high : bool },
 	Led { color : u8 },
-	Clock { hertz : f64 },
+	Clock { hertz : f64, on : bool },
 	Slider { volts : f64 },
 }
 
@@ -44,7 +44,7 @@ impl Kind
 			Kind::Capacitor { farads } if ! positive( farads ) => Err( Error::Capacitance ),
 			Kind::Inductor { henries } if ! positive( henries ) => Err( Error::Inductance ),
 			Kind::Symbol { rotation, .. } if rotation > 3 => Err( Error::Rotation ),
-			Kind::Clock { hertz } if ! positive( hertz ) || hertz > FASTEST => Err( Error::Frequency ),
+			Kind::Clock { hertz, .. } if ! positive( hertz ) || hertz > FASTEST => Err( Error::Frequency ),
 			Kind::Led { color } if color >= COLORS => Err( Error::Color ),
 			Kind::Slider { volts } if ! ( 0.0 ..= HIGH ).contains( &volts ) => Err( Error::Range ),
 			_ => Ok( () ),
@@ -79,7 +79,7 @@ impl Kind
 			Kind::Battery { volts } | Kind::Supply { volts } => Some( volts ),
 			Kind::Capacitor { farads } => Some( farads ),
 			Kind::Inductor { henries } => Some( henries ),
-			Kind::Clock { hertz } => Some( hertz ),
+			Kind::Clock { hertz, .. } => Some( hertz ),
 			Kind::Slider { volts } => Some( volts ),
 			Kind::Led { color } => Some( color as f64 ),
 			_ => None,
@@ -95,7 +95,7 @@ impl Kind
 			Kind::Supply { .. } => Kind::Supply { volts : value },
 			Kind::Capacitor { .. } => Kind::Capacitor { farads : value },
 			Kind::Inductor { .. } => Kind::Inductor { henries : value },
-			Kind::Clock { .. } => Kind::Clock { hertz : value },
+			Kind::Clock { on, .. } => Kind::Clock { hertz : value, on : *on },
 			Kind::Slider { .. } => Kind::Slider { volts : value },
 			Kind::Led { .. } if value.fract() == 0.0 && ( 0.0 .. COLORS as f64 ).contains( &value ) => Kind::Led { color : value as u8 },
 			Kind::Led { .. } => return Err( Error::Color ),
@@ -120,6 +120,7 @@ impl Kind
 		{
 			Kind::Input { .. } => Ok( Kind::Input { high } ),
 			Kind::Toggle { .. } => Ok( Kind::Toggle { high } ),
+			Kind::Clock { hertz, .. } => Ok( Kind::Clock { hertz : *hertz, on : high } ),
 			_ => Err( Error::Inputless ),
 		}
 	}

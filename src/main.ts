@@ -23,6 +23,7 @@ import { extent } from './extent.ts';
 import { flows } from './flows.ts';
 import { FINE, snap } from './grid.ts';
 import { grab } from './grab.ts';
+import { Hold } from './hold.ts';
 import { read, shape } from './keyboard.ts';
 import { junctions } from './junctions.ts';
 import { Library } from './library.ts';
@@ -111,6 +112,7 @@ const clock = new Clock( STEP_BUDGET );
 const drift = new Drift();
 const watch = new Watch();
 const view = new View();
+const hold = new Hold();
 
 let name = 'untitled.circuit';
 let hover : Point | null = null;
@@ -833,7 +835,13 @@ canvas.addEventListener( 'pointerup', ( event : PointerEvent ) =>
 
 	if( ! selection && event.button === 2 ) menu( event );
 
-	if( clicked ) toggle( circuit, point );
+	if( ! clicked ) return;
+
+	const clocked = circuit.elementsAt( point.x, point.y ).some( id => parts().find( item => item.id === id )?.kind === Kind.Clock );
+
+	if( ! clocked ) { toggle( circuit, point ); return; }
+
+	hold.wait( () => toggle( circuit, point ) );
 } );
 
 canvas.addEventListener( 'wheel', ( event : WheelEvent ) =>
@@ -849,6 +857,8 @@ canvas.addEventListener( 'pointerleave', () => { hover = null; pointer = null; }
 
 canvas.addEventListener( 'dblclick', ( event : MouseEvent ) =>
 {
+	hold.cancel();
+
 	const point = view.toGrid( event.clientX, event.clientY );
 	const ids = Array.from( circuit.elementsAt( point.x, point.y ) );
 	const elements = parts();

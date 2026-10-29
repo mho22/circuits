@@ -7,13 +7,14 @@ import * as label from './label.ts';
 
 
 const WAVE = [ [ -6, 3 ], [ -3, 3 ], [ -3, -3 ], [ 3, -3 ], [ 3, 3 ], [ 6, 3 ] ];
+const FLAT = [ [ -6, 3 ], [ 6, 3 ] ];
 
 
 export function draw( context : CanvasRenderingContext2D, element : Element, scale : Scale ) : void
 {
 	const x = toScreen( element.from.x );
 	const y = toScreen( element.from.y );
-	const [ start, ... rest ] = WAVE;
+	const [ start, ... rest ] = element.on === false ? FLAT : WAVE;
 
 	capsule.draw( context, element, color( element.potentials[ 1 ], scale.voltage ) );
 

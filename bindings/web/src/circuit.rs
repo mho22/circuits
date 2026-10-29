@@ -102,6 +102,7 @@ impl Circuit
 			let kind = match Circuit::kind( row[ 1 ] as u8, row[ 2 ] )?
 			{
 				Kind::Symbol { layer, .. } => Kind::Symbol { layer, rotation : row[ 3 ] as u8 },
+				Kind::Clock { hertz, .. } => Kind::Clock { hertz, on : row[ 3 ] != 0.0 },
 				kind => kind,
 			};
 			let mirrored = matches!( kind, Kind::Npn | Kind::Pnp | Kind::Nmos | Kind::Pmos ) && row[ 2 ] != 0.0;
@@ -517,7 +518,7 @@ impl Circuit
 				Kind::Output => ( 15.0, 0.0, 0 ),
 				Kind::Toggle { high } => ( 16.0, if high { 1.0 } else { 0.0 }, 0 ),
 				Kind::Led { color } => ( 17.0, color as f64, 0 ),
-				Kind::Clock { hertz } => ( 18.0, hertz, 0 ),
+				Kind::Clock { hertz, on } => ( 18.0, hertz, on as u8 ),
 				Kind::Slider { volts } => ( 19.0, volts, 0 ),
 			};
 
@@ -637,7 +638,7 @@ impl Circuit
 			15 => Kind::Output,
 			16 => Kind::Toggle { high : value != 0.0 },
 			17 => Kind::Led { color : value as u8 },
-			18 => Kind::Clock { hertz : value },
+			18 => Kind::Clock { hertz : value, on : true },
 			19 => Kind::Slider { volts : value },
 			_ => return Err( JsError::new( "Unknown part kind." ) ),
 		};

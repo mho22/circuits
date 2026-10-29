@@ -65,6 +65,20 @@ describe( 'toggle', () =>
 		expect( decode( circuit.elements() )[ 0 ] ).toMatchObject( { value : 1, potentials : [ 0, 5 ] } );
 	} );
 
+	it( 'switches a clock off, then back on', () =>
+	{
+		const circuit = new Circuit();
+
+		circuit.add( Kind.Clock, 1e6, 0, 0, 2, 0 );
+
+		expect( toggle( circuit, { x : 1, y : 0 } ) ).toBe( true );
+		expect( decode( circuit.elements() )[ 0 ].on ).toBe( false );
+
+		toggle( circuit, { x : 1, y : 0 } );
+
+		expect( decode( circuit.elements() )[ 0 ].on ).toBe( true );
+	} );
+
 	it( 'leaves a toggle on a wire that another part drives', () =>
 	{
 		const circuit = new Circuit();

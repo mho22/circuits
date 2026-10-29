@@ -112,7 +112,7 @@ function row( layer : number, part : Record<string, unknown> | null ) : [ number
 	const closed = kind === Kind.Switch && ( typeof part.closed === 'boolean' ? part.closed : unreadable() );
 	const mirrored = TRANSISTORS.includes( kind ) && ( typeof ( part.mirrored ?? false ) === 'boolean' ? part.mirrored === true : unreadable() );
 	const value = field ? number( part[ field ] ) : LEVELS.includes( kind ) ? level( part.level ?? 0 ) : kind === Kind.Led ? color( part.color ?? 'red' ) : Number( closed || mirrored );
-	const turn = kind === Kind.Symbol ? rotation( part.rotation ?? 0 ) : 0;
+	const turn = kind === Kind.Symbol ? rotation( part.rotation ?? 0 ) : kind === Kind.Clock ? level( part.level ?? 1 ) : 0;
 
 	if( kind === Kind.Symbol && ! ( Number.isInteger( value ) && value > 0 ) ) unreadable();
 

@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use crate::flatten::HIGH;
-use crate::{ compute, Action, Branch, Device, Element, Error, History, Kind, Logic, Model, Plan, Reading, Solution, Source, FLOOR, THRESHOLD };
+use crate::{ compute, Action, Branch, Device, Drive, Element, Error, History, Kind, Logic, Model, Plan, Reading, Solution, Source, FLOOR, THRESHOLD };
 
 
 const ROUNDS : usize = 100;
@@ -22,7 +22,7 @@ fn emit( kind : Kind, time : f64 ) -> f64
 {
 	match kind
 	{
-		Kind::Clock { hertz } => level( count( hertz, time ) ),
+		Kind::Clock { hertz, on : true } => level( count( hertz, time ) ),
 		Kind::Toggle { high : true } => HIGH,
 		Kind::Slider { volts } => volts,
 		_ => 0.0,
@@ -40,6 +40,7 @@ struct Run<'a>
 	analog : Vec<Element>,
 	logic : &'a mut Logic,
 	instant : bool,
+	resting : Vec<bool>,
 	events : usize,
 	budget : usize,
 }
@@ -56,10 +57,10 @@ impl<'a> Run<'a>
 		let analog = plan.analog.iter().map( | &index | elements[ index ] ).collect();
 		let budget = EVENTS * ( devices.len() + plan.generators.len() + 1 );
 
-		Ok( Run { elements, devices, plan, tables, positions, analog, logic, instant, events : 0, budget } )
+		Ok( Run { elements, devices, plan, tables, positions, analog, logic, instant, resting : vec![ false; devices.len() ], events : 0, budget } )
 	}
 
-	fn start( &mut self, history : &History, step : f64 ) -> Result<(), Error>
+	fn start( &mut self, history : &History, step : f64, rest : bool ) -> Result<(), Error>
 	{
 		let time = self.logic.time;
 		let size = self.devices.len();
@@ -76,6 +77,7 @@ impl<'a> Run<'a>
 		self.logic.since = vec![ None; size ];
 		self.logic.queued = vec![ VecDeque::new(); size ];
 		self.logic.clear();
+		self.resting = vec![ rest; size ];
 
 		for device in 0 .. size
 		{
@@ -85,6 +87,7 @@ impl<'a> Run<'a>
 
 			self.logic.applied[ device ] = entry;
 			self.logic.states[ device ] = state;
+			self.resting[ device ] = false;
 		}
 
 		for ( device, outputs ) in self.plan.outputs.iter().enumerate()
@@ -103,7 +106,7 @@ impl<'a> Run<'a>
 
 			self.logic.levels[ net ] = emit( self.elements[ index ].kind, time );
 
-			let Kind::Clock { hertz } = self.elements[ index ].kind else { continue; };
+			let Kind::Clock { hertz, on : true } = self.elements[ index ].kind else { continue; };
 			let edges = count( hertz, time );
 
 			self.logic.schedule( ( edges + 1 ) as f64 / ( 2.0 * hertz ), Action::Edge { clock, count : edges + 1 } );
@@ -201,12 +204,25 @@ impl<'a> Run<'a>
 
 	fn commit( &mut self, device : usize ) -> usize
 	{
-		let entry = self.logic.states[ device ] * ( 1 << self.plan.inputs[ device ].len() ) + self.logic.rows[ device ];
+		let width = 1 << self.plan.inputs[ device ].len();
+		let row = self.logic.rows[ device ];
+
+		if self.resting[ device ] { self.logic.states[ device ] = self.rest( device, width, row ); }
+
+		let entry = self.logic.states[ device ] * width + row;
 
 		self.logic.states[ device ] = self.tables[ device ].next[ entry ];
 		self.logic.since[ device ] = None;
 
 		entry
+	}
+
+	fn rest( &self, device : usize, width : usize, row : usize ) -> usize
+	{
+		let table = self.tables[ device ];
+		let stable = ( 0 .. table.next.len() / width ).filter( | &state | table.next[ state * width + row ] == state );
+
+		stable.min_by_key( | &state | table.rows[ state * width + row ].iter().map( Drive::high ).collect::<Vec<_>>() ).unwrap_or( self.logic.states[ device ] )
 	}
 
 	fn fire( &mut self, device : usize, stamp : u64, time : f64 )
@@ -232,7 +248,7 @@ impl<'a> Run<'a>
 	fn tick( &mut self, clock : usize, count : u64, time : f64 )
 	{
 		let ( index, net ) = self.plan.generators[ clock ];
-		let ( Kind::Clock { hertz }, Some( net ) ) = ( self.elements[ index ].kind, net ) else { return; };
+		let ( Kind::Clock { hertz, .. }, Some( net ) ) = ( self.elements[ index ].kind, net ) else { return; };
 
 		self.set( net, level( count ), time );
 		self.logic.schedule( ( count + 1 ) as f64 / ( 2.0 * hertz ), Action::Edge { clock, count : count + 1 } );
@@ -316,14 +332,14 @@ impl<'a> Run<'a>
 }
 
 
-pub fn settle( elements : &[ Element ], devices : &[ Device ], plan : &Plan, models : &[ Option<Model> ], history : &History, step : f64, logic : &mut Logic ) -> Result<Solution, Error>
+pub fn settle( elements : &[ Element ], devices : &[ Device ], plan : &Plan, models : &[ Option<Model> ], history : &History, step : f64, logic : &mut Logic, rest : bool ) -> Result<Solution, Error>
 {
 	let time = logic.time;
 	let mut run = Run::new( elements, devices, plan, models, logic, true )?;
 	let mut round = 0;
 	let mut spare = Solution::default();
 
-	run.start( history, step )?;
+	run.start( history, step, rest )?;
 
 	loop
 	{
