@@ -2,11 +2,10 @@ use std::collections::{ HashMap, HashSet };
 
 use crate::flatten::STRIDE;
 use crate::shape::FINE;
-use crate::{ advance, enclose, flatten, idle, leads, place, rush, settle, stretch, Catalog, Device, Document, Element, Enclosure, Error, History, Kind, Logic, Mode, Model, Netlist, Operation, Outline, Plan, Point, Reading, Registry, Segment, Shape, Solution, THRESHOLD };
+use crate::{ advance, enclose, flatten, idle, place, rush, settle, stretch, Catalog, Device, Document, Element, Enclosure, Error, History, Kind, Logic, Mode, Model, Netlist, Operation, Outline, Plan, Point, Reading, Registry, Segment, Shape, Solution };
 
 
 const DIVISIONS : f64 = 20.0;
-const GLOW : f64 = 5e-3;
 
 
 type Loading = ( Vec<Document>, Vec<( usize, Operation )>, Catalog );
@@ -58,7 +57,7 @@ pub struct Simulation
 	lights : Vec<f64>,
 	places : Vec<Vec<Option<usize>>>,
 	glows : Vec<Option<usize>>,
-	ends : Vec<Option<( usize, usize )>>,
+	gates : Vec<Option<( usize, usize )>>,
 	captions : Vec<String>,
 	revision : u32,
 	base : f64,
@@ -73,7 +72,7 @@ impl Simulation
 {
 	pub fn new( step : f64 ) -> Simulation
 	{
-		Simulation { layers : vec![ Document::default() ], registry : Registry::default(), elements : Vec::new(), devices : Vec::new(), plan : Plan::default(), models : Vec::new(), sources : Vec::new(), focus : Vec::new(), history : History::default(), logic : Logic::default(), solution : Ok( Solution::default() ), lights : Vec::new(), places : Vec::new(), glows : Vec::new(), ends : Vec::new(), captions : Vec::new(), revision : 0, base : step, step, undos : Vec::new(), redos : Vec::new(), loading : None, measuring : None }
+		Simulation { layers : vec![ Document::default() ], registry : Registry::default(), elements : Vec::new(), devices : Vec::new(), plan : Plan::default(), models : Vec::new(), sources : Vec::new(), focus : Vec::new(), history : History::default(), logic : Logic::default(), solution : Ok( Solution::default() ), lights : Vec::new(), places : Vec::new(), glows : Vec::new(), gates : Vec::new(), captions : Vec::new(), revision : 0, base : step, step, undos : Vec::new(), redos : Vec::new(), loading : None, measuring : None }
 	}
 
 	pub fn create( &mut self ) -> usize
@@ -688,14 +687,17 @@ impl Simulation
 			}
 		} ).collect();
 
-		self.ends = symbols.iter().flat_map( | &( at, _, inner ) | self.leads( inner, &self.places[ at ] ) ).collect();
+		let owners : HashMap<usize, usize> = self.devices.iter().enumerate().filter_map( | ( device, gate ) | gate.outputs.first().map( | &( _, resistor ) | ( resistor, device ) ) ).collect();
+
+		self.gates = symbols.iter().flat_map( | &( at, _, inner ) |
+		{
+			let device = self.places[ at ].iter().flatten().find_map( | place | owners.get( place ).copied() );
+			let count = self.layers[ inner ].elements().iter().filter( | part | matches!( part.kind, Kind::Led { .. } ) ).count();
+
+			( 0 .. count ).map( move | rank | device.map( | device | ( device, rank ) ) )
+		} ).collect();
 
 		self.captions = self.caption();
-	}
-
-	fn leads( &self, layer : usize, places : &[ Option<usize> ] ) -> Vec<Option<( usize, usize )>>
-	{
-		leads( self.layers[ layer ].elements() ).into_iter().map( | ends | ends.and_then( | ( anode, cathode ) | places[ anode ].zip( places[ cathode ] ) ) ).collect()
 	}
 
 	fn edit( &mut self, layer : usize, operation : Operation ) -> Result<( u32, Operation ), Error>
@@ -731,10 +733,9 @@ impl Simulation
 
 	fn glow( &self, solution : &Solution ) -> Vec<f64>
 	{
-		let high = | index : usize | solution.readings[ index ].potentials[ 1 ] > THRESHOLD;
-		let lit = | ( anode, cathode ) : ( usize, usize ) | if high( anode ) && ! high( cathode ) { GLOW } else { 0.0 };
+		let lit = | ( device, rank ) : ( usize, usize ) | self.models.get( self.devices[ device ].layer ).and_then( Option::as_ref ).zip( self.logic.applied.get( device ) ).and_then( | ( model, &entry ) | model.lights.get( entry )?.get( rank ).copied() );
 
-		self.glows.iter().zip( &self.ends ).map( | ( &index, &ends ) | index.and_then( | index | solution.readings.get( index ) ).map( | reading | reading.currents[ 0 ] ).or_else( || ends.map( lit ) ).unwrap_or( 0.0 ) ).collect()
+		self.glows.iter().zip( &self.gates ).map( | ( &index, &gate ) | index.and_then( | index | solution.readings.get( index ) ).map( | reading | reading.currents[ 0 ] ).or_else( || gate.and_then( lit ) ).unwrap_or( 0.0 ) ).collect()
 	}
 
 	fn view( &self, solution : &Solution, shown : &mut Solution )

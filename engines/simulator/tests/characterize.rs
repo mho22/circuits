@@ -281,14 +281,55 @@ fn it_measures_a_layer_with_an_led_between_two_pins_as_a_gate()
 	let model = characterize( &[ Document::default(), led ], &[], 1 ).unwrap();
 
 	assert_eq!( model.rows.iter().map( | row | row[ 0 ].high() ).collect::<Vec<_>>(), vec![ true, false ] );
+	assert_eq!( model.lights.iter().map( | lights | lights[ 0 ] > 1e-3 ).collect::<Vec<_>>(), vec![ true, false ] );
 }
 
 #[test]
-fn it_leaves_a_layer_with_an_led_on_ground_analog()
+fn it_measures_a_layer_with_an_led_on_ground_as_a_gate()
 {
 	let led = inverter( &[ ( Kind::Led { color : 0 }, ( 5, 1 ), ( 5, 3 ) ), ( Kind::Resistor { ohms : 1000.0 }, ( 5, 3 ), ( 5, 5 ) ), ( Kind::Ground, ( 5, 5 ), ( 5, 5 ) ) ] );
+	let model = characterize( &[ Document::default(), led ], &[], 1 ).unwrap();
 
-	assert_eq!( characterize( &[ Document::default(), led ], &[], 1 ), None );
+	assert_eq!( model.lights.iter().map( | lights | lights[ 0 ] > 1e-3 ).collect::<Vec<_>>(), vec![ true, false ] );
+}
+
+#[test]
+fn it_measures_a_layer_with_an_led_between_two_inner_gates_as_a_gate()
+{
+	let led = layer( &[
+		&[ ( Kind::Input { high : false }, ( -1, 0 ), ( 0, 0 ) ), ( Kind::Wire, ( 5, 0 ), ( 10, 0 ) ), ( Kind::Output, ( 16, 0 ), ( 15, 0 ) ) ],
+		gate( 0 ).as_slice(),
+		gate( 10 ).as_slice(),
+		&[ ( Kind::Resistor { ohms : 1000.0 }, ( 15, -3 ), ( 15, -7 ) ), ( Kind::Led { color : 0 }, ( 15, -7 ), ( 5, -7 ) ), ( Kind::Wire, ( 5, -7 ), ( 5, -3 ) ) ],
+	].concat() );
+	let model = characterize( &[ Document::default(), led ], &[], 1 ).unwrap();
+
+	assert_eq!( model.rows.iter().map( | row | row[ 0 ].high() ).collect::<Vec<_>>(), vec![ false, true ] );
+	assert_eq!( model.lights.iter().map( | lights | lights[ 0 ] > 1e-3 ).collect::<Vec<_>>(), vec![ false, true ] );
+}
+
+#[test]
+fn it_keeps_apart_two_states_of_a_layer_that_differ_only_by_an_led()
+{
+	let ends = Outline::of( &flip_flop() ).terminals( Point { x : 0, y : 0 }, 0 );
+	let parts = [
+		vec![
+			( Kind::Symbol { layer : 2, rotation : 0 }, ( 0, 0 ), ( 0, 0 ) ),
+			( Kind::Input { high : false }, ( ends[ 0 ].x - 1, ends[ 0 ].y ), ( ends[ 0 ].x, ends[ 0 ].y ) ),
+			( Kind::Input { high : false }, ( ends[ 1 ].x - 1, ends[ 1 ].y ), ( ends[ 1 ].x, ends[ 1 ].y ) ),
+			( Kind::Led { color : 0 }, ( ends[ 2 ].x, ends[ 2 ].y ), ( ends[ 3 ].x, ends[ 3 ].y ) ),
+			( Kind::Input { high : false }, ( 199, 0 ), ( 200, 0 ) ),
+			( Kind::Output, ( 206, 0 ), ( 205, 0 ) ),
+		],
+		gate( 200 ),
+	].concat();
+	let layers = [ Document::default(), nand(), flip_flop(), layer( &parts ) ];
+	let gates = [ None, characterize( &layers, &[], 1 ) ];
+	let models = [ None, gates[ 1 ].clone(), characterize( &layers, &gates, 2 ) ];
+	let model = characterize( &layers, &models, 3 ).unwrap();
+
+	assert!( model.rows.len() > 8 );
+	assert!( model.lights.iter().any( | lights | lights[ 0 ] > 1e-3 ) && model.lights.iter().any( | lights | lights[ 0 ] < 1e-4 ) );
 }
 
 #[test]

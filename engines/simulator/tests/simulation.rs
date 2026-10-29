@@ -877,7 +877,7 @@ fn it_gives_the_current_of_each_led_inside_each_symbol_of_the_page_in_the_order_
 }
 
 #[test]
-fn it_lights_an_led_inside_a_gate_when_the_pin_on_its_anode_is_high_and_the_pin_on_its_cathode_is_low()
+fn it_lights_an_led_inside_a_gate_with_the_current_measured_for_the_row_of_the_gate()
 {
 	let mut simulation = Simulation::new( STEP );
 	let layer = define( &mut simulation, &[
@@ -911,7 +911,7 @@ fn it_lights_an_led_inside_a_gate_when_the_pin_on_its_anode_is_high_and_the_pin_
 
 	simulation.apply( 0, Operation::SetHigh { id : toggle, high : true } ).unwrap();
 
-	assert_eq!( simulation.lights(), [ 0.0 ] );
+	assert!( simulation.lights()[ 0 ].abs() < 1e-4 );
 }
 
 #[test]

@@ -1,5 +1,5 @@
 use crate::flatten::STRIDE;
-use crate::{ flatten, flip, leads, settle, stages, Device, Document, Drive, Element, History, Kind, Logic, Model, Netlist, Plan, Point, Registry, Segment, Solution, DELAY, FLOOR, THRESHOLD };
+use crate::{ flatten, flip, settle, stages, Device, Document, Drive, Element, History, Kind, Logic, Model, Netlist, Plan, Point, Registry, Segment, Solution, DELAY, FLOOR, THRESHOLD };
 
 
 pub const INPUTS : usize = 8;
@@ -9,6 +9,10 @@ const SUPPLY : f64 = 5.0;
 const LOAD : f64 = 1000.0;
 const CEILING : f64 = 1e9;
 const STATES : usize = 64;
+const LIT : f64 = 1e-4;
+
+
+type Entry = ( Vec<Drive>, Vec<f64>, usize );
 
 
 fn run( elements : &[ Element ], devices : &[ Device ], plan : &Plan, models : &[ Option<Model> ], step : f64, seed : &Logic ) -> Option<( Solution, Logic )>
@@ -82,15 +86,15 @@ fn number<T : PartialEq>( keys : Vec<T> ) -> Vec<usize>
 	keys.iter().map( | key | seen.iter().position( | &other | other == key ).unwrap_or_else( || { seen.push( key ); seen.len() - 1 } ) ).collect()
 }
 
-fn classify( entries : &[ ( Vec<Drive>, usize ) ], width : usize ) -> Vec<usize>
+fn classify( entries : &[ Entry ], width : usize ) -> Vec<usize>
 {
 	let count = entries.len() / width;
 	let row = | state : usize | &entries[ state * width .. ( state + 1 ) * width ];
-	let mut classes = number( ( 0 .. count ).map( | state | row( state ).iter().map( | ( drives, _ ) | drives.iter().map( Drive::high ).collect::<Vec<bool>>() ).collect::<Vec<_>>() ).collect() );
+	let mut classes = number( ( 0 .. count ).map( | state | row( state ).iter().map( | ( drives, lights, _ ) | ( drives.iter().map( Drive::high ).collect::<Vec<bool>>(), lights.iter().map( | &light | light > LIT ).collect::<Vec<bool>>() ) ).collect::<Vec<_>>() ).collect() );
 
 	loop
 	{
-		let refined = number( ( 0 .. count ).map( | state | ( classes[ state ], row( state ).iter().map( | &( _, next ) | classes[ next ] ).collect::<Vec<usize>>() ) ).collect() );
+		let refined = number( ( 0 .. count ).map( | state | ( classes[ state ], row( state ).iter().map( | &( _, _, next ) | classes[ next ] ).collect::<Vec<usize>>() ) ).collect() );
 
 		if refined == classes { return classes; }
 
@@ -103,11 +107,11 @@ fn representatives( classes : &[ usize ] ) -> Vec<usize>
 	( 0 .. classes.len() ).filter( | &state | classes[ .. state ].iter().all( | &class | class != classes[ state ] ) ).collect()
 }
 
-fn minimize( entries : &[ ( Vec<Drive>, usize ) ], width : usize ) -> ( Vec<Vec<Drive>>, Vec<usize> )
+fn minimize( entries : &[ Entry ], width : usize ) -> Vec<Entry>
 {
 	let classes = classify( entries, width );
 
-	representatives( &classes ).iter().flat_map( | &state | &entries[ state * width .. ( state + 1 ) * width ] ).map( | ( drives, next ) | ( drives.clone(), classes[ *next ] ) ).unzip()
+	representatives( &classes ).iter().flat_map( | &state | &entries[ state * width .. ( state + 1 ) * width ] ).map( | ( drives, lights, next ) | ( drives.clone(), lights.clone(), classes[ *next ] ) ).collect()
 }
 
 
@@ -120,11 +124,12 @@ pub struct Characterization
 	loads : Vec<Plan>,
 	drives : Vec<usize>,
 	probes : Vec<usize>,
+	lights : Vec<usize>,
 	sequential : bool,
 	width : usize,
 	step : f64,
 	seeds : Vec<Logic>,
-	entries : Vec<( Vec<Drive>, usize )>,
+	entries : Vec<Entry>,
 	settled : Vec<( usize, Logic )>,
 	flips : usize,
 	longest : Option<f64>,
@@ -145,13 +150,13 @@ impl Characterization
 
 		let active = ! devices.is_empty() || elements.iter().any( | element | matches!( element.kind, Kind::Npn | Kind::Pnp | Kind::Nmos | Kind::Pmos ) );
 		let timed = elements.iter().any( | element | matches!( element.kind, Kind::Capacitor { .. } | Kind::Inductor { .. } | Kind::Clock { .. } ) );
-		let unlit = leads( layers[ layer ].elements() ).contains( &None );
 
 		let find = | key : &[ u32 ] | registry.find( key ).and_then( | id | elements.iter().position( | element | element.id == id ) );
 		let drives : Vec<usize> = inputs.iter().map( | &id | find( &[ id, 0 ] ) ).collect::<Option<_>>()?;
 		let probes : Vec<usize> = outputs.iter().map( | &id | find( &[ id ] ) ).collect::<Option<_>>()?;
+		let lights : Vec<usize> = layers[ layer ].elements().iter().filter( | element | matches!( element.kind, Kind::Led { .. } ) ).map( | led | find( &[ led.id ] ) ).collect::<Option<_>>()?;
 
-		if ! active || timed || unlit || looped( &elements, &[], &drives ) { return None; }
+		if ! active || timed || looped( &elements, &[], &drives ) { return None; }
 
 		let remembers = devices.iter().any( | device | models.get( device.layer ).and_then( Option::as_ref ).is_some_and( | model | model.next.iter().any( | &next | next != 0 ) ) );
 		let sequential = remembers || looped( &elements, &devices, &drives );
@@ -165,7 +170,7 @@ impl Characterization
 		let plan = Plan::build( &elements, &devices );
 		let loads = probes.iter().map( | &probe | Plan::build( &load( &elements, elements[ probe ].segment.to, 0.0 ), &devices ) ).collect();
 
-		Some( Characterization { elements, devices, plan, loads, drives, probes, sequential, width : 1 << inputs.len(), step, seeds : vec![ Logic::default() ], entries : Vec::new(), settled : Vec::new(), flips : 0, longest : Some( 0.0 ) } )
+		Some( Characterization { elements, devices, plan, loads, drives, probes, lights, sequential, width : 1 << inputs.len(), step, seeds : vec![ Logic::default() ], entries : Vec::new(), settled : Vec::new(), flips : 0, longest : Some( 0.0 ) } )
 	}
 
 	fn bits( &self ) -> usize
@@ -246,7 +251,9 @@ impl Characterization
 			None => { self.seeds.push( after ); self.seeds.len() - 1 },
 		};
 
-		self.entries.push( ( outputs, next ) );
+		let lights = self.lights.iter().map( | &led | open.readings[ led ].currents[ 0 ] ).collect();
+
+		self.entries.push( ( outputs, lights, next ) );
 
 		if self.tabulated() { self.settled = representatives( &classify( &self.entries, self.width ) ).iter().flat_map( | &state | &self.settled[ state * self.width .. ( state + 1 ) * self.width ] ).cloned().collect(); }
 
@@ -255,9 +262,9 @@ impl Characterization
 
 	pub fn model( &self ) -> Model
 	{
-		let ( rows, next ) = minimize( &self.entries, self.width );
+		let ( rows, ( lights, next ) ) = minimize( &self.entries, self.width ).into_iter().map( | ( drives, lights, next ) | ( drives, ( lights, next ) ) ).unzip();
 		let delay = if self.devices.is_empty() { stages( &self.elements, &self.drives, &self.probes ) } else { self.longest.unwrap_or( 0.0 ) };
 
-		Model { rows, next, delay : delay.max( DELAY ) }
+		Model { rows, lights, next, delay : delay.max( DELAY ) }
 	}
 }

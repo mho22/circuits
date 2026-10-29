@@ -157,7 +157,7 @@ fn it_keeps_a_toggle_at_its_level_with_its_id_at_the_end_of_its_lead()
 fn it_turns_a_toggle_into_a_probe_on_a_net_that_a_source_a_gate_or_a_channel_to_a_source_drives()
 {
 	let kinds = | parts : &[ Part ], models : &[ Option<Model> ] | flatten( &[ layer( parts ), input( true ) ], &mut Registry::default(), models, 0, &[] ).unwrap().0.iter().map( | element | element.kind ).collect::<Vec<Kind>>();
-	let model = Model { rows : vec![ vec![ Drive { volts : 5.0, ohms : 10.0 } ]; 2 ], next : vec![ 0; 2 ], delay : DELAY };
+	let model = Model { rows : vec![ vec![ Drive { volts : 5.0, ohms : 10.0 } ]; 2 ], lights : vec![ Vec::new(); 2 ], next : vec![ 0; 2 ], delay : DELAY };
 	let high = Kind::Toggle { high : true };
 
 	assert_eq!( kinds( &[ ( Kind::Toggle { high : true }, ( 1, 0 ), ( 2, 0 ) ), ( Kind::Wire, ( 2, 0 ), ( 6, 0 ) ), ( Kind::Supply { volts : 5.0 }, ( 6, 0 ), ( 6, 0 ) ) ], &[] )[ 0 ], Kind::Output );
@@ -221,7 +221,7 @@ fn it_drives_each_input_of_a_symbol_alone_with_its_level_from_its_layer()
 fn it_turns_a_copy_of_a_symbol_with_a_model_into_a_device()
 {
 	let drawing = layer( &[ ( Kind::Symbol { layer : 1, rotation : 0 }, ( 10, 10 ), ( 10, 10 ) ), ( Kind::Wire, ( 12, 10 ), ( 14, 10 ) ) ] );
-	let model = Model { rows : vec![ vec![ Drive { volts : 5.0, ohms : 10.0 } ]; 2 ], next : vec![ 0; 2 ], delay : DELAY };
+	let model = Model { rows : vec![ vec![ Drive { volts : 5.0, ohms : 10.0 } ]; 2 ], lights : vec![ Vec::new(); 2 ], next : vec![ 0; 2 ], delay : DELAY };
 	let ( elements, devices ) = flatten( &[ drawing, input( true ) ], &mut Registry::default(), &[ None, Some( model ) ], 0, &[] ).unwrap();
 
 	assert_eq!( elements[ .. 3 ], [
@@ -237,7 +237,7 @@ fn it_turns_a_copy_of_a_symbol_with_a_model_into_a_device()
 fn it_reads_an_input_that_a_wire_touches_through_an_open_switch()
 {
 	let drawing = layer( &[ ( Kind::Symbol { layer : 1, rotation : 0 }, ( 10, 10 ), ( 10, 10 ) ), ( Kind::Wire, ( 6, 10 ), ( 8, 10 ) ) ] );
-	let model = Model { rows : vec![ vec![ Drive { volts : 5.0, ohms : 10.0 } ]; 2 ], next : vec![ 0; 2 ], delay : DELAY };
+	let model = Model { rows : vec![ vec![ Drive { volts : 5.0, ohms : 10.0 } ]; 2 ], lights : vec![ Vec::new(); 2 ], next : vec![ 0; 2 ], delay : DELAY };
 	let ( elements, devices ) = flatten( &[ drawing, input( true ) ], &mut Registry::default(), &[ None, Some( model ) ], 0, &[] ).unwrap();
 
 	assert_eq!( elements[ 0 ], Element { id : 0, kind : Kind::Switch { closed : false }, segment : segment( ( SCOPE, 0 ), ( 8, 10 ) ), mirrored : false } );

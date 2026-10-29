@@ -23,6 +23,7 @@ impl Drive
 pub struct Model
 {
 	pub rows : Vec<Vec<Drive>>,
+	pub lights : Vec<Vec<f64>>,
 	pub next : Vec<usize>,
 	pub delay : f64,
 }

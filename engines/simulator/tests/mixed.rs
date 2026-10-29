@@ -117,7 +117,9 @@ fn toggler( delay : f64 ) -> Model
 		}
 	}
 
-	Model { rows, next, delay }
+	let lights = vec![ Vec::new(); rows.len() ];
+
+	Model { rows, lights, next, delay }
 }
 
 fn symbol( x : i32 ) -> Part

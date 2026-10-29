@@ -55,7 +55,7 @@ fn measure( layers : &[ Document ], models : &[ Option<Model> ], sources : &[ Ve
 
 fn fake() -> Model
 {
-	Model { rows : vec![ vec![ Drive { volts : 1.0, ohms : 1.0 } ]; 2 ], next : vec![ 0; 2 ], delay : DELAY }
+	Model { rows : vec![ vec![ Drive { volts : 1.0, ohms : 1.0 } ]; 2 ], lights : vec![ Vec::new(); 2 ], next : vec![ 0; 2 ], delay : DELAY }
 }
 
 fn highs( model : &Option<Model> ) -> Vec<bool>
