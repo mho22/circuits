@@ -58,12 +58,11 @@ fn it_keeps_a_net_between_two_gates_out_of_the_analog_circuit()
 {
 	let plan = plan( layer( &[ symbol( 10 ), symbol( 16 ), ( Kind::Wire, ( 12, 0 ), ( 14, 0 ) ) ] ) );
 
-	assert_eq!( plan.nets.len(), 2 );
+	assert_eq!( plan.nets.len(), 3 );
 	assert_eq!( plan.nets[ 0 ].readers, vec![ 1 ] );
 	assert!( plan.nets[ 1 ].readers.is_empty() );
 	assert_eq!( plan.nets[ 0 ].pieces, vec![ Segment { from : Point { x : 12, y : 0 }, to : Point { x : 14, y : 0 } } ] );
 	assert_eq!( plan.outputs, vec![ vec![ Some( 0 ) ], vec![ Some( 1 ) ] ] );
-	assert!( matches!( plan.inputs[ 0 ][ 0 ], Source::Analog( _ ) ) );
 	assert_eq!( plan.inputs[ 1 ], vec![ Source::Net( 0 ) ] );
 	assert!( plan.nets[ 0 ].elements.iter().all( | index | ! plan.analog.contains( index ) ) );
 }
@@ -136,4 +135,39 @@ fn it_keeps_an_output_pin_on_the_net_of_a_gate_out_of_the_analog_circuit()
 	assert_eq!( plan.outputs, vec![ vec![ Some( 0 ) ] ] );
 	assert_eq!( plan.nets[ 0 ].elements.len(), 3 );
 	assert!( plan.nets[ 0 ].elements.iter().all( | index | ! plan.analog.contains( index ) ) );
+}
+
+#[test]
+fn it_keeps_a_free_input_of_a_gate_out_of_the_analog_circuit_on_the_net_of_its_supply()
+{
+	let plan = plan( layer( &[ symbol( 10 ) ] ) );
+
+	assert_eq!( plan.generators.len(), 1 );
+	assert_eq!( plan.inputs[ 0 ], vec![ Source::Net( plan.generators[ 0 ].1.unwrap() ) ] );
+	assert!( plan.analog.is_empty() );
+}
+
+#[test]
+fn it_keeps_a_net_that_nothing_drives_out_of_the_analog_circuit()
+{
+	let plan = plan( layer( &[ symbol( 10 ), ( Kind::Wire, ( 4, 0 ), ( 8, 0 ) ) ] ) );
+
+	assert!( plan.generators.is_empty() );
+	assert!( matches!( plan.inputs[ 0 ][ 0 ], Source::Net( _ ) ) );
+	assert!( plan.analog.is_empty() );
+}
+
+#[test]
+fn it_keeps_an_led_between_two_gates_out_of_the_analog_circuit_unless_an_analog_part_touches_one_of_its_nets()
+{
+	let parts = [ symbol( 10 ), ( Kind::Symbol { layer : 1, rotation : 2 }, ( 16, 4 ), ( 16, 4 ) ), ( Kind::Led { color : 0 }, ( 12, 0 ), ( 12, 4 ) ), ( Kind::Wire, ( 12, 4 ), ( 14, 4 ) ) ];
+	let lit = plan( layer( &parts ) );
+	let loaded = plan( layer( &[ &parts[ .. ], &[ ( Kind::Resistor { ohms : 1000.0 }, ( 14, 4 ), ( 14, 8 ) ) ] ].concat() ) );
+
+	assert_eq!( lit.lights.len(), 1 );
+	assert_eq!( [ lit.lights[ 0 ].1, lit.lights[ 0 ].2 ], [ lit.outputs[ 0 ][ 0 ].unwrap(), lit.outputs[ 1 ][ 0 ].unwrap() ] );
+	assert!( lit.analog.is_empty() );
+	assert!( loaded.lights.is_empty() );
+	assert_eq!( loaded.outputs[ 1 ], vec![ None ] );
+	assert!( loaded.analog.contains( &lit.lights[ 0 ].0 ) );
 }

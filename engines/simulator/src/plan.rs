@@ -30,6 +30,7 @@ pub struct Plan
 	pub generators : Vec<( usize, Option<usize> )>,
 	pub topology : Topology,
 	pub reactive : bool,
+	pub lights : Vec<( usize, usize, usize )>,
 }
 
 impl Plan
@@ -41,7 +42,13 @@ impl Plan
 		let mut drivers : HashMap<usize, usize> = HashMap::new();
 		let mut touched = vec![ false; netlist.count ];
 
-		let generators : Vec<usize> = ( 0 .. elements.len() ).filter( | &index | matches!( elements[ index ].kind, Kind::Clock { .. } | Kind::Toggle { .. } | Kind::Slider { .. } ) ).collect();
+		let supplies : Vec<usize> = devices.iter().flat_map( | device | device.outputs.iter().map( | &( supply, _ ) | supply ) ).collect();
+		let generators : Vec<usize> = ( 0 .. elements.len() ).filter( | &index | match elements[ index ].kind
+		{
+			Kind::Clock { .. } | Kind::Toggle { .. } | Kind::Slider { .. } => true,
+			Kind::Supply { .. } => ! supplies.contains( &index ),
+			_ => false,
+		} ).collect();
 
 		for index in devices.iter().flat_map( | device | device.inputs.iter().copied().chain( device.outputs.iter().flat_map( | &( supply, resistor ) | [ supply, resistor ] ) ) ) { joined[ index ] = true; }
 
@@ -53,7 +60,7 @@ impl Plan
 
 		for ( index, element ) in elements.iter().enumerate()
 		{
-			if matches!( element.kind, Kind::Wire | Kind::Output | Kind::Switch { closed : true } ) || joined[ index ] { continue; }
+			if matches!( element.kind, Kind::Wire | Kind::Output | Kind::Switch { closed : true } | Kind::Led { .. } ) || joined[ index ] { continue; }
 
 			for point in element.terminals() { touched[ netlist.net( point ) ] = true; }
 		}
@@ -64,28 +71,47 @@ impl Plan
 
 			for &input in &device.inputs
 			{
-				if matches!( elements[ input ].kind, Kind::Switch { .. } ) { continue; }
+				if matches!( elements[ input ].kind, Kind::Switch { .. } | Kind::Resistor { .. } ) { continue; }
 
 				touched[ netlist.net( elements[ input ].segment.to ) ] = true;
 			}
+		}
+
+		let ends = | index : usize | { let terminals = elements[ index ].terminals(); ( netlist.net( terminals[ 0 ] ), netlist.net( terminals[ 1 ] ) ) };
+		let mut leds : Vec<usize> = ( 0 .. elements.len() ).filter( | &index | matches!( elements[ index ].kind, Kind::Led { .. } ) ).collect();
+
+		loop
+		{
+			let open = | net : usize | ! touched[ net ] && drivers.get( &net ) == Some( &1 );
+			let ( kept, refused ) : ( Vec<usize>, Vec<usize> ) = leds.iter().partition( | &&index | { let ( anode, cathode ) = ends( index ); anode != cathode && open( anode ) && open( cathode ) } );
+
+			if refused.is_empty() { break; }
+
+			for index in refused { let ( anode, cathode ) = ends( index ); touched[ anode ] = true; touched[ cathode ] = true; }
+
+			leds = kept;
 		}
 
 		let mut numbers : HashMap<usize, usize> = HashMap::new();
 		let mut nets : Vec<Net> = Vec::new();
 		let mut number = | net : usize | -> Option<usize>
 		{
-			if touched[ net ] || drivers.get( &net ) != Some( &1 ) { return None; }
+			if touched[ net ] || drivers.get( &net ).is_some_and( | &count | count != 1 ) { return None; }
 
 			Some( *numbers.entry( net ).or_insert_with( || { nets.push( Net::default() ); nets.len() - 1 } ) )
 		};
 
 		let outputs : Vec<Vec<Option<usize>>> = devices.iter().map( | device | device.outputs.iter().map( | &( _, resistor ) | number( netlist.net( elements[ resistor ].segment.to ) ) ).collect() ).collect();
 		let generators : Vec<( usize, Option<usize> )> = generators.iter().map( | &index | ( index, number( netlist.net( elements[ index ].segment.to ) ) ) ).collect();
-		let inputs : Vec<Vec<Source>> = devices.iter().map( | device | device.inputs.iter().map( | &input | number( netlist.net( elements[ input ].segment.to ) ).map_or( Source::Analog( input ), Source::Net ) ).collect() ).collect();
+		let sensed = | input : usize | if matches!( elements[ input ].kind, Kind::Resistor { .. } ) { elements[ input ].segment.from } else { elements[ input ].segment.to };
+		let inputs : Vec<Vec<Source>> = devices.iter().map( | device | device.inputs.iter().map( | &input | number( netlist.net( sensed( input ) ) ).map_or( Source::Analog( input ), Source::Net ) ).collect() ).collect();
 		let inert : Vec<( usize, Option<usize> )> = elements.iter().enumerate().filter( | ( _, element ) | matches!( element.kind, Kind::Wire | Kind::Output | Kind::Switch { closed : true } ) ).map( | ( index, element ) | ( index, number( netlist.net( element.terminals()[ 0 ] ) ) ) ).collect();
 		let pieces : Vec<( Segment, Option<usize> )> = netlist.edges.iter().map( | &( a, b ) | ( Segment { from : netlist.points[ a ], to : netlist.points[ b ] }, number( netlist.nets[ a ] ) ) ).collect();
 
+		let lights : Vec<( usize, usize, usize )> = leds.iter().filter_map( | &index | { let ( anode, cathode ) = ends( index ); Some( ( index, number( anode )?, number( cathode )? ) ) } ).collect();
 		let mut digital = vec![ false; elements.len() ];
+
+		for &( index, _, _ ) in &lights { digital[ index ] = true; }
 
 		let mut claim = | nets : &mut Vec<Net>, net : usize, index : usize | { nets[ net ].elements.push( index ); digital[ index ] = true; };
 
@@ -142,6 +168,6 @@ impl Plan
 		let topology = Topology::build( &circuit );
 		let reactive = circuit.iter().any( | element | matches!( element.kind, Kind::Capacitor { .. } | Kind::Inductor { .. } ) );
 
-		Plan { analog, nets, inputs, outputs, generators, topology, reactive }
+		Plan { analog, nets, inputs, outputs, generators, topology, reactive, lights }
 	}
 }

@@ -1,11 +1,12 @@
 use std::collections::VecDeque;
 
 use crate::flatten::HIGH;
-use crate::{ compute, Action, Branch, Device, Drive, Element, Error, History, Kind, Logic, Model, Plan, Reading, Solution, Source, FLOOR, THRESHOLD };
+use crate::{ compute, Action, Branch, Device, Drive, Element, Error, History, Junction, Kind, Logic, Model, Plan, Reading, Solution, Source, FLOOR, THRESHOLD };
 
 
 const ROUNDS : usize = 100;
 const EVENTS : usize = 64;
+const HALVINGS : usize = 60;
 
 
 fn count( hertz : f64, time : f64 ) -> u64
@@ -18,13 +19,30 @@ fn level( count : u64 ) -> f64
 	if count % 2 == 1 { HIGH } else { 0.0 }
 }
 
+fn light( junction : Junction, volts : f64, ohms : f64 ) -> f64
+{
+	if volts <= 0.0 || ! ohms.is_finite() { return 0.0; }
+
+	let current = | drop : f64 | junction.saturation * ( ( drop / junction.thermal ).exp() - 1.0 );
+	let ( mut low, mut high ) = ( 0.0, volts );
+
+	for _ in 0 .. HALVINGS
+	{
+		let middle = 0.5 * ( low + high );
+
+		if middle + current( middle ) * ohms > volts { high = middle; } else { low = middle; }
+	}
+
+	current( low )
+}
+
 fn emit( kind : Kind, time : f64 ) -> f64
 {
 	match kind
 	{
 		Kind::Clock { hertz, on : true } => level( count( hertz, time ) ),
 		Kind::Toggle { high : true } => HIGH,
-		Kind::Slider { volts } => volts,
+		Kind::Slider { volts } | Kind::Supply { volts } => volts,
 		_ => 0.0,
 	}
 }
@@ -325,6 +343,46 @@ impl<'a> Run<'a>
 			}
 
 			branches.extend( net.pieces.iter().map( | &segment | Branch { segment, voltage : volts, current : 0.0 } ) );
+		}
+
+		let mut ohms = vec![ f64::INFINITY; self.plan.nets.len() ];
+		let mut shares = vec![ 0.0; self.plan.nets.len() ];
+
+		for ( device, outputs ) in self.plan.outputs.iter().enumerate()
+		{
+			for ( drive, &net ) in self.tables[ device ].rows[ self.logic.applied[ device ] ].iter().zip( outputs )
+			{
+				let Some( net ) = net else { continue; };
+
+				ohms[ net ] = drive.ohms.max( FLOOR );
+			}
+		}
+
+		for &( _, net ) in &self.plan.generators
+		{
+			let Some( net ) = net else { continue; };
+
+			ohms[ net ] = FLOOR;
+		}
+
+		for &( _, anode, cathode ) in &self.plan.lights
+		{
+			if self.logic.levels[ anode ] <= self.logic.levels[ cathode ] { continue; }
+
+			shares[ anode ] += 1.0;
+			shares[ cathode ] += 1.0;
+		}
+
+		for &( index, anode, cathode ) in &self.plan.lights
+		{
+			let ( high, low ) = ( self.logic.levels[ anode ], self.logic.levels[ cathode ] );
+			let current = light( self.elements[ index ].kind.junction(), high - low, shares[ anode ] * ohms[ anode ] + shares[ cathode ] * ohms[ cathode ] );
+			let Reading { potentials, currents } = &mut readings[ index ];
+
+			potentials.clear();
+			currents.clear();
+			potentials.extend( [ high, low ] );
+			currents.extend( [ current, - current ] );
 		}
 
 		Solution { readings, branches }

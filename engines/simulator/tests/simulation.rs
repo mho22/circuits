@@ -915,6 +915,59 @@ fn it_lights_an_led_inside_a_gate_with_the_current_measured_for_the_row_of_the_g
 }
 
 #[test]
+fn it_lights_an_led_between_two_gates_with_the_output_current_shared_by_the_lit_leds()
+{
+	let mut simulation = Simulation::new( STEP );
+	let layer = inverter( &mut simulation );
+	let outline = Outline::of( simulation.document( layer as usize ).unwrap() );
+	let high = outline.terminals( point( 10, 10 ), 0 )[ 1 ];
+	let ends = outline.terminals( point( 10, 20 ), 0 );
+	let ( input, low ) = ( ends[ 0 ], ends[ 1 ] );
+
+	add( &mut simulation, Kind::Symbol { layer, rotation : 0 }, ( 10, 20 ), ( 10, 20 ) );
+
+	let toggle = add( &mut simulation, Kind::Toggle { high : true }, ( input.x - 1, input.y ), ( input.x, input.y ) );
+	let first = add( &mut simulation, Kind::Led { color : 0 }, ( high.x, high.y ), ( high.x + 2, high.y ) );
+
+	add( &mut simulation, Kind::Wire, ( high.x + 2, high.y ), ( high.x + 2, low.y ) );
+	add( &mut simulation, Kind::Wire, ( high.x + 2, low.y ), ( low.x, low.y ) );
+
+	let current = | simulation : &Simulation, id : u32 | { let at = simulation.document( 0 ).unwrap().elements().iter().position( | element | element.id == id ).unwrap(); simulation.solution().unwrap().readings[ at ].currents[ 0 ] };
+	let alone = current( &simulation, first );
+
+	add( &mut simulation, Kind::Wire, ( high.x, high.y ), ( high.x, high.y - 4 ) );
+
+	let second = add( &mut simulation, Kind::Led { color : 0 }, ( high.x, high.y - 4 ), ( high.x + 2, high.y - 4 ) );
+
+	add( &mut simulation, Kind::Wire, ( high.x + 2, high.y - 4 ), ( high.x + 2, high.y ) );
+
+	assert_eq!( simulation.mode(), Mode::Digital );
+	assert!( alone > 1e-3 );
+	assert!( near( current( &simulation, first ), current( &simulation, second ), 1e-12 ) );
+	assert!( current( &simulation, first ) < alone );
+
+	simulation.apply( 0, Operation::SetHigh { id : toggle, high : false } ).unwrap();
+
+	assert_eq!( [ current( &simulation, first ), current( &simulation, second ) ], [ 0.0, 0.0 ] );
+}
+
+#[test]
+fn it_lights_an_led_between_a_toggle_and_a_gate()
+{
+	let mut simulation = Simulation::new( STEP );
+	let layer = inverter( &mut simulation );
+	let high = Outline::of( simulation.document( layer as usize ).unwrap() ).terminals( point( 10, 10 ), 0 )[ 1 ];
+
+	add( &mut simulation, Kind::Toggle { high : false }, ( high.x + 4, high.y - 4 ), ( high.x + 4, high.y ) );
+
+	let led = add( &mut simulation, Kind::Led { color : 0 }, ( high.x, high.y ), ( high.x + 4, high.y ) );
+	let at = simulation.document( 0 ).unwrap().elements().iter().position( | element | element.id == led ).unwrap();
+
+	assert_eq!( simulation.mode(), Mode::Digital );
+	assert!( simulation.solution().unwrap().readings[ at ].currents[ 0 ] > 1e-3 );
+}
+
+#[test]
 fn it_gives_no_current_of_an_led_while_its_symbol_is_measured()
 {
 	let mut simulation = Simulation::new( STEP );
@@ -1125,11 +1178,11 @@ fn it_names_the_engine_that_runs_the_view()
 
 	inverter( &mut simulation );
 
-	assert_eq!( simulation.mode(), Mode::Mixed );
-
-	add( &mut simulation, Kind::Clock { hertz : 1e6, on : true }, ( 4, 10 ), ( 8, 10 ) );
-
 	assert_eq!( simulation.mode(), Mode::Digital );
+
+	add( &mut simulation, Kind::Resistor { ohms : 1000.0 }, ( 4, 10 ), ( 8, 10 ) );
+
+	assert_eq!( simulation.mode(), Mode::Mixed );
 }
 
 #[test]
