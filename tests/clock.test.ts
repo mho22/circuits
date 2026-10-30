@@ -49,7 +49,7 @@ describe( 'clock', () =>
 	{
 		const clock = grown( 1000 );
 
-		for( let frame = 0; frame < 100; frame++ ) clock.measure( 1000, 40 );
+		clock.measure( 1000, 40 );
 
 		expect( clock.tick( 1, 1000 ) ).toBe( 200 );
 	} );
@@ -58,18 +58,28 @@ describe( 'clock', () =>
 	{
 		const clock = grown( 1000 );
 
-		for( let frame = 0; frame < 100; frame++ ) clock.measure( 10, 16 );
+		clock.measure( 10, 16 );
 
 		expect( clock.tick( 1, 1000 ) ).toBe( 5 );
 	} );
 
-	it( 'keeps its limit after one slow frame among fast frames', () =>
+	it( 'starts from the cost of the last frame, not from one step', () =>
+	{
+		const clock = new Clock( 8 );
+
+		clock.measure( clock.tick( 1, 1000 ), 0.01 );
+
+		expect( clock.tick( 1, 1000 ) ).toBe( 800 );
+	} );
+
+	it( 'follows the cost of the last frame after one slow frame', () =>
 	{
 		const clock = grown( 10 );
 
 		clock.measure( 3, 6 );
+		clock.measure( clock.tick( 1, 1000 ), 0.5 );
 
-		expect( clock.tick( 1, 1000 ) ).toBe( 16 );
+		expect( clock.tick( 1, 1000 ) ).toBe( 64 );
 	} );
 
 	it( 'keeps its limit when fewer steps than the limit fit in the budget', () =>
