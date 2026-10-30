@@ -42,9 +42,9 @@ fn plan( drawing : Document ) -> Plan
 	while catalog.advance( &layers ) {}
 
 	let ( models, _ ) = catalog.finish();
-	let ( elements, devices ) = flatten( &layers, &mut Registry::default(), &models, 0, &[] ).unwrap();
+	let ( elements, devices, netlist ) = flatten( &layers, &mut Registry::default(), &models, 0, &[] ).unwrap();
 
-	Plan::build( &elements, &devices )
+	Plan::build( &elements, &devices, &netlist )
 }
 
 fn symbol( x : i32 ) -> Part

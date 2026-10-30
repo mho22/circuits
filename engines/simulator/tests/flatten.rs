@@ -41,7 +41,7 @@ fn it_keeps_the_parts_of_the_drawing_with_an_id_for_each()
 {
 	let drawing = layer( &[ ( Kind::Wire, ( 0, 0 ), ( 2, 0 ) ), ( Kind::Output, ( 3, 0 ), ( 2, 0 ) ) ] );
 
-	assert_eq!( flatten( &[ drawing ], &mut Registry::default(), &[], 0, &[] ).map( | ( elements, _ ) | elements ), Ok( vec![
+	assert_eq!( flatten( &[ drawing ], &mut Registry::default(), &[], 0, &[] ).map( | ( elements, _, _ ) | elements ), Ok( vec![
 		Element { id : 0, kind : Kind::Wire, segment : segment( ( 0, 0 ), ( 2, 0 ) ), mirrored : false },
 		Element { id : 1, kind : Kind::Output, segment : segment( ( 3, 0 ), ( 2, 0 ) ), mirrored : false },
 	] ) );
@@ -52,7 +52,7 @@ fn it_replaces_a_symbol_with_its_parts_joined_to_the_box()
 {
 	let drawing = layer( &[ ( Kind::Symbol { layer : 1, rotation : 0 }, ( 10, 10 ), ( 10, 10 ) ) ] );
 
-	assert_eq!( flatten( &[ drawing, resistor() ], &mut Registry::default(), &[], 0, &[] ).map( | ( elements, _ ) | elements ), Ok( vec![
+	assert_eq!( flatten( &[ drawing, resistor() ], &mut Registry::default(), &[], 0, &[] ).map( | ( elements, _, _ ) | elements ), Ok( vec![
 		join( 0, ( SCOPE, 0 ), ( 8, 10 ) ),
 		join( 1, ( SCOPE + 4, 0 ), ( 12, 10 ) ),
 		Element { id : 2, kind : Kind::Resistor { ohms : 1000.0 }, segment : segment( ( SCOPE, 0 ), ( SCOPE + 4, 0 ) ), mirrored : false },
@@ -222,7 +222,7 @@ fn it_turns_a_copy_of_a_symbol_with_a_model_into_a_device()
 {
 	let drawing = layer( &[ ( Kind::Symbol { layer : 1, rotation : 0 }, ( 10, 10 ), ( 10, 10 ) ), ( Kind::Wire, ( 12, 10 ), ( 14, 10 ) ) ] );
 	let model = Model { rows : vec![ vec![ Drive { volts : 5.0, ohms : 10.0 } ]; 2 ], lights : vec![ Vec::new(); 2 ], next : vec![ 0; 2 ], delay : DELAY };
-	let ( elements, devices ) = flatten( &[ drawing, input( true ) ], &mut Registry::default(), &[ None, Some( model ) ], 0, &[] ).unwrap();
+	let ( elements, devices, _ ) = flatten( &[ drawing, input( true ) ], &mut Registry::default(), &[ None, Some( model ) ], 0, &[] ).unwrap();
 
 	assert_eq!( elements[ .. 3 ], [
 		supply( 0, 5.0, ( SCOPE, 0 ) ),
@@ -238,7 +238,7 @@ fn it_reads_an_input_that_a_wire_touches_through_an_open_switch()
 {
 	let drawing = layer( &[ ( Kind::Symbol { layer : 1, rotation : 0 }, ( 10, 10 ), ( 10, 10 ) ), ( Kind::Wire, ( 6, 10 ), ( 8, 10 ) ) ] );
 	let model = Model { rows : vec![ vec![ Drive { volts : 5.0, ohms : 10.0 } ]; 2 ], lights : vec![ Vec::new(); 2 ], next : vec![ 0; 2 ], delay : DELAY };
-	let ( elements, devices ) = flatten( &[ drawing, input( true ) ], &mut Registry::default(), &[ None, Some( model ) ], 0, &[] ).unwrap();
+	let ( elements, devices, _ ) = flatten( &[ drawing, input( true ) ], &mut Registry::default(), &[ None, Some( model ) ], 0, &[] ).unwrap();
 
 	assert_eq!( elements[ 0 ], Element { id : 0, kind : Kind::Switch { closed : false }, segment : segment( ( SCOPE, 0 ), ( 8, 10 ) ), mirrored : false } );
 	assert_eq!( devices[ 0 ].inputs, vec![ 0 ] );

@@ -135,8 +135,8 @@ fn circuit( parts : &[ Part ] ) -> Circuit
 	while catalog.advance( &layers ) {}
 
 	let ( models, _ ) = catalog.finish();
-	let ( elements, devices ) = flatten( &layers, &mut Registry::default(), &models, 0, &[] ).unwrap();
-	let plan = Plan::build( &elements, &devices );
+	let ( elements, devices, netlist ) = flatten( &layers, &mut Registry::default(), &models, 0, &[] ).unwrap();
+	let plan = Plan::build( &elements, &devices, &netlist );
 
 	Circuit { elements, devices, plan, models, logic : Logic::default() }
 }
@@ -145,8 +145,8 @@ fn cleared( clock : f64, clear : f64, delay : f64 ) -> Circuit
 {
 	let layers = [ layer( &[ ( Kind::Clock { hertz : clock, on : true }, ( 4, -1 ), ( 8, -1 ) ), ( Kind::Clock { hertz : clear, on : true }, ( 4, 1 ), ( 8, 1 ) ), symbol( 10 ), ( Kind::Wire, ( 12, 0 ), ( 14, 0 ) ) ] ), flipflop() ];
 	let models = vec![ None, Some( toggler( delay ) ) ];
-	let ( elements, devices ) = flatten( &layers, &mut Registry::default(), &models, 0, &[] ).unwrap();
-	let plan = Plan::build( &elements, &devices );
+	let ( elements, devices, netlist ) = flatten( &layers, &mut Registry::default(), &models, 0, &[] ).unwrap();
+	let plan = Plan::build( &elements, &devices, &netlist );
 
 	Circuit { elements, devices, plan, models, logic : Logic::default() }
 }
@@ -422,8 +422,8 @@ fn it_starts_a_new_device_with_memory_at_rest_with_its_lowest_outputs_and_keeps_
 {
 	let layers = [ layer( &[ ( Kind::Toggle { high : true }, ( 7, -1 ), ( 8, -1 ) ), ( Kind::Toggle { high : false }, ( 7, 1 ), ( 8, 1 ) ), symbol( 10 ), ( Kind::Wire, ( 12, 0 ), ( 14, 0 ) ) ] ), flipflop() ];
 	let models = vec![ None, Some( toggler( 1e-9 ) ) ];
-	let ( elements, devices ) = flatten( &layers, &mut Registry::default(), &models, 0, &[] ).unwrap();
-	let plan = Plan::build( &elements, &devices );
+	let ( elements, devices, netlist ) = flatten( &layers, &mut Registry::default(), &models, 0, &[] ).unwrap();
+	let plan = Plan::build( &elements, &devices, &netlist );
 	let mut circuit = Circuit { elements, devices, plan, models, logic : Logic::default() };
 	let edged = settle( Machine { elements : &circuit.elements, devices : &circuit.devices, plan : &circuit.plan, models : &circuit.models }, &History::default(), STEP, &mut Logic::default(), false ).unwrap();
 	let rested = circuit.settle().unwrap();

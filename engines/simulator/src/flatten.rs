@@ -34,10 +34,13 @@ fn visit( layers : &[ Document ], layer : usize, open : &mut Vec<usize>, done : 
 	Ok( () )
 }
 
-fn listen( elements : &mut [ Element ], devices : &[ Device ] )
+fn listen( elements : &mut [ Element ], devices : &[ Device ] ) -> Netlist
 {
 	let netlist = Netlist::build( elements );
-	let outputs : Vec<usize> = devices.iter().flat_map( | device | device.outputs.iter().map( | &( _, resistor ) | resistor ) ).collect();
+	let mut outputs = vec![ false; elements.len() ];
+
+	for &( _, resistor ) in devices.iter().flat_map( | device | &device.outputs ) { outputs[ resistor ] = true; }
+
 	let mut groups = UnionFind::new( netlist.count );
 	let mut driven = vec![ false; netlist.count ];
 
@@ -53,7 +56,7 @@ fn listen( elements : &mut [ Element ], devices : &[ Device ] )
 		let points = match element.kind
 		{
 			Kind::Supply { .. } | Kind::Battery { .. } | Kind::Ground | Kind::Clock { .. } => element.terminals(),
-			_ if outputs.contains( &index ) => vec![ element.segment.to ],
+			_ if outputs[ index ] => vec![ element.segment.to ],
 			_ => continue,
 		};
 
@@ -64,6 +67,8 @@ fn listen( elements : &mut [ Element ], devices : &[ Device ] )
 	{
 		if driven[ groups.find( netlist.net( element.segment.to ) ) ] { element.kind = Kind::Output; }
 	}
+
+	netlist
 }
 
 
@@ -183,7 +188,7 @@ impl Walk<'_>
 }
 
 
-pub fn flatten( layers : &[ Document ], registry : &mut Registry, models : &[ Option<Model> ], layer : usize, path : &[ u32 ] ) -> Result<( Vec<Element>, Vec<Device> ), Error>
+pub fn flatten( layers : &[ Document ], registry : &mut Registry, models : &[ Option<Model> ], layer : usize, path : &[ u32 ] ) -> Result<( Vec<Element>, Vec<Device>, Netlist ), Error>
 {
 	let mut done = Vec::new();
 
@@ -193,7 +198,7 @@ pub fn flatten( layers : &[ Document ], registry : &mut Registry, models : &[ Op
 
 	walk.expand( layer, path, 0 );
 
-	listen( &mut walk.elements, &walk.devices );
+	let netlist = listen( &mut walk.elements, &walk.devices );
 
-	Ok( ( walk.elements, walk.devices ) )
+	Ok( ( walk.elements, walk.devices, netlist ) )
 }

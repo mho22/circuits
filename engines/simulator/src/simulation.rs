@@ -2,7 +2,7 @@ use std::collections::{ HashMap, HashSet };
 
 use crate::flatten::STRIDE;
 use crate::shape::FINE;
-use crate::{ advance, enclose, flatten, idle, place, rush, settle, stretch, Catalog, Device, Document, Element, Enclosure, Error, History, Kind, Logic, Machine, Mode, Model, Netlist, Operation, Outline, Plan, Point, Reading, Registry, Segment, Shape, Solution };
+use crate::{ advance, enclose, flatten, idle, place, rush, settle, stretch, Catalog, Device, Document, Element, Enclosure, Error, Hashing, History, Kind, Logic, Machine, Mode, Model, Netlist, Operation, Outline, Plan, Point, Reading, Registry, Segment, Shape, Solution };
 
 
 const DIVISIONS : f64 = 20.0;
@@ -481,11 +481,11 @@ impl Simulation
 		let layer = self.descend( path )?;
 
 		let models = self.available();
-		let ( elements, devices ) = flatten( &self.layers, &mut self.registry, &models, layer, path )?;
+		let ( elements, devices, netlist ) = flatten( &self.layers, &mut self.registry, &models, layer, path )?;
 
 		self.focus = path.to_vec();
 
-		self.rebuild( elements, devices );
+		self.rebuild( elements, devices, netlist );
 
 		Ok( () )
 	}
@@ -589,7 +589,7 @@ impl Simulation
 		let models = match &self.measuring { Some( running ) if ! symbolic => running.ready(), _ => catalog.ready() };
 		let result = result.and_then( | id | flatten( &self.layers, &mut self.registry, &models, layer, &focus ).map( | flat | ( id, flat ) ) );
 
-		let ( id, ( elements, devices ) ) = match result
+		let ( id, ( elements, devices, netlist ) ) = match result
 		{
 			Ok( pair ) => pair,
 			Err( error ) =>
@@ -606,7 +606,7 @@ impl Simulation
 
 		if symbolic { self.measuring = Some( catalog ).filter( | catalog | ! catalog.done() ); }
 
-		self.rebuild( elements, devices );
+		self.rebuild( elements, devices, netlist );
 
 		Ok( ( id, inverses ) )
 	}
@@ -623,9 +623,9 @@ impl Simulation
 
 		let layer = self.descend( &self.focus )?;
 		let models = self.available();
-		let ( elements, devices ) = flatten( &self.layers, &mut self.registry, &models, layer, &self.focus )?;
+		let ( elements, devices, netlist ) = flatten( &self.layers, &mut self.registry, &models, layer, &self.focus )?;
 
-		self.rebuild( elements, devices );
+		self.rebuild( elements, devices, netlist );
 
 		Ok( pending )
 	}
@@ -656,9 +656,9 @@ impl Simulation
 		found
 	}
 
-	fn rebuild( &mut self, elements : Vec<Element>, devices : Vec<Device> )
+	fn rebuild( &mut self, elements : Vec<Element>, devices : Vec<Device>, netlist : Netlist )
 	{
-		self.plan = if self.frozen() { Plan::default() } else { Plan::build( &elements, &devices ) };
+		self.plan = if self.frozen() { Plan::default() } else { Plan::build( &elements, &devices, &netlist ) };
 		self.elements = elements;
 		self.devices = devices;
 		self.revision = self.revision.wrapping_add( 1 );
@@ -671,7 +671,7 @@ impl Simulation
 	{
 		let path = self.focus.as_slice();
 		let layer = self.descend( path ).unwrap_or( 0 );
-		let positions : HashMap<u32, usize> = self.elements.iter().enumerate().map( | ( index, element ) | ( element.id, index ) ).collect();
+		let positions : HashMap<u32, usize, Hashing> = self.elements.iter().enumerate().map( | ( index, element ) | ( element.id, index ) ).collect();
 		let position = | key : &[ u32 ] | self.registry.find( key ).and_then( | id | positions.get( &id ).copied() );
 		let symbols : Vec<( usize, u32, usize )> = self.layers[ layer ].elements().iter().enumerate().filter_map( | ( at, element ) | match element.kind { Kind::Symbol { layer : inner, .. } => Some( ( at, element.id, inner as usize ) ), _ => None } ).collect();
 
@@ -687,7 +687,7 @@ impl Simulation
 			}
 		} ).collect();
 
-		let owners : HashMap<usize, usize> = self.devices.iter().enumerate().filter_map( | ( device, gate ) | gate.outputs.first().map( | &( _, resistor ) | ( resistor, device ) ) ).collect();
+		let owners : HashMap<usize, usize, Hashing> = self.devices.iter().enumerate().filter_map( | ( device, gate ) | gate.outputs.first().map( | &( _, resistor ) | ( resistor, device ) ) ).collect();
 
 		self.gates = symbols.iter().flat_map( | &( at, _, inner ) |
 		{

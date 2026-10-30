@@ -1,10 +1,12 @@
 use std::collections::HashMap;
 
+use crate::Hashing;
+
 
 #[derive( Debug, Default )]
 pub struct Registry
 {
-	ids : HashMap<Vec<u32>, u32>,
+	ids : HashMap<Vec<u32>, u32, Hashing>,
 }
 
 impl Registry

@@ -146,7 +146,7 @@ impl Characterization
 		if outputs.is_empty() || inputs.len() > INPUTS { return None; }
 
 		let mut registry = Registry::default();
-		let ( mut elements, devices ) = flatten( layers, &mut registry, models, layer, &[] ).ok()?;
+		let ( mut elements, devices, netlist ) = flatten( layers, &mut registry, models, layer, &[] ).ok()?;
 
 		let active = ! devices.is_empty() || elements.iter().any( | element | matches!( element.kind, Kind::Npn | Kind::Pnp | Kind::Nmos | Kind::Pmos ) );
 		let timed = elements.iter().any( | element | matches!( element.kind, Kind::Capacitor { .. } | Kind::Inductor { .. } | Kind::Clock { .. } ) );
@@ -160,15 +160,14 @@ impl Characterization
 
 		let remembers = devices.iter().any( | device | models.get( device.layer ).and_then( Option::as_ref ).is_some_and( | model | model.next.iter().any( | &next | next != 0 ) ) );
 		let sequential = remembers || looped( &elements, &devices, &drives );
-		let netlist = Netlist::build( &elements );
 		let net = | index : usize | netlist.net( elements[ index ].segment.to );
 
 		if probes.iter().any( | &probe | drives.iter().any( | &drive | net( probe ) == net( drive ) ) ) { return None; }
 
 		for &drive in &drives { elements[ drive ].kind = Kind::Supply { volts : 0.0 }; }
 
-		let plan = Plan::build( &elements, &devices );
-		let loads = probes.iter().map( | &probe | Plan::build( &load( &elements, elements[ probe ].segment.to, 0.0 ), &devices ) ).collect();
+		let plan = Plan::build( &elements, &devices, &netlist );
+		let loads = probes.iter().map( | &probe | { let loaded = load( &elements, elements[ probe ].segment.to, 0.0 ); Plan::build( &loaded, &devices, &Netlist::build( &loaded ) ) } ).collect();
 
 		Some( Characterization { elements, devices, plan, loads, drives, probes, lights, sequential, width : 1 << inputs.len(), step, seeds : vec![ Logic::default() ], entries : Vec::new(), settled : Vec::new(), flips : 0, longest : Some( 0.0 ) } )
 	}

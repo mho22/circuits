@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::union_find::UnionFind;
-use crate::{ Element, Kind, Point };
+use crate::{ Element, Hashing, Kind, Point };
 
 
 #[derive( Clone, Debug, Default, PartialEq )]
@@ -13,7 +13,7 @@ pub struct Netlist
 	pub earth : Option<usize>,
 	pub edges : Vec<( usize, usize )>,
 	pub links : Vec<( usize, usize )>,
-	indices : HashMap<Point, usize>,
+	indices : HashMap<Point, usize, Hashing>,
 }
 
 impl Netlist
@@ -21,7 +21,7 @@ impl Netlist
 	pub fn build( elements : &[ Element ] ) -> Netlist
 	{
 		let mut points = Vec::new();
-		let mut indices = HashMap::with_capacity( elements.len() * 3 );
+		let mut indices = HashMap::with_capacity_and_hasher( elements.len() * 3, Hashing::default() );
 
 		for element in elements
 		{

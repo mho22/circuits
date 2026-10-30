@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{ Device, Element, Kind, Netlist, Segment, Topology };
+use crate::{ Device, Element, Hashing, Kind, Netlist, Segment, Topology };
 
 
 #[derive( Clone, Copy, Debug, PartialEq )]
@@ -36,11 +36,10 @@ pub struct Plan
 
 impl Plan
 {
-	pub fn build( elements : &[ Element ], devices : &[ Device ] ) -> Plan
+	pub fn build( elements : &[ Element ], devices : &[ Device ], netlist : &Netlist ) -> Plan
 	{
-		let netlist = Netlist::build( elements );
 		let mut joined = vec![ false; elements.len() ];
-		let mut drivers : HashMap<usize, usize> = HashMap::new();
+		let mut drivers : HashMap<usize, usize, Hashing> = HashMap::default();
 		let mut touched = vec![ false; netlist.count ];
 
 		let supplies : Vec<usize> = devices.iter().flat_map( | device | device.outputs.iter().map( | &( supply, _ ) | supply ) ).collect();
@@ -93,7 +92,7 @@ impl Plan
 			leds = kept;
 		}
 
-		let mut numbers : HashMap<usize, usize> = HashMap::new();
+		let mut numbers : HashMap<usize, usize, Hashing> = HashMap::default();
 		let mut nets : Vec<Net> = Vec::new();
 		let mut number = | net : usize | -> Option<usize>
 		{
