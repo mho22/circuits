@@ -13,7 +13,7 @@ describe( 'element renderer', () =>
 	{
 		const { context, calls } = record();
 
-		draw( context, element( { kind, value : 1 } ), scale );
+		draw( context, element( { kind, value : 1 } ), scale, 1 );
 
 		return calls;
 	}

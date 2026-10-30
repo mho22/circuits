@@ -67,10 +67,12 @@ function heading( layer : Layer ) : string
 }
 
 
-export function encode( elements : Element[], layers : Layer[] = [] ) : string
+export function encode( elements : Element[], layers : Layer[] = [], zoom = 1 ) : string
 {
 	const definitions = layers.map( layer => `\t\t{\n${ heading( layer ) }\t\t\t"parts" : ${ list( layer.parts, '\t\t\t' ) }\n\t\t}` );
 	const tail = definitions.length === 0 ? '' : `,\n\t"symbols" : [\n${ definitions.join( ',\n' ) }\n\t]`;
 
-	return `{\n\t"version" : 1,\n\t"parts" : ${ list( elements, '\t' ) }${ tail }\n}\n`;
+	const head = zoom === 1 ? '' : `\n\t"zoom" : ${ zoom },`;
+
+	return `{\n\t"version" : 1,${ head }\n\t"parts" : ${ list( elements, '\t' ) }${ tail }\n}\n`;
 }

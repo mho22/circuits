@@ -13,9 +13,10 @@ const COLOR = '#9e9e9e';
 const RADIUS = 4;
 const DOT = 3;
 const SQUARE = 9;
+const GLOW = 1 / 4;
 
 
-export function draw( context : CanvasRenderingContext2D, element : Element, scale : Scale ) : void
+export function draw( context : CanvasRenderingContext2D, element : Element, scale : Scale, stride : number ) : void
 {
 	const { outline, definition } = element;
 
@@ -28,6 +29,7 @@ export function draw( context : CanvasRenderingContext2D, element : Element, sca
 	const bottom = element.from.y + Math.max( ... corners.map( corner => corner.y ) );
 	const center = { x : toScreen( element.from.x ), y : toScreen( element.from.y ) };
 	const ends = pins( element.from, outline, element.rotation );
+	const half = SQUARE + GLOW * stride;
 
 	if( definition?.drawing.length ) drawing.draw( context, definition.drawing, center, element.rotation, SPACING / FINE );
 
@@ -59,7 +61,7 @@ export function draw( context : CanvasRenderingContext2D, element : Element, sca
 		const glows = indexes.map( ( index ) : [ Color, number ] => [ outline.lights[ index ].color, brightness( element.lights?.[ index ] ?? 0 ) ] ).filter( ( [ , glow ] ) => glow > 0 );
 
 		context.fillStyle = glows.length ? `rgb(${ mix( glows ) })` : DARK;
-		context.fillRect( x - SQUARE, y - SQUARE, 2 * SQUARE, 2 * SQUARE );
+		context.fillRect( x - half, y - half, 2 * half, 2 * half );
 	} );
 
 	ends.forEach( ( pin, index ) =>

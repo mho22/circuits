@@ -20,7 +20,7 @@ import * as transistor from './transistor.ts';
 import * as wire from './wire.ts';
 
 
-const RENDERERS : Record<Kind, ( context : CanvasRenderingContext2D, element : Element, scale : Scale ) => void> = {
+const RENDERERS : Record<Kind, ( context : CanvasRenderingContext2D, element : Element, scale : Scale, stride : number ) => void> = {
 	[ Kind.Wire ] : wire.draw,
 	[ Kind.Resistor ] : resistor.draw,
 	[ Kind.Battery ] : battery.draw,
@@ -44,7 +44,7 @@ const RENDERERS : Record<Kind, ( context : CanvasRenderingContext2D, element : E
 };
 
 
-export function draw( context : CanvasRenderingContext2D, element : Element, scale : Scale ) : void
+export function draw( context : CanvasRenderingContext2D, element : Element, scale : Scale, stride : number ) : void
 {
-	RENDERERS[ element.kind ]( context, element, scale );
+	RENDERERS[ element.kind ]( context, element, scale, stride );
 }

@@ -189,6 +189,20 @@ describe( 'view', () =>
 		expect( [ view.level, view.x, view.y ] ).toEqual( [ 1, 0, 0 ] );
 	} );
 
+	it( 'keeps the stride of the main page while it shows a layer', () =>
+	{
+		const view = new View();
+
+		view.zoom( 3, { x : 0, y : 0 } );
+
+		expect( view.base ).toBe( 8 );
+
+		view.enter( 2, { x : 4, y : 8 }, { x : 100, y : 50 } );
+		view.zoom( 1, { x : 100, y : 50 } );
+
+		expect( view.base ).toBe( 8 );
+	} );
+
 	it( 'zooms one level for each swipe of the wheel around the cursor', () =>
 	{
 		const view = new View();

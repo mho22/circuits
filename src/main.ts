@@ -127,7 +127,7 @@ let sketching = false;
 let origin : Point = { x : 0, y : 0 };
 let aim : Point | null = null;
 let picked : { area : Area, menu : HTMLElement } | null = null;
-let loading : { name : string, since : number, progress : number } | null = null;
+let loading : { name : string, since : number, progress : number, zoom : number } | null = null;
 let scene : Scene | null = null;
 
 
@@ -231,7 +231,7 @@ function layered( layer : number ) : Element[]
 
 async function save() : Promise<void>
 {
-	try { name = await download( encode( layered( 0 ), Array.from( circuit.symbols(), layer => ( { number : layer, definition : define( layer ), parts : layered( layer ) } ) ) ), name ); }
+	try { name = await download( encode( layered( 0 ), Array.from( circuit.symbols(), layer => ( { number : layer, definition : define( layer ), parts : layered( layer ) } ) ), view.base ), name ); }
 
 	catch( error ) { if( ( error as Error ).name !== 'AbortError' ) notice = ( error as Error ).message; }
 }
@@ -250,7 +250,7 @@ async function load() : Promise<void>
 
 		circuit.load( contents.parts, contents.labels, contents.layers, contents.names, contents.drawings, contents.layouts );
 
-		loading = { name : file.name, since : performance.now(), progress : 0 };
+		loading = { name : file.name, since : performance.now(), progress : 0, zoom : contents.zoom };
 	}
 
 	catch( error ) { notice = ( error as Error ).message; }
@@ -282,6 +282,9 @@ function proceed() : void
 	if( pending ) return;
 
 	view.follow( circuit.layer );
+
+	if( view.zoom( STRIDES.indexOf( loading.zoom ), screen() ) ) zoomed();
+
 	view.center( screen() );
 
 	name = loading.name;
@@ -612,7 +615,7 @@ function paint( shown : Map<number, Element>, branches : Branch[], joints : Scen
 
 	grid.draw( context, view.x * stride, view.y * stride, innerWidth * stride, innerHeight * stride, false, stride );
 
-	elements.forEach( item => element.draw( context, item, scale ) );
+	elements.forEach( item => element.draw( context, item, scale, stride ) );
 
 	junction.draw( context, joints.filter( ( { wire } ) => shown.has( wire ) ).map( ( { point, wire } ) => ( { point, potential : shown.get( wire )!.potentials[ 0 ] } ) ), scale );
 
@@ -620,7 +623,7 @@ function paint( shown : Map<number, Element>, branches : Branch[], joints : Scen
 
 	context.globalAlpha = 0.5;
 
-	previews.forEach( item => element.draw( context, outlined( item ), { voltage : 0, current : 0 } ) );
+	previews.forEach( item => element.draw( context, outlined( item ), { voltage : 0, current : 0 }, stride ) );
 
 	context.globalAlpha = 1;
 

@@ -32,6 +32,12 @@ describe( 'file encoder', () =>
 		].join( '\n' ) );
 	} );
 
+	it( 'writes the zoom of the main page after the version only when it is not 1', () =>
+	{
+		expect( encode( [], [], 8 ) ).toBe( '{\n\t"version" : 1,\n\t"zoom" : 8,\n\t"parts" : []\n}\n' );
+		expect( encode( [], [], 1 ) ).not.toContain( '"zoom"' );
+	} );
+
 	it( 'writes an open switch', () =>
 	{
 		expect( encode( [ element( { kind : Kind.Switch, value : 0 } ) ] ) ).toContain( '"closed" : false' );

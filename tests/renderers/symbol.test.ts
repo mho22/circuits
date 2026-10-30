@@ -17,7 +17,7 @@ describe( 'symbol renderer', () =>
 	{
 		const { context, calls } = record();
 
-		draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline, potentials : [ 5, 0 ] } ), { voltage : 5, current : 0 } );
+		draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline, potentials : [ 5, 0 ] } ), { voltage : 5, current : 0 }, 1 );
 
 		expect( calls ).toContainEqual( [ 'roundRect', 3 * SPACING, 2 * SPACING, 4 * SPACING, 6 * SPACING, 4 ] );
 		expect( calls.filter( call => call[ 0 ] === 'arc' ).map( call => call.slice( 1, 3 ) ) ).toEqual( [ [ 3 * SPACING, 6 * SPACING ], [ 7 * SPACING, 5 * SPACING ] ] );
@@ -28,7 +28,7 @@ describe( 'symbol renderer', () =>
 	{
 		const { context, calls } = record();
 
-		draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline, rotation : 1 } ), { voltage : 5, current : 0 } );
+		draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline, rotation : 1 } ), { voltage : 5, current : 0 }, 1 );
 
 		expect( calls ).toContainEqual( [ 'roundRect', 2 * SPACING, 3 * SPACING, 6 * SPACING, 4 * SPACING, 4 ] );
 		expect( calls.filter( call => call[ 0 ] === 'arc' ).map( call => call.slice( 1, 3 ) ) ).toEqual( [ [ 4 * SPACING, 3 * SPACING ], [ 5 * SPACING, 7 * SPACING ] ] );
@@ -39,10 +39,26 @@ describe( 'symbol renderer', () =>
 		const { context, calls } = record();
 		const lights = [ { point : { x : 0, y : -1 }, color : Color.Green }, { point : { x : 1, y : 0 }, color : Color.Red } ];
 
-		draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline : { ... outline, lights }, potentials : [ 5, 0 ], lights : [ 0.0025, 0 ] } ), { voltage : 5, current : 0 } );
+		draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline : { ... outline, lights }, potentials : [ 5, 0 ], lights : [ 0.0025, 0 ] } ), { voltage : 5, current : 0 }, 1 );
 
-		expect( calls.filter( call => call[ 0 ] === 'fillRect' ) ).toEqual( [ [ 'fillRect', 91, 71, 18, 18 ], [ 'fillRect', 111, 91, 18, 18 ] ] );
+		expect( calls.filter( call => call[ 0 ] === 'fillRect' ) ).toEqual( [ [ 'fillRect', 90.75, 70.75, 18.5, 18.5 ], [ 'fillRect', 110.75, 90.75, 18.5, 18.5 ] ] );
 		expect( calls.filter( call => call[ 1 ] === 'fillStyle' ).map( call => call[ 2 ] ).slice( 0, 2 ) ).toEqual( [ 'rgb(26, 110, 48)', '#1a1a1a' ] );
+	} );
+
+	it( 'widens each light by a glow of a quarter of a screen pixel, so the lights overlap when zoomed out', () =>
+	{
+		const fill = ( stride : number ) =>
+		{
+			const { context, calls } = record();
+
+			draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline : { ... outline, lights : [ { point : { x : 0, y : 0 }, color : Color.Red } ] } } ), { voltage : 5, current : 0 }, stride );
+
+			return calls.find( call => call[ 0 ] === 'fillRect' );
+		};
+
+		expect( fill( 2 ) ).toEqual( [ 'fillRect', 90.5, 90.5, 19, 19 ] );
+		expect( fill( 4 ) ).toEqual( [ 'fillRect', 90, 90, SPACING, SPACING ] );
+		expect( fill( 8 ) ).toEqual( [ 'fillRect', 89, 89, 22, 22 ] );
 	} );
 
 	it( 'fills one square for the lights that share a point with the mix of the colors of their conducting leds, each scaled by its current', () =>
@@ -53,7 +69,7 @@ describe( 'symbol renderer', () =>
 		{
 			const { context, calls } = record();
 
-			draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline : { ... outline, lights }, lights : currents } ), { voltage : 5, current : 0 } );
+			draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline : { ... outline, lights }, lights : currents } ), { voltage : 5, current : 0 }, 1 );
 
 			expect( calls.filter( call => call[ 0 ] === 'fillRect' ) ).toHaveLength( 1 );
 
@@ -70,16 +86,16 @@ describe( 'symbol renderer', () =>
 	{
 		const { context, calls } = record();
 
-		draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline : { ... outline, lights : [ { point : { x : 1, y : 0 }, color : Color.Red } ] }, rotation : 1 } ), { voltage : 5, current : 0 } );
+		draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline : { ... outline, lights : [ { point : { x : 1, y : 0 }, color : Color.Red } ] }, rotation : 1 } ), { voltage : 5, current : 0 }, 1 );
 
-		expect( calls.filter( call => call[ 0 ] === 'fillRect' ) ).toEqual( [ [ 'fillRect', 91, 111, 18, 18 ] ] );
+		expect( calls.filter( call => call[ 0 ] === 'fillRect' ) ).toEqual( [ [ 'fillRect', 90.75, 110.75, 18.5, 18.5 ] ] );
 	} );
 
 	it( 'draws nothing before its outline is known', () =>
 	{
 		const { context, calls } = record();
 
-		draw( context, element( { kind : Kind.Symbol } ), { voltage : 5, current : 0 } );
+		draw( context, element( { kind : Kind.Symbol } ), { voltage : 5, current : 0 }, 1 );
 
 		expect( calls ).toEqual( [] );
 	} );
@@ -89,7 +105,7 @@ describe( 'symbol renderer', () =>
 		const { context, calls } = record();
 		const definition = { name : 'foo', drawing : [ { figure : Figure.Circle as const, center : { x : 0, y : 0 }, radius : 4 } ], labels : [ 'bar', '' ], layout : [], delay : 1e-9 };
 
-		draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline, definition } ), { voltage : 5, current : 0 } );
+		draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline, definition } ), { voltage : 5, current : 0 }, 1 );
 
 		expect( calls ).toContainEqual( [ 'arc', 5 * SPACING, 5 * SPACING, 4 * SPACING / FINE, 0, 2 * Math.PI ] );
 		expect( calls.some( call => call[ 0 ] === 'roundRect' ) ).toBe( false );
@@ -101,7 +117,7 @@ describe( 'symbol renderer', () =>
 		const { context, calls } = record();
 		const definition = { name : '', drawing : [ { figure : Figure.Line as const, from : { x : 4, y : 0 }, to : { x : 8, y : 0 } } ], labels : [], layout : [], delay : 1e-9 };
 
-		draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline, rotation : 1, definition } ), { voltage : 5, current : 0 } );
+		draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline, rotation : 1, definition } ), { voltage : 5, current : 0 }, 1 );
 
 		expect( calls ).toContainEqual( [ 'moveTo', 5 * SPACING, 6 * SPACING ] );
 		expect( calls ).toContainEqual( [ 'lineTo', 5 * SPACING, 7 * SPACING ] );

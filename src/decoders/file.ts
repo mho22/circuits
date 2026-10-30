@@ -5,6 +5,7 @@ import { FIELDS, Kind, LEVELS, NAMES, PINS, TRANSISTORS } from '../enums/kind.ts
 import type { Contents } from '../types/contents.ts';
 import type { Point } from '../types/point.ts';
 import type { Shape } from '../types/shape.ts';
+import { STRIDES } from '../view.ts';
 
 
 const VERSION = 1;
@@ -93,6 +94,11 @@ function rotation( value : unknown ) : number
 	return typeof value === 'number' && [ 0, 1, 2, 3 ].includes( value ) ? value : unreadable();
 }
 
+function zoom( value : unknown ) : number
+{
+	return typeof value === 'number' && STRIDES.includes( value ) ? value : unreadable();
+}
+
 function level( value : unknown ) : number
 {
 	return value === 0 || value === 1 ? value : unreadable();
@@ -144,5 +150,5 @@ export function decode( source : string ) : Contents
 	const definitions = symbols.map( definition );
 	const rows = [ ... file.parts.map( part => row( 0, part ) ), ... definitions.flatMap( ( [ parts ] ) => parts ) ];
 
-	return { parts : new Float64Array( rows.flatMap( ( [ numbers ] ) => numbers ) ), labels : rows.map( ( [ , label ] ) => label ), layers : new Uint32Array( definitions.map( ( [ , layer ] ) => layer ) ), names : definitions.map( ( [ , , name ] ) => name ), drawings : new Int32Array( definitions.flatMap( ( [ , , , rows ] ) => rows ) ), layouts : new Int32Array( definitions.flatMap( ( [ , , , , points ] ) => points ) ) };
+	return { parts : new Float64Array( rows.flatMap( ( [ numbers ] ) => numbers ) ), labels : rows.map( ( [ , label ] ) => label ), layers : new Uint32Array( definitions.map( ( [ , layer ] ) => layer ) ), names : definitions.map( ( [ , , name ] ) => name ), drawings : new Int32Array( definitions.flatMap( ( [ , , , rows ] ) => rows ) ), layouts : new Int32Array( definitions.flatMap( ( [ , , , , points ] ) => points ) ), zoom : zoom( file.zoom ?? 1 ) };
 }

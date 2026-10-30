@@ -89,6 +89,8 @@ describe( 'file decoder', () =>
 			'{ "version" : 1, "parts" : [], "symbols" : [ { "layer" : 1, "drawing" : [ { "shape" : "polyline", "points" : [ [ 0, 0 ], [ 1, 1 ] ] } ], "parts" : [] } ] }',
 			'{ "version" : 1, "parts" : [ { "kind" : "pin", "label" : 1, "from" : [ 0, 0 ], "to" : [ 0, 0 ] } ] }',
 			'{ "version" : 1, "parts" : [ { "kind" : "output", "label" : 1, "from" : [ 0, 0 ], "to" : [ 1, 0 ] } ] }',
+			'{ "version" : 1, "zoom" : 3, "parts" : [] }',
+			'{ "version" : 1, "zoom" : "8", "parts" : [] }',
 		] )
 		{
 			expect( () => decode( text ), text ).toThrow( 'This file is not a circuit.' );
@@ -125,6 +127,12 @@ describe( 'file decoder', () =>
 		const contents = decode( '{ "version" : 1, "parts" : [], "symbols" : [ { "layer" : 1, "drawing" : [ { "shape" : "rectangle", "from" : [ -4, -2 ], "to" : [ 4, 2 ] } ], "parts" : [] } ] }' );
 
 		expect( Array.from( contents.drawings ) ).toEqual( [ 20, 2, -4, -2, 4, -2, 2, 4, -2, 4, 2, 2, 4, 2, -4, 2, 2, -4, 2, -4, -2 ] );
+	} );
+
+	it( 'reads back the zoom of the main page, and 1 for a file without a zoom', () =>
+	{
+		expect( decode( encode( [], [], 8 ) ).zoom ).toBe( 8 );
+		expect( decode( '{ "version" : 1, "parts" : [] }' ).zoom ).toBe( 1 );
 	} );
 
 	it( 'skips the delay of an older file', () =>

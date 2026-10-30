@@ -37,6 +37,11 @@ export class View
 		return STRIDES[ this.level ];
 	}
 
+	get base() : number
+	{
+		return STRIDES[ this.entries[ 0 ]?.level ?? this.level ];
+	}
+
 	press( point : Point ) : void
 	{
 		this.grab = point;
