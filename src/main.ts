@@ -218,7 +218,7 @@ function refresh( indexes : number[] ) : Map<number, Element>
 	return new Map( indexes.map( ( index, rank ) =>
 	{
 		const item = elements[ index ];
-		const glow = item.outline ? { lights : Array.from( lights.subarray( starts[ index ], starts[ index ] + item.outline.lights.length ) ) } : {};
+		const glow = item.outline ? { lights : lights.subarray( starts[ index ], starts[ index ] + item.outline.lights.length ) } : {};
 
 		return [ index, { ... item, ... readings[ rank ], ... glow } ];
 	} ) );

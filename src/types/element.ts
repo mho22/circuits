@@ -20,5 +20,5 @@ export interface Element
 	label? : string;
 	listening? : boolean;
 	on? : boolean;
-	lights? : number[];
+	lights? : ArrayLike<number>;
 }

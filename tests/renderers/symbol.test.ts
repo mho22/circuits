@@ -41,7 +41,7 @@ describe( 'symbol renderer', () =>
 
 		draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline : { ... outline, lights }, potentials : [ 5, 0 ], lights : [ 0.0025, 0 ] } ), { voltage : 5, current : 0 }, 1 );
 
-		expect( calls.filter( call => call[ 0 ] === 'fillRect' ) ).toEqual( [ [ 'fillRect', 90.75, 70.75, 18.5, 18.5 ], [ 'fillRect', 110.75, 90.75, 18.5, 18.5 ] ] );
+		expect( calls.filter( call => call[ 0 ] === 'rect' ) ).toEqual( [ [ 'rect', 90.75, 70.75, 18.5, 18.5 ], [ 'rect', 110.75, 90.75, 18.5, 18.5 ] ] );
 		expect( calls.filter( call => call[ 1 ] === 'fillStyle' ).map( call => call[ 2 ] ).slice( 0, 2 ) ).toEqual( [ 'rgb(26, 110, 48)', '#1a1a1a' ] );
 	} );
 
@@ -53,12 +53,12 @@ describe( 'symbol renderer', () =>
 
 			draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline : { ... outline, lights : [ { point : { x : 0, y : 0 }, color : Color.Red } ] } } ), { voltage : 5, current : 0 }, stride );
 
-			return calls.find( call => call[ 0 ] === 'fillRect' );
+			return calls.find( call => call[ 0 ] === 'rect' );
 		};
 
-		expect( fill( 2 ) ).toEqual( [ 'fillRect', 90.5, 90.5, 19, 19 ] );
-		expect( fill( 4 ) ).toEqual( [ 'fillRect', 90, 90, SPACING, SPACING ] );
-		expect( fill( 8 ) ).toEqual( [ 'fillRect', 89, 89, 22, 22 ] );
+		expect( fill( 2 ) ).toEqual( [ 'rect', 90.5, 90.5, 19, 19 ] );
+		expect( fill( 4 ) ).toEqual( [ 'rect', 90, 90, SPACING, SPACING ] );
+		expect( fill( 8 ) ).toEqual( [ 'rect', 89, 89, 22, 22 ] );
 	} );
 
 	it( 'fills one square for the lights that share a point with the mix of the colors of their conducting leds, each scaled by its current', () =>
@@ -71,7 +71,7 @@ describe( 'symbol renderer', () =>
 
 			draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline : { ... outline, lights }, lights : currents } ), { voltage : 5, current : 0 }, 1 );
 
-			expect( calls.filter( call => call[ 0 ] === 'fillRect' ) ).toHaveLength( 1 );
+			expect( calls.filter( call => call[ 0 ] === 'rect' ) ).toHaveLength( 1 );
 
 			return calls.find( call => call[ 1 ] === 'fillStyle' )?.[ 2 ];
 		};
@@ -82,13 +82,58 @@ describe( 'symbol renderer', () =>
 		expect( fills( [ 0, 0, 0 ] ) ).toEqual( '#1a1a1a' );
 	} );
 
+	it( 'fills the squares of the lights that follow each other in one color as one path, in their order', () =>
+	{
+		const { context, calls } = record();
+		const lights = [ 0, 1, 2, 3 ].map( x => ( { point : { x, y : 0 }, color : Color.Red } ) );
+
+		draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline : { ... outline, pins : [], lights }, lights : [ 0.005, 0.005, 0, 0.005 ] } ), { voltage : 5, current : 0 }, 1 );
+
+		const steps = calls.filter( call => [ 'rect', 'fill' ].includes( call[ 0 ] as string ) || call[ 1 ] === 'fillStyle' ).map( call => call[ 0 ] === 'rect' ? call[ 1 ] : call[ 0 ] === 'set' ? call[ 2 ] : call[ 0 ] );
+
+		expect( steps ).toEqual( [ 'rgb(255, 48, 48)', 90.75, 110.75, 'fill', '#1a1a1a', 130.75, 'fill', 'rgb(255, 48, 48)', 150.75, 'fill' ] );
+	} );
+
+	it( 'fills a run of squares in one color as one rectangle once the squares touch', () =>
+	{
+		const squares = ( stride : number, rotation : number, currents : number[] ) =>
+		{
+			const { context, calls } = record();
+			const lights = [ 0, 1, 2, 0, 1 ].map( ( x, index ) => ( { point : { x, y : index < 3 ? 0 : 1 }, color : Color.Red } ) );
+
+			draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline : { ... outline, pins : [], lights }, rotation, lights : currents } ), { voltage : 5, current : 0 }, stride );
+
+			return calls.filter( call => call[ 0 ] === 'rect' ).map( call => call.slice( 1 ) );
+		};
+
+		expect( squares( 4, 0, [ 0.005, 0.005, 0.005, 0.005, 0.005 ] ) ).toEqual( [ [ 90, 90, 60, SPACING ], [ 90, 110, 40, SPACING ] ] );
+		expect( squares( 8, 1, [ 0.005, 0.005, 0.005, 0.005, 0.005 ] ) ).toEqual( [ [ 89, 89, 22, 62 ], [ 69, 89, 22, 42 ] ] );
+		expect( squares( 4, 0, [ 0.005, 0, 0.005, 0, 0 ] ) ).toEqual( [ [ 90, 90, SPACING, SPACING ], [ 110, 90, SPACING, SPACING ], [ 130, 90, SPACING, SPACING ], [ 90, 110, 40, SPACING ] ] );
+		expect( squares( 2, 0, [ 0.005, 0.005, 0.005, 0.005, 0.005 ] ) ).toHaveLength( 5 );
+	} );
+
 	it( 'turns its lights with the box', () =>
 	{
 		const { context, calls } = record();
 
 		draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline : { ... outline, lights : [ { point : { x : 1, y : 0 }, color : Color.Red } ] }, rotation : 1 } ), { voltage : 5, current : 0 }, 1 );
 
-		expect( calls.filter( call => call[ 0 ] === 'fillRect' ) ).toEqual( [ [ 'fillRect', 90.75, 110.75, 18.5, 18.5 ] ] );
+		expect( calls.filter( call => call[ 0 ] === 'rect' ) ).toEqual( [ [ 'rect', 90.75, 110.75, 18.5, 18.5 ] ] );
+	} );
+
+	it( 'turns the lights of one outline drawn at two rotations each with its own box', () =>
+	{
+		const shared = { ... outline, lights : [ { point : { x : 1, y : 0 }, color : Color.Red } ] };
+		const squares = ( rotation : number ) =>
+		{
+			const { context, calls } = record();
+
+			draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline : shared, rotation } ), { voltage : 5, current : 0 }, 1 );
+
+			return calls.filter( call => call[ 0 ] === 'rect' );
+		};
+
+		expect( [ squares( 0 ), squares( 1 ), squares( 0 ) ] ).toEqual( [ [ [ 'rect', 110.75, 90.75, 18.5, 18.5 ] ], [ [ 'rect', 90.75, 110.75, 18.5, 18.5 ] ], [ [ 'rect', 110.75, 90.75, 18.5, 18.5 ] ] ] );
 	} );
 
 	it( 'draws nothing before its outline is known', () =>
