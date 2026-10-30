@@ -58,6 +58,13 @@ pub struct Exposure
 	peaks : Vec<f64>,
 	dirty : Vec<usize>,
 	marked : Vec<bool>,
+	moved : Vec<bool>,
+	starts : Vec<usize>,
+	links : Vec<( usize, usize, bool )>,
+	lits : Vec<Vec<( usize, usize, usize )>>,
+	slots : Vec<[ usize; 2 ]>,
+	junctions : Vec<Junction>,
+	recent : Option<( ( u64, u64, u64 ), f64 )>,
 	cache : HashMap<( u64, u64, u64 ), f64, BuildHasherDefault<Fold>>,
 }
 
@@ -67,7 +74,9 @@ impl Exposure
 	{
 		let count = plan.lights.len();
 		let nets = plan.nets.len();
-		let mut exposure = Exposure { ohms, shares : vec![ 0; nets ], lit : vec![ false; count ], currents : vec![ 0.0; count ], peaks : vec![ 0.0; count ], dirty : Vec::new(), marked : vec![ false; nets ], cache : HashMap::default() };
+		let starts = [ 0 ].into_iter().chain( plan.nets.iter().scan( 0, | end, net | { *end += net.lights.len(); Some( *end ) } ) ).collect();
+		let links = plan.nets.iter().enumerate().flat_map( | ( index, net ) | net.lights.iter().map( move | &light | { let ( _, anode, cathode ) = plan.lights[ light ]; if anode == index { ( light, cathode, true ) } else { ( light, anode, false ) } } ) ).collect();
+		let mut exposure = Exposure { ohms, shares : vec![ 0; nets ], lit : vec![ false; count ], currents : vec![ 0.0; count ], peaks : vec![ 0.0; count ], dirty : Vec::new(), marked : vec![ false; nets ], moved : vec![ false; nets ], starts, links, lits : vec![ Vec::new(); nets ], slots : vec![ [ 0; 2 ]; count ], junctions : plan.lights.iter().map( | &( index, _, _ ) | elements[ index ].kind.junction() ).collect(), recent : None, cache : HashMap::default() };
 
 		for ( light, &( _, anode, cathode ) ) in plan.lights.iter().enumerate()
 		{
@@ -76,9 +85,11 @@ impl Exposure
 			exposure.lit[ light ] = true;
 			exposure.shares[ anode ] += 1;
 			exposure.shares[ cathode ] += 1;
+			exposure.light( anode, 0, light, cathode );
+			exposure.light( cathode, 1, light, anode );
 		}
 
-		for light in 0 .. count { exposure.refresh( plan, elements, levels, light ); }
+		for light in 0 .. count { exposure.refresh( plan, levels, light ); }
 
 		exposure
 	}
@@ -87,6 +98,7 @@ impl Exposure
 	{
 		if plan.nets[ net ].lights.is_empty() || ( volts == levels[ net ] && ohms == self.ohms[ net ] ) { return; }
 
+		self.moved[ net ] |= volts != levels[ net ];
 		self.ohms[ net ] = ohms;
 		self.mark( net );
 	}
@@ -101,7 +113,7 @@ impl Exposure
 		self.peaks.clone_from( &self.currents );
 	}
 
-	pub fn flush( &mut self, plan : &Plan, elements : &[ Element ], levels : &[ f64 ] )
+	pub fn flush( &mut self, plan : &Plan, levels : &[ f64 ] )
 	{
 		let changed = self.dirty.len();
 
@@ -109,18 +121,32 @@ impl Exposure
 		{
 			let net = self.dirty[ position ];
 
-			for &light in &plan.nets[ net ].lights
+			if ! self.moved[ net ] { continue; }
+
+			self.moved[ net ] = false;
+
+			for link in self.starts[ net ] .. self.starts[ net + 1 ]
 			{
-				let ( _, anode, cathode ) = plan.lights[ light ];
-				let lit = levels[ anode ] > levels[ cathode ];
+				let ( light, other, anode ) = self.links[ link ];
+				let lit = if anode { levels[ net ] > levels[ other ] } else { levels[ other ] > levels[ net ] };
 
 				if lit == self.lit[ light ] { continue; }
 
 				self.lit[ light ] = lit;
 
-				for end in [ anode, cathode ] { if lit { self.shares[ end ] += 1; } else { self.shares[ end ] -= 1; } }
+				let side = usize::from( ! anode );
 
-				self.mark( if anode == net { cathode } else { anode } );
+				for ( end, far, side ) in [ ( net, other, side ), ( other, net, 1 - side ) ]
+				{
+					if lit { self.shares[ end ] += 1; self.light( end, side, light, far ); continue; }
+
+					self.shares[ end ] -= 1;
+					self.darken( end, side, light );
+				}
+
+				if ! lit { self.currents[ light ] = 0.0; }
+
+				self.mark( other );
 			}
 		}
 
@@ -130,18 +156,35 @@ impl Exposure
 		{
 			self.marked[ net ] = false;
 
-			for &light in &plan.nets[ net ].lights
+			for index in 0 .. self.lits[ net ].len()
 			{
-				let ( _, anode, cathode ) = plan.lights[ light ];
+				let ( light, other, _ ) = self.lits[ net ][ index ];
 
-				if self.marked[ anode ] || self.marked[ cathode ] || ( ! self.lit[ light ] && self.currents[ light ] == 0.0 ) { continue; }
+				if self.marked[ other ] { continue; }
 
-				self.refresh( plan, elements, levels, light );
+				self.refresh( plan, levels, light );
 			}
 		}
 
 		self.dirty = dirty;
 		self.dirty.clear();
+	}
+
+	fn light( &mut self, net : usize, side : usize, light : usize, other : usize )
+	{
+		self.slots[ light ][ side ] = self.lits[ net ].len();
+		self.lits[ net ].push( ( light, other, side ) );
+	}
+
+	fn darken( &mut self, net : usize, side : usize, light : usize )
+	{
+		let place = self.slots[ light ][ side ];
+
+		self.lits[ net ].swap_remove( place );
+
+		let Some( &( moved, _, side ) ) = self.lits[ net ].get( place ) else { return; };
+
+		self.slots[ moved ][ side ] = place;
 	}
 
 	fn mark( &mut self, net : usize )
@@ -152,14 +195,21 @@ impl Exposure
 		self.dirty.push( net );
 	}
 
-	fn refresh( &mut self, plan : &Plan, elements : &[ Element ], levels : &[ f64 ], light : usize )
+	fn refresh( &mut self, plan : &Plan, levels : &[ f64 ], light : usize )
 	{
-		let ( index, anode, cathode ) = plan.lights[ light ];
-		let junction = elements[ index ].kind.junction();
+		let ( _, anode, cathode ) = plan.lights[ light ];
+		let junction = self.junctions[ light ];
 		let volts = levels[ anode ] - levels[ cathode ];
 		let ohms = self.shares[ anode ] as f64 * self.ohms[ anode ] + self.shares[ cathode ] as f64 * self.ohms[ cathode ];
+		let key = ( junction.saturation.to_bits(), volts.to_bits(), ohms.to_bits() );
+		let current = match self.recent
+		{
+			Some( ( known, current ) ) if known == key => current,
+			_ => *self.cache.entry( key ).or_insert_with( || shine( junction, volts, ohms ) ),
+		};
 
-		self.currents[ light ] = *self.cache.entry( ( junction.saturation.to_bits(), volts.to_bits(), ohms.to_bits() ) ).or_insert_with( || shine( junction, volts, ohms ) );
-		self.peaks[ light ] = self.peaks[ light ].max( self.currents[ light ] );
+		self.recent = Some( ( key, current ) );
+		self.currents[ light ] = current;
+		self.peaks[ light ] = self.peaks[ light ].max( current );
 	}
 }

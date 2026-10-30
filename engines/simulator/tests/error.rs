@@ -4,6 +4,7 @@ use simulator::Error;
 #[test]
 fn it_describes_each_error()
 {
+	assert_eq!( Error::Analog.to_string(), "A gate reads a voltage that is not a logic level." );
 	assert_eq!( Error::Capacitance.to_string(), "A capacitance must be greater than 0 F." );
 	assert_eq!( Error::Color.to_string(), "An LED is red, green or blue." );
 	assert_eq!( Error::Crooked.to_string(), "A part must run at 0° or 90°." );

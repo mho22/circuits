@@ -82,6 +82,7 @@ struct Walk<'a>
 	contacts : Vec<OnceLock<Contacts>>,
 	depth : usize,
 	scopes : i32,
+	within : Vec<( usize, i32 )>,
 }
 
 impl Walk<'_>
@@ -134,7 +135,9 @@ impl Walk<'_>
 				self.drive( &join, shift( pin.segment.to, scope ), high );
 			}
 
+			self.within.push( ( inner as usize, self.scopes ) );
 			self.expand( inner as usize, &key, scope );
+			self.within.pop();
 		}
 	}
 
@@ -144,7 +147,7 @@ impl Walk<'_>
 		let Kind::Symbol { layer : inner, rotation } = symbol.kind else { return; };
 		let inner = inner as usize;
 		let ends = Outline::of( &layers[ inner ] ).terminals( symbol.segment.from, rotation );
-		let mut device = Device { layer : inner, inputs : Vec::new(), outputs : Vec::new() };
+		let mut device = Device { layer : inner, inputs : Vec::new(), outputs : Vec::new(), scopes : self.within.clone() };
 
 		for ( ( pin, end ), index ) in layers[ inner ].elements().iter().filter( | part | part.kind.pin() ).zip( ends ).zip( 0 .. )
 		{
@@ -194,7 +197,7 @@ pub fn flatten( layers : &[ Document ], registry : &mut Registry, models : &[ Op
 
 	for layer in 0 .. layers.len() { visit( layers, layer, &mut Vec::new(), &mut done )?; }
 
-	let mut walk = Walk { layers, registry, models, elements : Vec::new(), devices : Vec::new(), contacts : layers.iter().map( | _ | OnceLock::new() ).collect(), depth : path.len(), scopes : 0 };
+	let mut walk = Walk { layers, registry, models, elements : Vec::new(), devices : Vec::new(), contacts : layers.iter().map( | _ | OnceLock::new() ).collect(), depth : path.len(), scopes : 0, within : Vec::new() };
 
 	walk.expand( layer, path, 0 );
 

@@ -32,6 +32,7 @@ pub struct Plan
 	pub topology : Topology,
 	pub reactive : bool,
 	pub lights : Vec<( usize, usize, usize )>,
+	pub starts : Vec<usize>,
 }
 
 impl Plan
@@ -172,7 +173,8 @@ impl Plan
 		} ).collect();
 		let topology = Topology::build( &circuit );
 		let reactive = circuit.iter().any( | element | matches!( element.kind, Kind::Capacitor { .. } | Kind::Inductor { .. } ) );
+		let starts = [ 0 ].into_iter().chain( nets.iter().scan( 0, | end, net | { *end += net.pieces.len(); Some( *end ) } ) ).collect();
 
-		Plan { analog, nets, inputs, outputs, generators, topology, reactive, lights }
+		Plan { analog, nets, inputs, outputs, generators, topology, reactive, lights, starts }
 	}
 }

@@ -8,12 +8,12 @@ const ROUNDS : usize = 100;
 const EVENTS : usize = 64;
 
 
-fn count( hertz : f64, time : f64 ) -> u64
+pub fn count( hertz : f64, time : f64 ) -> u64
 {
 	( time * hertz * 2.0 ).floor() as u64
 }
 
-fn level( count : u64 ) -> f64
+pub fn level( count : u64 ) -> f64
 {
 	if count % 2 == 1 { HIGH } else { 0.0 }
 }
@@ -70,6 +70,7 @@ impl<'a> Run<'a>
 
 		self.logic.keys = self.devices.iter().map( | device | self.elements[ device.outputs[ 0 ].1 ].id ).collect();
 		self.logic.levels = vec![ 0.0; self.plan.nets.len() ];
+		self.logic.drawn = Vec::new();
 		self.logic.rows = vec![ usize::MAX; size ];
 		self.logic.applied = vec![ 0; size ];
 		self.logic.states = vec![ 0; size ];
@@ -196,7 +197,7 @@ impl<'a> Run<'a>
 			}
 		}
 
-		self.logic.exposure.flush( self.plan, self.elements, &self.logic.levels );
+		self.logic.exposure.flush( self.plan, &self.logic.levels );
 
 		Ok( () )
 	}
@@ -307,51 +308,70 @@ impl<'a> Run<'a>
 
 		Ok( solution )
 	}
+}
 
-	fn assemble( &mut self, solution : Solution, mut readings : Vec<Reading> ) -> Solution
+
+pub fn assemble( elements : &[ Element ], plan : &Plan, logic : &mut Logic, solution : Solution, previous : Solution ) -> Solution
+{
+	let Solution { mut readings, branches : kept } = previous;
+	let reuse = solution.branches.is_empty() && plan.starts.last() == Some( &kept.len() );
+	let known = reuse && solution.readings.is_empty() && ! readings.is_empty() && readings.len() == elements.len() && logic.drawn.len() == logic.levels.len() && logic.peaks.len() == plan.lights.len();
+	let mut branches = if reuse { kept } else { solution.branches };
+	let peaks = logic.exposure.expose();
+	let mut moved = Vec::new();
+
+	readings.resize_with( elements.len(), Reading::default );
+
+	for ( reading, &index ) in solution.readings.into_iter().zip( &plan.analog ) { readings[ index ] = reading; }
+
+	for ( number, ( net, &volts ) ) in plan.nets.iter().zip( &logic.levels ).enumerate()
 	{
-		let mut branches = solution.branches;
+		if known && logic.drawn[ number ] == volts { continue; }
 
-		readings.resize_with( self.elements.len(), Reading::default );
+		if known { moved.extend_from_slice( &net.lights ); }
 
-		for ( reading, &index ) in solution.readings.into_iter().zip( &self.plan.analog ) { readings[ index ] = reading; }
-
-		for ( net, &volts ) in self.plan.nets.iter().zip( &self.logic.levels )
+		match reuse
 		{
-			for &index in &net.elements
-			{
-				let Reading { potentials, currents } = &mut readings[ index ];
-
-				potentials.clear();
-				currents.clear();
-
-				match self.elements[ index ].kind
-				{
-					Kind::Wire | Kind::Output => { potentials.extend( [ volts; 2 ] ); currents.extend( [ f64::NAN; 2 ] ); },
-					Kind::Supply { .. } | Kind::Clock { .. } | Kind::Toggle { .. } | Kind::Slider { .. } => { potentials.extend( [ 0.0, volts ] ); currents.extend( [ 0.0; 2 ] ); },
-					_ => { potentials.extend( [ volts; 2 ] ); currents.extend( [ 0.0; 2 ] ); },
-				}
-			}
-
-			branches.extend( net.pieces.iter().map( | &segment | Branch { segment, voltage : volts, current : 0.0 } ) );
+			true => for branch in &mut branches[ plan.starts[ number ] .. plan.starts[ number + 1 ] ] { branch.voltage = volts; },
+			false => branches.extend( net.pieces.iter().map( | &segment | Branch { segment, voltage : volts, current : 0.0 } ) ),
 		}
 
-		let peaks = self.logic.exposure.expose();
-
-		for ( &( index, anode, cathode ), current ) in self.plan.lights.iter().zip( peaks )
+		for &index in &net.elements
 		{
 			let Reading { potentials, currents } = &mut readings[ index ];
 
 			potentials.clear();
 			currents.clear();
-			potentials.extend( [ self.logic.levels[ anode ], self.logic.levels[ cathode ] ] );
-			currents.extend( [ current, - current ] );
+
+			match elements[ index ].kind
+			{
+				Kind::Wire | Kind::Output => { potentials.extend( [ volts; 2 ] ); currents.extend( [ f64::NAN; 2 ] ); },
+				Kind::Supply { .. } | Kind::Clock { .. } | Kind::Toggle { .. } | Kind::Slider { .. } => { potentials.extend( [ 0.0, volts ] ); currents.extend( [ 0.0; 2 ] ); },
+				_ => { potentials.extend( [ volts; 2 ] ); currents.extend( [ 0.0; 2 ] ); },
+			}
 		}
-
-		Solution { readings, branches }
 	}
-}
 
+	let glowing = ( 0 .. peaks.len() ).filter( | &light | ! known || logic.peaks[ light ] != peaks[ light ] );
+
+	for light in glowing.chain( moved )
+	{
+		let ( index, anode, cathode ) = plan.lights[ light ];
+		let current = peaks[ light ];
+		let Reading { potentials, currents } = &mut readings[ index ];
+
+		potentials.resize( 2, 0.0 );
+		currents.resize( 2, 0.0 );
+		potentials.copy_from_slice( &[ logic.levels[ anode ], logic.levels[ cathode ] ] );
+		currents.copy_from_slice( &[ current, - current ] );
+	}
+
+	logic.drawn.clone_from( &logic.levels );
+	logic.peaks = peaks;
+	logic.kept = known;
+
+	Solution { readings, branches }
+}
 
 pub fn settle( machine : Machine, history : &History, step : f64, logic : &mut Logic, rest : bool ) -> Result<Solution, Error>
 {
@@ -374,7 +394,7 @@ pub fn settle( machine : Machine, history : &History, step : f64, logic : &mut L
 		{
 			run.logic.exposure.reset();
 
-			return Ok( run.assemble( solution, Vec::new() ) );
+			return Ok( assemble( run.elements, run.plan, run.logic, solution, Solution::default() ) );
 		}
 
 		spare = solution;
@@ -395,26 +415,7 @@ pub fn advance( machine : Machine, history : &History, step : f64, logic : &mut 
 
 	run.logic.time = time;
 
-	Ok( run.assemble( solution, readings ) )
-}
-
-pub fn rush( machine : Machine, step : f64, count : u32, logic : &mut Logic ) -> Result<Solution, Error>
-{
-	let Solution { readings, mut branches } = std::mem::take( &mut logic.spare );
-	let mut run = Run::new( machine, logic, false )?;
-
-	branches.clear();
-
-	for _ in 0 .. count
-	{
-		let time = run.logic.time + step;
-
-		run.events = 0;
-		run.drain( time )?;
-		run.logic.time = time;
-	}
-
-	Ok( run.assemble( Solution { readings : Vec::new(), branches }, readings ) )
+	Ok( assemble( run.elements, run.plan, run.logic, solution, Solution { readings, branches : Vec::new() } ) )
 }
 
 pub fn idle( elements : &[ Element ], plan : &Plan, step : f64, logic : &Logic ) -> bool

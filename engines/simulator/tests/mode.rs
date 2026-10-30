@@ -3,7 +3,7 @@ use simulator::{ Device, Mode, Plan };
 
 fn device() -> Device
 {
-	Device { layer : 1, inputs : Vec::new(), outputs : Vec::new() }
+	Device { layer : 1, inputs : Vec::new(), outputs : Vec::new(), scopes : Vec::new() }
 }
 
 

@@ -23,6 +23,20 @@ fn it_gives_the_events_up_to_a_time_earliest_first_and_in_order_of_scheduling()
 }
 
 #[test]
+fn it_is_firing_while_a_device_has_an_event_pending()
+{
+	let mut logic = Logic::default();
+
+	logic.schedule( 1e-9, BAZ );
+
+	assert!( ! logic.firing() );
+
+	logic.schedule( 2e-9, FOO );
+
+	assert!( logic.firing() );
+}
+
+#[test]
 fn it_drops_every_event_on_a_clear()
 {
 	let mut logic = Logic::default();

@@ -19,6 +19,9 @@ pub struct Logic
 	pub queued : Vec<VecDeque<( u64, usize )>>,
 	pub memory : HashMap<u32, ( usize, usize )>,
 	pub spare : Solution,
+	pub drawn : Vec<f64>,
+	pub peaks : Vec<f64>,
+	pub kept : bool,
 	pub exposure : Exposure,
 	queue : BinaryHeap<Reverse<Event>>,
 	sequence : u64,
@@ -46,6 +49,11 @@ impl Logic
 	pub fn pending( &self, until : f64 ) -> bool
 	{
 		self.queue.peek().is_some_and( | Reverse( event ) | event.time <= until )
+	}
+
+	pub fn firing( &self ) -> bool
+	{
+		self.queue.iter().any( | Reverse( event ) | matches!( event.action, Action::Fire { .. } ) )
 	}
 
 	pub fn clear( &mut self )

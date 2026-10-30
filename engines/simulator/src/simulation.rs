@@ -2,7 +2,7 @@ use std::collections::{ HashMap, HashSet };
 
 use crate::flatten::STRIDE;
 use crate::shape::FINE;
-use crate::{ advance, enclose, flatten, idle, place, rush, settle, stretch, Catalog, Device, Document, Element, Enclosure, Error, Hashing, History, Kind, Logic, Machine, Mode, Model, Netlist, Operation, Outline, Plan, Point, Reading, Registry, Segment, Shape, Solution };
+use crate::{ advance, enclose, flatten, idle, place, pulse, settle, stretch, Catalog, Device, Document, Element, Enclosure, Error, Hashing, History, Kind, Layout, Logic, Machine, Mode, Model, Netlist, Operation, Outline, Plan, Point, Reading, Registry, Segment, Shape, Solution };
 
 
 const DIVISIONS : f64 = 20.0;
@@ -48,6 +48,7 @@ pub struct Simulation
 	elements : Vec<Element>,
 	devices : Vec<Device>,
 	plan : Plan,
+	layout : Result<Layout, Error>,
 	models : Vec<Option<Model>>,
 	sources : Vec<Vec<Element>>,
 	focus : Vec<u32>,
@@ -56,12 +57,14 @@ pub struct Simulation
 	solution : Result<Solution, Error>,
 	lights : Vec<f64>,
 	places : Vec<Vec<Option<usize>>>,
-	glows : Vec<Option<usize>>,
+	glows : Vec<( Option<usize>, Option<usize> )>,
+	tops : Vec<usize>,
 	gates : Vec<Option<( usize, usize )>>,
 	captions : Vec<String>,
 	revision : u32,
 	base : f64,
 	step : f64,
+	period : Option<f64>,
 	undos : Vec<Vec<( usize, Operation )>>,
 	redos : Vec<Vec<( usize, Operation )>>,
 	loading : Option<Loading>,
@@ -72,7 +75,7 @@ impl Simulation
 {
 	pub fn new( step : f64 ) -> Simulation
 	{
-		Simulation { layers : vec![ Document::default() ], registry : Registry::default(), elements : Vec::new(), devices : Vec::new(), plan : Plan::default(), models : Vec::new(), sources : Vec::new(), focus : Vec::new(), history : History::default(), logic : Logic::default(), solution : Ok( Solution::default() ), lights : Vec::new(), places : Vec::new(), glows : Vec::new(), gates : Vec::new(), captions : Vec::new(), revision : 0, base : step, step, undos : Vec::new(), redos : Vec::new(), loading : None, measuring : None }
+		Simulation { layers : vec![ Document::default() ], registry : Registry::default(), elements : Vec::new(), devices : Vec::new(), plan : Plan::default(), layout : Ok( Layout::default() ), models : Vec::new(), sources : Vec::new(), focus : Vec::new(), history : History::default(), logic : Logic::default(), solution : Ok( Solution::default() ), lights : Vec::new(), places : Vec::new(), glows : Vec::new(), tops : Vec::new(), gates : Vec::new(), captions : Vec::new(), revision : 0, base : step, step, period : None, undos : Vec::new(), redos : Vec::new(), loading : None, measuring : None }
 	}
 
 	pub fn create( &mut self ) -> usize
@@ -362,7 +365,15 @@ impl Simulation
 	{
 		if self.frozen() { return; }
 
-		if self.mode() == Mode::Digital { let solution = rush( Machine { elements : &self.elements, devices : &self.devices, plan : &self.plan, models : &self.models }, self.step, count, &mut self.logic ); self.show( solution ); return; }
+		if self.mode() == Mode::Digital
+		{
+			let machine = Machine { elements : &self.elements, devices : &self.devices, plan : &self.plan, models : &self.models };
+			let solution = self.layout.as_ref().map_err( | error | *error ).and_then( | layout | pulse( machine, layout, self.step, count, &mut self.logic ) );
+
+			self.show( solution );
+
+			return;
+		}
 
 		for _ in 0 .. count
 		{
@@ -463,7 +474,7 @@ impl Simulation
 
 	pub fn period( &self ) -> Option<f64>
 	{
-		self.elements.iter().filter_map( | element | match element.kind { Kind::Clock { hertz, on : true } => Some( 1.0 / hertz ), _ => None } ).reduce( f64::min )
+		self.period
 	}
 
 	pub fn mode( &self ) -> Mode
@@ -659,8 +670,10 @@ impl Simulation
 	fn rebuild( &mut self, elements : Vec<Element>, devices : Vec<Device>, netlist : Netlist )
 	{
 		self.plan = if self.frozen() { Plan::default() } else { Plan::build( &elements, &devices, &netlist ) };
+		self.period = elements.iter().filter_map( | element | match element.kind { Kind::Clock { hertz, on : true } => Some( 1.0 / hertz ), _ => None } ).reduce( f64::min );
 		self.elements = elements;
 		self.devices = devices;
+		self.layout = if self.mode() == Mode::Digital { Layout::new( Machine { elements : &self.elements, devices : &self.devices, plan : &self.plan, models : &self.models } ) } else { Ok( Layout::default() ) };
 		self.revision = self.revision.wrapping_add( 1 );
 
 		self.locate();
@@ -674,8 +687,9 @@ impl Simulation
 		let positions : HashMap<u32, usize, Hashing> = self.elements.iter().enumerate().map( | ( index, element ) | ( element.id, index ) ).collect();
 		let position = | key : &[ u32 ] | self.registry.find( key ).and_then( | id | positions.get( &id ).copied() );
 		let symbols : Vec<( usize, u32, usize )> = self.layers[ layer ].elements().iter().enumerate().filter_map( | ( at, element ) | match element.kind { Kind::Symbol { layer : inner, .. } => Some( ( at, element.id, inner as usize ) ), _ => None } ).collect();
+		let lights : HashMap<usize, usize, Hashing> = self.plan.lights.iter().enumerate().map( | ( light, &( index, _, _ ) ) | ( index, light ) ).collect();
 
-		self.glows = symbols.iter().flat_map( | &( _, id, inner ) | self.layers[ inner ].elements().iter().filter( | part | matches!( part.kind, Kind::Led { .. } ) ).map( move | led | ( id, led.id ) ) ).map( | ( id, led ) | position( &[ path, &[ id, led ] ].concat() ) ).collect();
+		self.glows = symbols.iter().flat_map( | &( _, id, inner ) | self.layers[ inner ].elements().iter().filter( | part | matches!( part.kind, Kind::Led { .. } ) ).map( move | led | ( id, led.id ) ) ).map( | ( id, led ) | position( &[ path, &[ id, led ] ].concat() ) ).map( | index | ( index, index.and_then( | index | lights.get( &index ).copied() ) ) ).collect();
 		self.places = self.layers[ layer ].elements().iter().map( | element |
 		{
 			let key = [ path, &[ element.id ] ].concat();
@@ -735,10 +749,12 @@ impl Simulation
 	{
 		let lit = | ( device, rank ) : ( usize, usize ) | self.models.get( self.devices[ device ].layer ).and_then( Option::as_ref ).zip( self.logic.applied.get( device ) ).and_then( | ( model, &entry ) | model.lights.get( entry )?.get( rank ).copied() );
 
-		self.glows.iter().zip( &self.gates ).map( | ( &index, &gate ) | index.and_then( | index | solution.readings.get( index ) ).map( | reading | reading.currents[ 0 ] ).or_else( || gate.and_then( lit ) ).unwrap_or( 0.0 ) ).collect()
+		let current = | &( index, light ) : &( Option<usize>, Option<usize> ) | light.and_then( | light | self.logic.peaks.get( light ).copied() ).or_else( || index.and_then( | index | solution.readings.get( index ) ).map( | reading | reading.currents[ 0 ] ) );
+
+		self.glows.iter().zip( &self.gates ).map( | ( glow, &gate ) | current( glow ).or_else( || gate.and_then( lit ) ).unwrap_or( 0.0 ) ).collect()
 	}
 
-	fn view( &self, solution : &Solution, shown : &mut Solution )
+	fn view( &mut self, solution : &Solution, shown : &mut Solution )
 	{
 		let path = self.focus.as_slice();
 		let layer = self.descend( path ).unwrap_or( 0 );
@@ -765,7 +781,9 @@ impl Simulation
 			target.currents.extend( places.iter().map( | &index | reading( index ).currents[ 1 ] ) );
 		}
 
+		if ! self.logic.kept { self.tops = solution.branches.iter().enumerate().filter( | ( _, branch ) | branch.segment.from.x.abs() < STRIDE / 2 ).map( | ( index, _ ) | index ).collect(); }
+
 		shown.branches.clear();
-		shown.branches.extend( solution.branches.iter().filter( | branch | branch.segment.from.x.abs() < STRIDE / 2 ).copied() );
+		shown.branches.extend( self.tops.iter().map( | &index | solution.branches[ index ] ) );
 	}
 }

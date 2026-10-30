@@ -4,6 +4,7 @@ use std::fmt;
 #[derive( Clone, Copy, Debug, PartialEq, Eq )]
 pub enum Error
 {
+	Analog,
 	Capacitance,
 	Color,
 	Crooked,
@@ -38,6 +39,7 @@ impl fmt::Display for Error
 	{
 		let message = match self
 		{
+			Error::Analog => "A gate reads a voltage that is not a logic level.",
 			Error::Capacitance => "A capacitance must be greater than 0 F.",
 			Error::Color => "An LED is red, green or blue.",
 			Error::Crooked => "A part must run at 0° or 90°.",

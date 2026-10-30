@@ -171,3 +171,14 @@ fn it_keeps_an_led_between_two_gates_out_of_the_analog_circuit_unless_an_analog_
 	assert_eq!( loaded.outputs[ 1 ], vec![ None ] );
 	assert!( loaded.analog.contains( &lit.lights[ 0 ].0 ) );
 }
+
+#[test]
+fn it_gives_the_first_branch_of_each_net_in_the_order_of_their_pieces()
+{
+	let plan = plan( layer( &[ symbol( 10 ), symbol( 16 ), ( Kind::Wire, ( 12, 0 ), ( 14, 0 ) ), ( Kind::Wire, ( 22, 0 ), ( 22, 4 ) ), ( Kind::Wire, ( 22, 4 ), ( 26, 4 ) ) ] ) );
+
+	assert_eq!( plan.starts.len(), plan.nets.len() + 1 );
+	assert_eq!( plan.starts[ 0 ], 0 );
+	assert!( plan.nets.iter().enumerate().all( | ( number, net ) | plan.starts[ number + 1 ] - plan.starts[ number ] == net.pieces.len() ) );
+	assert!( plan.nets.iter().filter( | net | ! net.pieces.is_empty() ).count() > 1 );
+}

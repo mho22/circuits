@@ -35,7 +35,7 @@ fn it_gives_the_highest_current_of_a_light_since_the_last_exposure()
 
 	exposure.change( &plan, &levels, 0, 0.0, OHMS );
 	levels[ 0 ] = 0.0;
-	exposure.flush( &plan, &elements, &levels );
+	exposure.flush( &plan, &levels );
 
 	assert!( lit > 1e-3 );
 	assert_eq!( exposure.expose(), [ lit ] );
@@ -55,7 +55,7 @@ fn it_shares_the_drive_of_a_net_between_its_lit_lights()
 
 	exposure.change( &shared, &levels, 2, HIGH, OHMS );
 	levels[ 2 ] = HIGH;
-	exposure.flush( &shared, &elements, &levels );
+	exposure.flush( &shared, &levels );
 
 	assert_eq!( both[ 0 ], both[ 1 ] );
 	assert!( both[ 0 ] < single );
@@ -76,7 +76,7 @@ fn it_lights_a_light_when_both_of_its_nets_change_at_the_same_time()
 	levels[ 0 ] = HIGH;
 	exposure.change( &plan, &levels, 1, 0.0, OHMS );
 	levels[ 1 ] = 0.0;
-	exposure.flush( &plan, &elements, &levels );
+	exposure.flush( &plan, &levels );
 
 	assert_eq!( exposure.expose(), [ lit ] );
 }
@@ -91,7 +91,7 @@ fn it_follows_a_change_of_the_drive_of_a_net()
 	let before = exposure.expose()[ 0 ];
 
 	exposure.change( &plan, &levels, 0, HIGH, 10.0 * OHMS );
-	exposure.flush( &plan, &elements, &levels );
+	exposure.flush( &plan, &levels );
 	exposure.expose();
 
 	assert!( exposure.expose()[ 0 ] < before );
@@ -107,7 +107,7 @@ fn it_drops_the_highest_currents_on_a_reset()
 
 	exposure.change( &plan, &levels, 0, 0.0, OHMS );
 	levels[ 0 ] = 0.0;
-	exposure.flush( &plan, &elements, &levels );
+	exposure.flush( &plan, &levels );
 	exposure.reset();
 
 	assert_eq!( exposure.expose(), [ 0.0 ] );

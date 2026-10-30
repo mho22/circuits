@@ -1832,6 +1832,37 @@ fn it_counts_the_rising_edges_of_a_clock_with_flip_flops_and_keeps_the_count_aft
 }
 
 #[test]
+fn it_gives_each_wire_of_the_page_the_level_of_its_net_at_each_pulse()
+{
+	let mut simulation = counter();
+	let wires : Vec<( usize, Segment )> = simulation.document( 0 ).unwrap().elements().iter().enumerate().filter( | ( _, element ) | element.kind == Kind::Wire ).map( | ( index, element ) | ( index, element.segment ) ).collect();
+	let levels = | simulation : &Simulation |
+	{
+		let solution = simulation.solution().unwrap();
+
+		assert!( ! solution.branches.is_empty() );
+
+		for branch in &solution.branches
+		{
+			let &( index, _ ) = wires.iter().find( | ( _, segment ) | segment.contains( branch.segment.from ) && segment.contains( branch.segment.to ) ).unwrap();
+
+			assert_eq!( branch.voltage, solution.readings[ index ].potentials[ 0 ] );
+		}
+
+		solution.branches.iter().map( | branch | branch.voltage ).collect::<Vec<_>>()
+	};
+	let mut seen = vec![ levels( &simulation ) ];
+
+	for _ in 0 .. 8
+	{
+		simulation.advance( 5 );
+		seen.push( levels( &simulation ) );
+	}
+
+	assert!( seen.windows( 2 ).any( | pair | pair[ 0 ] != pair[ 1 ] ) );
+}
+
+#[test]
 fn it_keeps_the_count_of_the_flip_flops_after_a_visit_inside_one_of_them()
 {
 	let mut simulation = counter();

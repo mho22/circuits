@@ -230,7 +230,19 @@ fn it_turns_a_copy_of_a_symbol_with_a_model_into_a_device()
 		supply( 2, 0.0, ( SCOPE + 1, 0 ) ),
 	] );
 	assert_eq!( elements[ 3 ].segment, segment( ( SCOPE + 1, 0 ), ( 12, 10 ) ) );
-	assert_eq!( devices, vec![ Device { layer : 1, inputs : vec![ 1 ], outputs : vec![ ( 2, 3 ) ] } ] );
+	assert_eq!( devices, vec![ Device { layer : 1, inputs : vec![ 1 ], outputs : vec![ ( 2, 3 ) ], scopes : Vec::new() } ] );
+}
+
+#[test]
+fn it_gives_each_device_the_copies_of_the_symbols_around_it()
+{
+	let drawing = layer( &[ ( Kind::Symbol { layer : 1, rotation : 0 }, ( 10, 10 ), ( 10, 10 ) ), ( Kind::Symbol { layer : 1, rotation : 0 }, ( 20, 10 ), ( 20, 10 ) ) ] );
+	let outer = layer( &[ ( Kind::Symbol { layer : 2, rotation : 0 }, ( 0, 0 ), ( 0, 0 ) ) ] );
+	let inner = layer( &[ ( Kind::Symbol { layer : 3, rotation : 0 }, ( 0, 0 ), ( 0, 0 ) ) ] );
+	let model = Model { rows : vec![ vec![ Drive { volts : 5.0, ohms : 10.0 } ]; 2 ], lights : vec![ Vec::new(); 2 ], next : vec![ 0; 2 ], delay : DELAY };
+	let ( _, devices, _ ) = flatten( &[ drawing, outer, inner, input( true ) ], &mut Registry::default(), &[ None, None, None, Some( model ) ], 0, &[] ).unwrap();
+
+	assert_eq!( devices.iter().map( | device | device.scopes.clone() ).collect::<Vec<_>>(), vec![ vec![ ( 1, 1 ), ( 2, 2 ) ], vec![ ( 1, 4 ), ( 2, 5 ) ] ] );
 }
 
 #[test]

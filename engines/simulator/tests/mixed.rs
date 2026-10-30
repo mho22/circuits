@@ -1,4 +1,4 @@
-use simulator::{ advance, flatten, idle, rush, settle, Catalog, Device, Document, Drive, Element, Error, History, Kind, Logic, Machine, Model, Operation, Plan, Point, Reading, Registry, Segment, Solution };
+use simulator::{ advance, flatten, idle, settle, Catalog, Device, Document, Drive, Element, Error, History, Kind, Logic, Machine, Model, Operation, Plan, Point, Reading, Registry, Segment, Solution };
 
 
 const STEP : f64 = 1e-6;
@@ -331,37 +331,6 @@ fn it_advances_the_same_with_the_buffers_of_any_spare_solution()
 	let refilled = circuit.advance( 0.75 ).unwrap();
 
 	assert_eq!( ( bits( &refilled ), &refilled.branches ), ( bits( &fresh ), &fresh.branches ) );
-}
-
-#[test]
-fn it_rushes_a_digital_circuit_over_several_steps_to_the_solution_of_its_last_step()
-{
-	let mut stepped = ring();
-	let mut rushed = ring();
-	let bits = | solution : &Solution | solution.readings.iter().map( | reading | reading.potentials.iter().chain( &reading.currents ).map( | value | value.to_bits() ).collect() ).collect::<Vec<Vec<u64>>>();
-
-	stepped.settle().unwrap();
-	rushed.settle().unwrap();
-
-	let last = ( 0 .. 25 ).map( | _ | stepped.advance( 0.4e-9 ).unwrap() ).last().unwrap();
-	let solution = rush( Machine { elements : &rushed.elements, devices : &rushed.devices, plan : &rushed.plan, models : &rushed.models }, 0.4e-9, 25, &mut rushed.logic ).unwrap();
-
-	assert!( rushed.plan.analog.is_empty() );
-	assert_eq!( ( bits( &solution ), &solution.branches, rushed.logic.time ), ( bits( &last ), &last.branches, stepped.logic.time ) );
-}
-
-#[test]
-fn it_gives_the_highest_current_of_a_digital_led_over_the_steps_it_rushes()
-{
-	let mut circuit = circuit( &[ ( Kind::Clock { hertz : 1000.0, on : true }, ( 4, 0 ), ( 8, 0 ) ), symbol( 10 ), ( Kind::Led { color : 0 }, ( 12, 0 ), ( 12, 4 ) ), ( Kind::Toggle { high : false }, ( 16, 4 ), ( 12, 4 ) ) ] );
-	let led = circuit.elements.iter().position( | element | matches!( element.kind, Kind::Led { .. } ) ).unwrap();
-	let lit = circuit.settle().unwrap().readings[ led ].currents[ 0 ];
-	let solution = rush( Machine { elements : &circuit.elements, devices : &circuit.devices, plan : &circuit.plan, models : &circuit.models }, 1e-5, 75, &mut circuit.logic ).unwrap();
-
-	assert!( circuit.plan.analog.is_empty() );
-	assert!( lit > 1e-3 );
-	assert_eq!( solution.readings[ led ].currents[ 0 ], lit );
-	assert!( circuit.advance( 1e-5 ).unwrap().readings[ led ].currents[ 0 ] < 1e-9 );
 }
 
 #[test]
