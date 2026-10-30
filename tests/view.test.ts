@@ -121,7 +121,7 @@ describe( 'view', () =>
 		expect( [ view.x, view.y ] ).toEqual( [ SPACING * 4 - 200, SPACING * 8 - 60 ] );
 	} );
 
-	it( 'zooms out to one dot for two or four grid steps around a point of the screen', () =>
+	it( 'zooms out to one dot for two, four or eight grid steps around a point of the screen', () =>
 	{
 		const view = new View();
 		const point = { x : SPACING * 6, y : SPACING * 3 };
@@ -138,17 +138,23 @@ describe( 'view', () =>
 		expect( view.toGrid( point.x, point.y ) ).toEqual( { x : 8, y : 4 } );
 		expect( view.toGrid( point.x + SPACING, point.y ) ).toEqual( { x : 12, y : 4 } );
 
+		view.zoom( 3, point );
+
+		expect( view.stride ).toBe( 8 );
+		expect( view.toGrid( point.x, point.y ) ).toEqual( { x : 8, y : 4 } );
+		expect( view.toGrid( point.x + SPACING, point.y ) ).toEqual( { x : 16, y : 4 } );
+
 		view.zoom( 0, point );
 
 		expect( [ view.x, view.y ] ).toEqual( [ SPACING * 2, SPACING ] );
 	} );
 
-	it( 'keeps its zoom out of the three levels', () =>
+	it( 'keeps its zoom out of the four levels', () =>
 	{
 		const view = new View();
 
 		expect( view.zoom( -1, { x : 100, y : 60 } ) ).toBe( false );
-		expect( view.zoom( 3, { x : 100, y : 60 } ) ).toBe( false );
+		expect( view.zoom( 4, { x : 100, y : 60 } ) ).toBe( false );
 		expect( view.zoom( 0, { x : 100, y : 60 } ) ).toBe( false );
 		expect( view.zoom( 1, { x : 100, y : 60 } ) ).toBe( true );
 		expect( view.zoom( 0, { x : 100, y : 60 } ) ).toBe( true );

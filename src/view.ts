@@ -2,7 +2,7 @@ import { SPACING, toGrid, toScreen } from './grid.ts';
 import type { Point } from './types/point.ts';
 
 
-export const STRIDES = [ 1, 2, 4 ];
+export const STRIDES = [ 1, 2, 4, 8 ];
 
 const LINE = 1;
 const PAUSE = 200;
