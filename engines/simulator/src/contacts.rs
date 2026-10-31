@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use crate::{ Document, Element, Kind, Outline, Point };
 
 
-fn terminals( layers : &[ Document ], element : &Element ) -> Vec<Point>
+pub fn terminals( layers : &[ Document ], element : &Element ) -> Vec<Point>
 {
 	let Kind::Symbol { layer, rotation } = element.kind else { return element.terminals(); };
 

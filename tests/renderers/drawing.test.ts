@@ -48,7 +48,7 @@ describe( 'drawing renderer', () =>
 		expect( calls.filter( call => [ 'moveTo', 'lineTo' ].includes( call[ 0 ] as string ) ) ).toEqual( [ [ 'moveTo', 100, 50 ], [ 'lineTo', 100, 70 ] ] );
 	} );
 
-	it( 'fills each text turned with the rotation, with the foot of its first glyph on its turned point', () =>
+	it( 'fills each text turned with the rotation, with the middle of its first glyph on its turned point', () =>
 	{
 		const { context, calls } = record();
 		const measured = new Proxy( context, { get : ( target, name ) => name === 'measureText' ? () => ( { actualBoundingBoxLeft : -1 } ) : Reflect.get( target, name ) } );
@@ -59,7 +59,7 @@ describe( 'drawing renderer', () =>
 			[ 'set', 'fillStyle', '#9e9e9e' ],
 			[ 'set', 'font', '12px ui-monospace, monospace' ],
 			[ 'set', 'textAlign', 'left' ],
-			[ 'set', 'textBaseline', 'alphabetic' ],
+			[ 'set', 'textBaseline', 'middle' ],
 			[ 'save' ],
 			[ 'translate', 100, 70 ],
 			[ 'rotate', Math.PI / 2 ],

@@ -66,7 +66,7 @@ impl Shape
 			Shape::Circle { center, radius } => vec![ Point { x : center.x - radius, y : center.y - radius }, Point { x : center.x + radius, y : center.y + radius } ],
 			Shape::Line { from, to } => vec![ *from, *to ],
 			Shape::Curve { from, through, to } => arc( *from, *through, *to ),
-			Shape::Text { at, content } => { let width = ( 3 * content.chars().count() as i32 + 1 ) / 2; vec![ Point { x : at.x, y : at.y - 2 }, Point { x : at.x + width, y : at.y + 1 } ] },
+			Shape::Text { at, content } => { let width = ( 3 * content.chars().count() as i32 + 1 ) / 2; vec![ Point { x : at.x, y : at.y - 1 }, Point { x : at.x + width, y : at.y + 1 } ] },
 		};
 
 		let low = Point { x : points.iter().map( | point | point.x ).min().unwrap_or( 0 ), y : points.iter().map( | point | point.y ).min().unwrap_or( 0 ) };

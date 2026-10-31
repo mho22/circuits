@@ -21,7 +21,7 @@ import { Figure } from './enums/figure.ts';
 import { INPUTS, Kind, NAMES, PINS } from './enums/kind.ts';
 import { extent } from './extent.ts';
 import { flows } from './flows.ts';
-import { FINE, snap } from './grid.ts';
+import { FINE, snap, SPACING } from './grid.ts';
 import { grab } from './grab.ts';
 import { Hold } from './hold.ts';
 import { read, shape } from './keyboard.ts';
@@ -53,6 +53,7 @@ import { socket } from './socket.ts';
 import { target } from './target.ts';
 import { PART_GROUPS, PIN_GROUPS, Toolbar } from './toolbar.ts';
 import { Trail } from './trail.ts';
+import { under } from './under.ts';
 import { Watch } from './watch.ts';
 import { CarryTool } from './tools/carry.ts';
 import { DrawTool } from './tools/draw.ts';
@@ -194,7 +195,8 @@ function arrange() : Scene
 	if( scene?.revision === circuit.revision ) return scene;
 
 	const listening = new Set( circuit.listening() );
-	const elements = captioned( labelled( decodeElements( circuit.elements() ), circuit.layer ) ).map( outlined ).map( item => listening.has( item.id ) ? { ... item, listening : true } : item );
+	const widths = circuit.widths();
+	const elements = captioned( labelled( decodeElements( circuit.elements() ), circuit.layer ) ).map( outlined ).map( item => listening.has( item.id ) ? { ... item, listening : true } : item ).map( ( item, index ) => widths[ index ] > 1 ? { ... item, lanes : widths[ index ] } : item );
 	const starts : number[] = [];
 
 	elements.reduce( ( start, item ) => { starts.push( start ); return start + ( item.outline?.lights.length ?? 0 ); }, 0 );
@@ -529,9 +531,10 @@ function modify( event : MouseEvent ) : void
 function menu( event : MouseEvent ) : void
 {
 	const point = view.toGrid( event.clientX, event.clientY );
+	const pixels = view.toPixels( event.clientX, event.clientY );
 	const elements = parts();
 	const targets = Array.from( circuit.elementsAt( point.x, point.y ) ).map( id => elements.find( item => item.id === id )! );
-	const target = targets.find( item => item.kind !== Kind.Wire ) ?? targets[ 0 ];
+	const target = under( targets, { x : pixels.x * FINE / SPACING, y : pixels.y * FINE / SPACING } );
 
 	if( ! target && tool.kind !== null ) { select( null ); return; }
 
@@ -617,7 +620,7 @@ function paint( shown : Map<number, Element>, branches : Branch[], joints : Scen
 
 	elements.forEach( item => element.draw( context, item, scale, stride ) );
 
-	junction.draw( context, joints.filter( ( { wire } ) => shown.has( wire ) ).map( ( { point, wire } ) => ( { point, potential : shown.get( wire )!.potentials[ 0 ] } ) ), scale );
+	junction.draw( context, joints.filter( ( { wire } ) => shown.has( wire ) ).map( ( { point, wire } ) => ( { point, potentials : shown.get( wire )!.potentials, lanes : shown.get( wire )!.lanes } ) ), scale );
 
 	paths.forEach( ( path, index ) => current.draw( context, path.from, path.to, path.current, scale.current, distances[ index ], circuit.frozen ? current.FROZEN : current.COLOR ) );
 

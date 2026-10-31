@@ -470,6 +470,11 @@ impl Circuit
 		solution.branches.iter().filter( | branch | inside( branch.segment ) ).flat_map( Circuit::row ).collect()
 	}
 
+	pub fn widths( &self ) -> Vec<u32>
+	{
+		self.simulation.widths()
+	}
+
 	pub fn listening( &self ) -> Vec<u32>
 	{
 		self.simulation.listening()

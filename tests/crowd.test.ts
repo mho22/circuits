@@ -22,10 +22,17 @@ describe( 'crowd', () =>
 		expect( crowded( [ light( Color.Red ), light( Color.Green ), light( Color.Blue ), light( Color.Red ) ], point ) ).toBe( true );
 	} );
 
-	it( 'never lets an input or an output share a point', () =>
+	it( 'lets inputs share a point with inputs and outputs with outputs into a stack of any size', () =>
+	{
+		expect( crowded( Array( 8 ).fill( input ), point ) ).toBe( false );
+		expect( crowded( Array( 8 ).fill( { ... input, output : true } ), point ) ).toBe( false );
+	} );
+
+	it( 'never lets an input share a point with an output or a light', () =>
 	{
 		expect( crowded( [ input, light( Color.Red ) ], point ) ).toBe( true );
 		expect( crowded( [ input, { ... input, output : true } ], point ) ).toBe( true );
+		expect( crowded( [ input, input, { ... input, output : true } ], point ) ).toBe( true );
 	} );
 
 	it( 'counts only the pins on the point', () =>

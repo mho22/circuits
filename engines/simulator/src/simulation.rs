@@ -2,7 +2,7 @@ use std::collections::{ HashMap, HashSet };
 
 use crate::flatten::STRIDE;
 use crate::shape::FINE;
-use crate::{ advance, enclose, flatten, idle, place, pulse, settle, stretch, Catalog, Device, Document, Element, Enclosure, Error, Hashing, History, Kind, Layout, Logic, Machine, Mode, Model, Netlist, Operation, Outline, Plan, Point, Reading, Registry, Segment, Shape, Solution };
+use crate::{ advance, enclose, flatten, idle, place, pulse, settle, stretch, Buses, Catalog, Device, Document, Element, Enclosure, Error, Hashing, History, Kind, Layout, Logic, Machine, Mode, Model, Netlist, Operation, Outline, Plan, Point, Reading, Registry, Segment, Shape, Solution };
 
 
 const DIVISIONS : f64 = 20.0;
@@ -512,6 +512,14 @@ impl Simulation
 		} )
 	}
 
+	pub fn widths( &self ) -> Vec<u32>
+	{
+		let layer = self.descend( &self.focus ).unwrap_or( 0 );
+		let buses = Buses::of( &self.layers, layer ).unwrap_or_default();
+
+		self.layers[ layer ].elements().iter().map( | element | if element.kind == Kind::Wire { buses.width( element.segment.from ) as u32 } else { 1 } ).collect()
+	}
+
 	pub fn elements_at( &self, layer : usize, point : Point ) -> Vec<u32>
 	{
 		let Some( document ) = self.document( layer ) else { return Vec::new(); };
@@ -688,16 +696,17 @@ impl Simulation
 		let position = | key : &[ u32 ] | self.registry.find( key ).and_then( | id | positions.get( &id ).copied() );
 		let symbols : Vec<( usize, u32, usize )> = self.layers[ layer ].elements().iter().enumerate().filter_map( | ( at, element ) | match element.kind { Kind::Symbol { layer : inner, .. } => Some( ( at, element.id, inner as usize ) ), _ => None } ).collect();
 		let lights : HashMap<usize, usize, Hashing> = self.plan.lights.iter().enumerate().map( | ( light, &( index, _, _ ) ) | ( index, light ) ).collect();
+		let widths = self.widths();
 
 		self.glows = symbols.iter().flat_map( | &( _, id, inner ) | self.layers[ inner ].elements().iter().filter( | part | matches!( part.kind, Kind::Led { .. } ) ).map( move | led | ( id, led.id ) ) ).map( | ( id, led ) | position( &[ path, &[ id, led ] ].concat() ) ).map( | index | ( index, index.and_then( | index | lights.get( &index ).copied() ) ) ).collect();
-		self.places = self.layers[ layer ].elements().iter().map( | element |
+		self.places = self.layers[ layer ].elements().iter().zip( widths ).map( | ( element, width ) |
 		{
 			let key = [ path, &[ element.id ] ].concat();
 
 			match element.kind
 			{
 				Kind::Symbol { layer : inner, .. } => self.layers[ inner as usize ].elements().iter().filter( | part | part.kind.pin() ).map( | pin | position( &[ key.as_slice(), &[ pin.id ] ].concat() ) ).collect(),
-				_ => vec![ position( &key ) ],
+				_ => std::iter::once( position( &key ) ).chain( ( 1 .. width ).map( | lane | position( &[ key.as_slice(), &[ 0, lane ] ].concat() ) ) ).collect(),
 			}
 		} ).collect();
 
@@ -765,23 +774,28 @@ impl Simulation
 
 		for ( ( element, places ), target ) in elements.iter().zip( &self.places ).zip( &mut shown.readings )
 		{
-			let Kind::Symbol { .. } = element.kind else
+			let side = match element.kind
 			{
-				let source = reading( places[ 0 ] );
+				Kind::Symbol { .. } => 1,
+				Kind::Wire if places.len() > 1 => 0,
+				_ =>
+				{
+					let source = reading( places[ 0 ] );
 
-				target.potentials.clone_from( &source.potentials );
-				target.currents.clone_from( &source.currents );
+					target.potentials.clone_from( &source.potentials );
+					target.currents.clone_from( &source.currents );
 
-				continue;
+					continue;
+				},
 			};
 
 			target.potentials.clear();
 			target.currents.clear();
-			target.potentials.extend( places.iter().map( | &index | reading( index ).potentials[ 1 ] ) );
-			target.currents.extend( places.iter().map( | &index | reading( index ).currents[ 1 ] ) );
+			target.potentials.extend( places.iter().map( | &index | reading( index ).potentials[ side ] ) );
+			target.currents.extend( places.iter().map( | &index | reading( index ).currents[ side ] ) );
 		}
 
-		if ! self.logic.kept { self.tops = solution.branches.iter().enumerate().filter( | ( _, branch ) | branch.segment.from.x.abs() < STRIDE / 2 ).map( | ( index, _ ) | index ).collect(); }
+		if ! self.logic.kept { self.tops = solution.branches.iter().enumerate().filter( | ( _, branch ) | branch.segment.from.x.abs() < STRIDE / 2 && branch.segment.from.y.abs() < STRIDE / 2 ).map( | ( index, _ ) | index ).collect(); }
 
 		shown.branches.clear();
 		shown.branches.extend( self.tops.iter().map( | &index | solution.branches[ index ] ) );

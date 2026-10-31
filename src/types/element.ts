@@ -21,4 +21,5 @@ export interface Element
 	listening? : boolean;
 	on? : boolean;
 	lights? : ArrayLike<number>;
+	lanes? : number;
 }

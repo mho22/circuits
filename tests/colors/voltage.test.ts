@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { color } from '../../src/colors/voltage.ts';
+import { bus, color } from '../../src/colors/voltage.ts';
 import { FROZEN } from '../../src/scale.ts';
 
 
@@ -39,5 +39,31 @@ describe( 'voltage color', () =>
 	{
 		expect( color( 5, 0 ) ).toBe( 'rgb(128, 128, 128)' );
 		expect( color( NaN, 5 ) ).toBe( 'rgb(128, 128, 128)' );
+	} );
+} );
+
+
+describe( 'bus color', () =>
+{
+	it( 'is gray when every lane is at zero volts', () =>
+	{
+		expect( bus( [ 0, 0, 0 ], 5 ) ).toBe( 'rgb(128, 128, 128)' );
+	} );
+
+	it( 'is green when a lane carries a positive or a negative voltage', () =>
+	{
+		expect( bus( [ 0, 5, 0 ], 5 ) ).toBe( 'rgb(0, 255, 0)' );
+		expect( bus( [ 0, 0, -5 ], 5 ) ).toBe( 'rgb(0, 255, 0)' );
+	} );
+
+	it( 'is gray without a scale or a finite voltage', () =>
+	{
+		expect( bus( [ 5 ], 0 ) ).toBe( 'rgb(128, 128, 128)' );
+		expect( bus( [ NaN ], 5 ) ).toBe( 'rgb(128, 128, 128)' );
+	} );
+
+	it( 'is blue on a frozen scale', () =>
+	{
+		expect( bus( [ 5 ], FROZEN.voltage ) ).toBe( 'rgb(24, 48, 128)' );
 	} );
 } );

@@ -1,4 +1,6 @@
 const FROZEN = 'rgb(24, 48, 128)';
+const GRAY = 'rgb(128, 128, 128)';
+const GREEN = 'rgb(0, 255, 0)';
 
 
 export function color( voltage : number, scale : number ) : string
@@ -12,4 +14,12 @@ export function color( voltage : number, scale : number ) : string
 	const blue = 128 - 128 * Math.abs( ratio );
 
 	return `rgb(${ Math.round( red ) }, ${ Math.round( green ) }, ${ Math.round( blue ) })`;
+}
+
+
+export function bus( voltages : number[], scale : number ) : string
+{
+	if( Number.isNaN( scale ) ) return FROZEN;
+
+	return voltages.some( voltage => color( voltage, scale ) !== GRAY ) ? GREEN : GRAY;
 }

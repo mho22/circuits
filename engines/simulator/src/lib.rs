@@ -1,5 +1,6 @@
 mod action;
 mod branch;
+mod bus;
 mod catalog;
 mod channel;
 mod characterize;
@@ -49,6 +50,7 @@ mod union_find;
 
 pub use action::Action;
 pub use branch::Branch;
+pub use bus::Buses;
 pub use catalog::Catalog;
 pub use channel::conduct;
 pub use characterize::Characterization;

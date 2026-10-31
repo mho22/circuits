@@ -50,7 +50,7 @@ export function draw( context : CanvasRenderingContext2D, shapes : Shape[], cent
 	context.fillStyle = COLOR;
 	context.font = FONT;
 	context.textAlign = 'left';
-	context.textBaseline = 'alphabetic';
+	context.textBaseline = 'middle';
 
 	texts.forEach( shape =>
 	{

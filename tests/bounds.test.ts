@@ -21,12 +21,12 @@ describe( 'bounds', () =>
 		expect( bounds( { figure : Figure.Curve, from : { x : 0, y : -4 }, through : { x : 4, y : 0 }, to : { x : 0, y : 4 } } ) ).toEqual( [ { x : 0, y : -4 }, { x : 4, y : 0 }, { x : 0, y : 4 }, { x : 4, y : 0 } ] );
 	} );
 
-	it( 'bounds a text by a box that rises from its point and grows with each character', () =>
+	it( 'bounds a text by a box centered on the height of its point that grows with each character', () =>
 	{
-		expect( bounds( { figure : Figure.Text, at : { x : 2, y : 4 }, content : 'f' } ) ).toEqual( [ { x : 2, y : 2 }, { x : 4, y : 5 } ] );
-		expect( bounds( { figure : Figure.Text, at : { x : 2, y : 4 }, content : 'foo' } ) ).toEqual( [ { x : 2, y : 2 }, { x : 7, y : 5 } ] );
-		expect( bounds( { figure : Figure.Text, at : { x : 2, y : 4 }, content : 'foobar' } ) ).toEqual( [ { x : 2, y : 2 }, { x : 11, y : 5 } ] );
-		expect( bounds( { figure : Figure.Text, at : { x : 2, y : 4 }, content : 'éé' } ) ).toEqual( [ { x : 2, y : 2 }, { x : 5, y : 5 } ] );
+		expect( bounds( { figure : Figure.Text, at : { x : 2, y : 4 }, content : 'f' } ) ).toEqual( [ { x : 2, y : 3 }, { x : 4, y : 5 } ] );
+		expect( bounds( { figure : Figure.Text, at : { x : 2, y : 4 }, content : 'foo' } ) ).toEqual( [ { x : 2, y : 3 }, { x : 7, y : 5 } ] );
+		expect( bounds( { figure : Figure.Text, at : { x : 2, y : 4 }, content : 'foobar' } ) ).toEqual( [ { x : 2, y : 3 }, { x : 11, y : 5 } ] );
+		expect( bounds( { figure : Figure.Text, at : { x : 2, y : 4 }, content : 'éé' } ) ).toEqual( [ { x : 2, y : 3 }, { x : 5, y : 5 } ] );
 	} );
 
 	it( 'rounds the extremes of a curve to the fine grid', () =>

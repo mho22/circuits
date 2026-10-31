@@ -128,6 +128,15 @@ fn input( high : bool ) -> Document
 	layer( &[ ( Kind::Input { high }, ( -1, 0 ), ( 0, 0 ) ), ( Kind::Resistor { ohms : 1000.0 }, ( 0, 0 ), ( 4, 0 ) ), ( Kind::Output, ( 5, 0 ), ( 4, 0 ) ) ] )
 }
 
+fn stacked( count : i32, kind : Kind, x : i32 ) -> Document
+{
+	let mut document = layer( &( 0 .. count ).map( | row | ( kind, ( -1, row ), ( 0, row ) ) ).collect::<Vec<_>>() );
+
+	document.apply( Operation::Describe { name : String::new(), drawing : Vec::new(), layout : vec![ Point { x, y : 0 }; count as usize ] } ).unwrap();
+
+	document
+}
+
 fn supply( id : u32, volts : f64, at : ( i32, i32 ) ) -> Element
 {
 	Element { id, kind : Kind::Supply { volts }, segment : segment( at, at ), mirrored : false }
@@ -254,4 +263,46 @@ fn it_reads_an_input_that_a_wire_touches_through_an_open_switch()
 
 	assert_eq!( elements[ 0 ], Element { id : 0, kind : Kind::Switch { closed : false }, segment : segment( ( SCOPE, 0 ), ( 8, 10 ) ), mirrored : false } );
 	assert_eq!( devices[ 0 ].inputs, vec![ 0 ] );
+}
+
+#[test]
+fn it_joins_each_pin_of_a_stack_to_the_pin_of_the_same_rank_across_a_bus()
+{
+	let drawing = layer( &[ ( Kind::Symbol { layer : 1, rotation : 0 }, ( 0, 0 ), ( 0, 0 ) ), ( Kind::Symbol { layer : 2, rotation : 0 }, ( 10, 0 ), ( 10, 0 ) ), ( Kind::Wire, ( 2, 0 ), ( 5, 0 ) ), ( Kind::Wire, ( 5, 0 ), ( 8, 0 ) ) ] );
+	let ( elements, _, netlist ) = flatten( &[ drawing, stacked( 3, Kind::Output, 2 ), stacked( 3, Kind::Input { high : false }, -2 ) ], &mut Registry::default(), &[], 0, &[] ).unwrap();
+	let nets : Vec<( usize, usize )> = ( 0 .. 3 ).map( | row | ( netlist.net( Point { x : SCOPE, y : row } ), netlist.net( Point { x : 2 * SCOPE, y : row } ) ) ).collect();
+
+	assert_eq!( elements.iter().filter( | element | element.kind == Kind::Wire ).count(), 6 );
+	assert!( nets.iter().all( | &( from, to ) | from == to ) );
+	assert!( nets[ 0 ].0 != nets[ 1 ].0 && nets[ 1 ].0 != nets[ 2 ].0 && nets[ 0 ].0 != nets[ 2 ].0 );
+}
+
+#[test]
+fn it_joins_each_pin_of_a_stack_to_the_pin_of_the_same_rank_across_a_bus_inside_a_symbol()
+{
+	let drawing = layer( &[ ( Kind::Symbol { layer : 3, rotation : 0 }, ( 0, 0 ), ( 0, 0 ) ) ] );
+	let inside = layer( &[ ( Kind::Symbol { layer : 1, rotation : 0 }, ( 0, 0 ), ( 0, 0 ) ), ( Kind::Symbol { layer : 2, rotation : 0 }, ( 10, 0 ), ( 10, 0 ) ), ( Kind::Wire, ( 2, 0 ), ( 8, 0 ) ) ] );
+	let ( elements, _, netlist ) = flatten( &[ drawing, stacked( 3, Kind::Output, 2 ), stacked( 3, Kind::Input { high : false }, -2 ), inside ], &mut Registry::default(), &[], 0, &[] ).unwrap();
+	let nets : Vec<( usize, usize )> = ( 0 .. 3 ).map( | row | ( netlist.net( Point { x : 2 * SCOPE, y : row } ), netlist.net( Point { x : 3 * SCOPE, y : row } ) ) ).collect();
+
+	assert_eq!( elements.iter().filter( | element | element.kind == Kind::Wire ).count(), 3 );
+	assert!( nets.iter().all( | &( from, to ) | from == to ) );
+	assert!( nets[ 0 ].0 != nets[ 1 ].0 && nets[ 1 ].0 != nets[ 2 ].0 && nets[ 0 ].0 != nets[ 2 ].0 );
+}
+
+#[test]
+fn it_keeps_the_pins_of_a_stack_apart_when_nothing_touches_it()
+{
+	let drawing = layer( &[ ( Kind::Symbol { layer : 1, rotation : 0 }, ( 0, 0 ), ( 0, 0 ) ) ] );
+	let ( _, _, netlist ) = flatten( &[ drawing, stacked( 2, Kind::Output, 2 ) ], &mut Registry::default(), &[], 0, &[] ).unwrap();
+
+	assert_ne!( netlist.net( Point { x : SCOPE, y : 0 } ), netlist.net( Point { x : SCOPE, y : 1 } ) );
+}
+
+#[test]
+fn it_refuses_a_bus_between_stacks_of_two_widths()
+{
+	let drawing = layer( &[ ( Kind::Symbol { layer : 1, rotation : 0 }, ( 0, 0 ), ( 0, 0 ) ), ( Kind::Symbol { layer : 2, rotation : 0 }, ( 10, 0 ), ( 10, 0 ) ), ( Kind::Wire, ( 2, 0 ), ( 8, 0 ) ) ] );
+
+	assert_eq!( flatten( &[ drawing, stacked( 3, Kind::Output, 2 ), stacked( 2, Kind::Input { high : false }, -2 ) ], &mut Registry::default(), &[], 0, &[] ).map( | _ | () ), Err( Error::Bus ) );
 }

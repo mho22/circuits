@@ -58,12 +58,12 @@ fn it_bounds_a_curve_by_its_ends_and_by_the_sides_of_its_circle_that_it_reaches(
 }
 
 #[test]
-fn it_bounds_a_text_by_a_box_that_rises_from_its_point_and_grows_with_each_character()
+fn it_bounds_a_text_by_a_box_centered_on_the_height_of_its_point_that_grows_with_each_character()
 {
 	let point = | x, y | Point { x, y };
 
-	assert_eq!( Shape::Text { at : point( 2, 4 ), content : "f".to_string() }.bounds(), ( point( 2, 2 ), point( 4, 5 ) ) );
-	assert_eq!( Shape::Text { at : point( 2, 4 ), content : "foo".to_string() }.bounds(), ( point( 2, 2 ), point( 7, 5 ) ) );
-	assert_eq!( Shape::Text { at : point( 2, 4 ), content : "foobar".to_string() }.bounds(), ( point( 2, 2 ), point( 11, 5 ) ) );
-	assert_eq!( Shape::Text { at : point( 2, 4 ), content : "éé".to_string() }.bounds(), ( point( 2, 2 ), point( 5, 5 ) ) );
+	assert_eq!( Shape::Text { at : point( 2, 4 ), content : "f".to_string() }.bounds(), ( point( 2, 3 ), point( 4, 5 ) ) );
+	assert_eq!( Shape::Text { at : point( 2, 4 ), content : "foo".to_string() }.bounds(), ( point( 2, 3 ), point( 7, 5 ) ) );
+	assert_eq!( Shape::Text { at : point( 2, 4 ), content : "foobar".to_string() }.bounds(), ( point( 2, 3 ), point( 11, 5 ) ) );
+	assert_eq!( Shape::Text { at : point( 2, 4 ), content : "éé".to_string() }.bounds(), ( point( 2, 3 ), point( 5, 5 ) ) );
 }

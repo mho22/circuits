@@ -1,5 +1,5 @@
 import { brightness, CHANNELS, DARK, fill } from '../colors/light.ts';
-import { color } from '../colors/voltage.ts';
+import { bus, color } from '../colors/voltage.ts';
 import { FINE, SPACING, toScreen } from '../grid.ts';
 import { pins } from '../pins.ts';
 import { turn } from '../turn.ts';
@@ -10,6 +10,7 @@ import type { Point } from '../types/point.ts';
 import type { Scale } from '../types/scale.ts';
 import type { Spot } from '../types/spot.ts';
 import * as drawing from './drawing.ts';
+import { BUS } from './wire.ts';
 
 
 const COLOR = '#9e9e9e';
@@ -43,6 +44,11 @@ function spots( outline : Outline, rotation : number ) : Spot[]
 	turns[ rotation ] = [ ... groups.values() ].map( indexes => ( { point : turn( outline.lights[ indexes[ 0 ] ].point, rotation ), indexes } ) );
 
 	return turns[ rotation ];
+}
+
+function across( { low, high } : Outline, pin : Point ) : Point
+{
+	return pin.x === low.x || pin.x === high.x ? { x : 0, y : 1 } : { x : 1, y : 0 };
 }
 
 function continues( { low, high } : Area, point : Point ) : boolean
@@ -137,9 +143,32 @@ export function draw( context : CanvasRenderingContext2D, element : Element, sca
 
 	ends.forEach( ( pin, index ) =>
 	{
-		context.fillStyle = color( element.potentials[ index ], scale.voltage );
+		const shared = ends.flatMap( ( other, at ) => other.x === pin.x && other.y === pin.y ? [ element.potentials[ at ] ] : [] );
+		const stacked = shared.length > 1;
+		const tint = stacked ? bus( shared, scale.voltage ) : color( element.potentials[ index ], scale.voltage );
+		const x = toScreen( pin.x );
+		const y = toScreen( pin.y );
+
+		if( ends.findIndex( other => other.x === pin.x && other.y === pin.y ) !== index ) return;
+
+		if( ! stacked )
+		{
+			context.fillStyle = tint;
+			context.beginPath();
+			context.arc( x, y, DOT, 0, 2 * Math.PI );
+			context.fill();
+
+			return;
+		}
+
+		const along = turn( across( outline, outline.pins[ index ] ), element.rotation );
+
+		context.strokeStyle = tint;
+		context.lineWidth = BUS;
+		context.lineCap = 'butt';
 		context.beginPath();
-		context.arc( toScreen( pin.x ), toScreen( pin.y ), DOT, 0, 2 * Math.PI );
-		context.fill();
+		context.moveTo( x - along.x * BUS / 2, y - along.y * BUS / 2 );
+		context.lineTo( x + along.x * BUS / 2, y + along.y * BUS / 2 );
+		context.stroke();
 	} );
 }

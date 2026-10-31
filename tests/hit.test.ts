@@ -23,7 +23,7 @@ describe( 'hit', () =>
 	{
 		const shape = { figure : Figure.Text as const, at : { x : 0, y : 0 }, content : 'foo' };
 
-		expect( [ { x : 0, y : 0 }, { x : 4, y : 1 }, { x : -1, y : 0 }, { x : 2, y : -3 } ].map( point => hit( shape, point ) ) ).toEqual( [ true, true, false, false ] );
+		expect( [ { x : 0, y : 0 }, { x : 4, y : 1 }, { x : 2, y : -1 }, { x : -1, y : 0 }, { x : 2, y : -2 }, { x : 2, y : 2 } ].map( point => hit( shape, point ) ) ).toEqual( [ true, true, true, false, false, false ] );
 	} );
 
 	it( 'reaches a line along its length but not past its ends', () =>

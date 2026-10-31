@@ -11,5 +11,7 @@ export function crowded( pins : Pin[], point : Point ) : boolean
 
 	if( shared.length < 2 ) return false;
 
-	return shared.length > STACK || shared.some( pin => pin.light === undefined );
+	if( shared.every( pin => pin.light !== undefined ) ) return shared.length > STACK;
+
+	return shared.some( pin => pin.light !== undefined || pin.output !== shared[ 0 ].output );
 }

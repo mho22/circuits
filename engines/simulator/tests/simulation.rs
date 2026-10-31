@@ -1874,3 +1874,56 @@ fn it_keeps_the_count_of_the_flip_flops_after_a_visit_inside_one_of_them()
 
 	assert_eq!( count( &simulation ), ( start + 5 ) % 16 );
 }
+
+#[test]
+fn it_carries_each_lane_of_a_bus_to_the_pin_of_the_same_rank_and_shows_one_voltage_per_lane_on_the_wires_of_the_page()
+{
+	let mut simulation = Simulation::new( STEP );
+	let levels = [ 5.0, 0.0, 3.0 ];
+	let page : Vec<Part> = vec![ ( Kind::Symbol { layer : 1, rotation : 0 }, ( 0, 0 ), ( 0, 0 ) ), ( Kind::Symbol { layer : 2, rotation : 0 }, ( 10, 0 ), ( 10, 0 ) ), ( Kind::Wire, ( 2, 0 ), ( 5, 0 ) ), ( Kind::Wire, ( 5, 0 ), ( 8, 0 ) ) ];
+	let source : Vec<Part> = ( 0 .. 3 ).flat_map( | row | [ ( Kind::Output, ( -1, row ), ( 0, row ) ), ( Kind::Supply { volts : levels[ row as usize ] }, ( 0, row ), ( 0, row ) ) ] ).collect();
+	let load : Vec<Part> = ( 0 .. 3 ).flat_map( | row | [ ( Kind::Input { high : false }, ( -1, row ), ( 0, row ) ), ( Kind::Resistor { ohms : 1000.0 }, ( 0, row ), ( 4, row ) ), ( Kind::Ground, ( 4, row ), ( 4, row ) ) ] ).collect();
+	let layers = [ page, source, load ];
+	let mut additions : Vec<( usize, Operation )> = layers.iter().enumerate().flat_map( | ( layer, parts ) | parts.iter().map( move | &( kind, from, to ) | ( layer, Operation::Add { kind, segment : segment( from, to ), mirrored : false } ) ) ).collect();
+
+	additions.push( ( 1, Operation::Describe { name : String::from( "SOURCE" ), drawing : Vec::new(), layout : vec![ point( 2, 0 ); 3 ] } ) );
+	additions.push( ( 2, Operation::Describe { name : String::from( "LOAD" ), drawing : Vec::new(), layout : vec![ point( -2, 0 ); 3 ] } ) );
+	simulation.open( additions ).unwrap();
+	measure( &mut simulation );
+
+	let solution = simulation.solution().unwrap();
+
+	assert!( solution.readings[ 1 ].potentials.iter().zip( levels ).all( | ( &volts, level ) | near( volts, level, 1e-6 ) ) );
+	assert!( solution.readings[ 2 .. ].iter().all( | reading | reading.potentials.len() == 3 && reading.potentials.iter().zip( levels ).all( | ( &volts, level ) | near( volts, level, 1e-6 ) ) ) );
+	assert_eq!( simulation.widths(), [ 1, 1, 3, 3 ] );
+	assert!( ! solution.branches.is_empty() );
+	assert!( solution.branches.iter().all( | branch | branch.segment.from.y.abs() < 10 && branch.segment.to.y.abs() < 10 ) );
+}
+
+#[test]
+fn it_runs_a_bus_from_the_stacked_outputs_of_a_gate_to_a_stack_of_inputs_in_digital_mode()
+{
+	let mut simulation = Simulation::new( STEP );
+	let inverter = inverter( &mut simulation );
+	let ends = | at : ( i32, i32 ) | Outline::of( simulation.document( inverter as usize ).unwrap() ).terminals( point( at.0, at.1 ), 0 );
+	let ( first, second ) = ( ends( ( 10, 0 ) ), ends( ( 10, 10 ) ) );
+	let pins : Vec<Part> = [ &first, &second ].into_iter().flat_map( | ends | [ ( Kind::Input { high : false }, ( ends[ 0 ].x - 1, ends[ 0 ].y ), ( ends[ 0 ].x, ends[ 0 ].y ) ), ( Kind::Output, ( ends[ 1 ].x + 1, ends[ 1 ].y ), ( ends[ 1 ].x, ends[ 1 ].y ) ) ] ).collect();
+	let pair = define( &mut simulation, &[ &[ ( Kind::Symbol { layer : inverter, rotation : 0 }, ( 10, 0 ), ( 10, 0 ) ), ( Kind::Symbol { layer : inverter, rotation : 0 }, ( 10, 10 ), ( 10, 10 ) ) ], pins.as_slice() ].concat() );
+	let split = define( &mut simulation, &[ ( Kind::Input { high : false }, ( -1, 0 ), ( 0, 0 ) ), ( Kind::Input { high : false }, ( -1, 1 ), ( 0, 1 ) ), ( Kind::Output, ( 3, 0 ), ( 2, 0 ) ), ( Kind::Output, ( 3, 1 ), ( 2, 1 ) ), ( Kind::Wire, ( 0, 0 ), ( 2, 0 ) ), ( Kind::Wire, ( 0, 1 ), ( 2, 1 ) ) ] );
+
+	simulation.apply( pair as usize, Operation::Describe { name : String::new(), drawing : Vec::new(), layout : vec![ point( -3, 0 ), point( 3, 0 ), point( -3, 2 ), point( 3, 0 ) ] } ).unwrap();
+	simulation.apply( split as usize, Operation::Describe { name : String::new(), drawing : Vec::new(), layout : vec![ point( -3, 0 ), point( -3, 0 ), point( 3, -1 ), point( 3, 1 ) ] } ).unwrap();
+	add( &mut simulation, Kind::Symbol { layer : pair, rotation : 0 }, ( 0, 30 ), ( 0, 30 ) );
+	add( &mut simulation, Kind::Symbol { layer : split, rotation : 0 }, ( 10, 30 ), ( 10, 30 ) );
+	add( &mut simulation, Kind::Toggle { high : true }, ( -4, 30 ), ( -3, 30 ) );
+	add( &mut simulation, Kind::Toggle { high : false }, ( -4, 32 ), ( -3, 32 ) );
+	add( &mut simulation, Kind::Wire, ( 3, 30 ), ( 7, 30 ) );
+	measure( &mut simulation );
+
+	let solution = simulation.solution().unwrap();
+
+	assert_eq!( simulation.mode(), Mode::Digital );
+	assert_eq!( simulation.widths(), [ 1, 1, 1, 1, 1, 2 ] );
+	assert!( near( solution.readings[ 5 ].potentials[ 0 ], 0.0, 1e-6 ) && near( solution.readings[ 5 ].potentials[ 1 ], 5.0, 1e-6 ) );
+	assert!( near( solution.readings[ 2 ].potentials[ 2 ], 0.0, 1e-6 ) && near( solution.readings[ 2 ].potentials[ 3 ], 5.0, 1e-6 ) );
+}

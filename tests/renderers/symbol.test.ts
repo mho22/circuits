@@ -5,6 +5,7 @@ import { Figure } from '../../src/enums/figure.ts';
 import { Kind } from '../../src/enums/kind.ts';
 import { FINE, SPACING } from '../../src/grid.ts';
 import { draw } from '../../src/renderers/symbol.ts';
+import { BUS } from '../../src/renderers/wire.ts';
 import { record } from '../stubs/context.ts';
 import { element } from '../stubs/element.ts';
 
@@ -22,6 +23,29 @@ describe( 'symbol renderer', () =>
 		expect( calls ).toContainEqual( [ 'roundRect', 3 * SPACING, 2 * SPACING, 4 * SPACING, 6 * SPACING, 4 ] );
 		expect( calls.filter( call => call[ 0 ] === 'arc' ).map( call => call.slice( 1, 3 ) ) ).toEqual( [ [ 3 * SPACING, 6 * SPACING ], [ 7 * SPACING, 5 * SPACING ] ] );
 		expect( calls.filter( call => call[ 1 ] === 'fillStyle' ).map( call => call[ 2 ] ) ).toEqual( [ color( 5, 5 ), color( 0, 5 ) ] );
+	} );
+
+	it( 'draws a stack of pins as one line along the edge of the box, as wide as a bus, in the color of its pins', () =>
+	{
+		const { context, calls } = record();
+		const stacked = { ... outline, pins : [ { x : 2, y : 0 }, { x : 2, y : 0 }, { x : 2, y : 0 }, { x : 0, y : 3 }, { x : 0, y : 3 } ] };
+
+		draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline : stacked, potentials : [ 0, 0, 5, 0, 0 ] } ), { voltage : 5, current : 0 }, 1 );
+
+		expect( calls.filter( call => call[ 0 ] === 'arc' ) ).toEqual( [] );
+		expect( calls.filter( call => call[ 0 ] === 'moveTo' || call[ 0 ] === 'lineTo' ).slice( -4 ) ).toEqual( [ [ 'moveTo', 7 * SPACING, 5 * SPACING - BUS / 2 ], [ 'lineTo', 7 * SPACING, 5 * SPACING + BUS / 2 ], [ 'moveTo', 5 * SPACING - BUS / 2, 8 * SPACING ], [ 'lineTo', 5 * SPACING + BUS / 2, 8 * SPACING ] ] );
+		expect( calls.filter( call => call[ 1 ] === 'lineWidth' ).slice( -2 ) ).toEqual( [ [ 'set', 'lineWidth', BUS ], [ 'set', 'lineWidth', BUS ] ] );
+		expect( calls.filter( call => call[ 1 ] === 'strokeStyle' ).slice( -2 ).map( call => call[ 2 ] ) ).toEqual( [ 'rgb(0, 255, 0)', 'rgb(128, 128, 128)' ] );
+	} );
+
+	it( 'turns the line of a stack of pins with the box', () =>
+	{
+		const { context, calls } = record();
+		const stacked = { ... outline, pins : [ { x : 2, y : 0 }, { x : 2, y : 0 } ] };
+
+		draw( context, element( { kind : Kind.Symbol, from : { x : 5, y : 5 }, to : { x : 5, y : 5 }, outline : stacked, rotation : 1 } ), { voltage : 5, current : 0 }, 1 );
+
+		expect( calls.filter( call => call[ 0 ] === 'moveTo' || call[ 0 ] === 'lineTo' ).slice( -2 ) ).toEqual( [ [ 'moveTo', 5 * SPACING + BUS / 2, 7 * SPACING ], [ 'lineTo', 5 * SPACING - BUS / 2, 7 * SPACING ] ] );
 	} );
 
 	it( 'swaps the width and the height of a box turned a quarter', () =>

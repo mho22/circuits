@@ -1,5 +1,5 @@
 use std::sync::OnceLock;
-use crate::{ Contacts, Device, Document, Element, Error, Kind, Model, Netlist, Outline, Point, Registry, Segment, UnionFind, FLOOR };
+use crate::{ Buses, Contacts, Device, Document, Element, Error, Kind, Model, Netlist, Outline, Point, Registry, Segment, UnionFind, FLOOR };
 
 
 pub const STRIDE : i32 = 1 << 16;
@@ -9,6 +9,16 @@ pub const HIGH : f64 = 5.0;
 fn shift( point : Point, offset : i32 ) -> Point
 {
 	Point { x : point.x + offset, y : point.y }
+}
+
+fn lane( point : Point, lane : usize ) -> Point
+{
+	Point { x : point.x, y : point.y + lane as i32 * STRIDE }
+}
+
+fn stack( ends : &[ Point ] ) -> Vec<Point>
+{
+	ends.iter().enumerate().map( | ( index, &end ) | lane( end, ends[ .. index ].iter().filter( | &&other | other == end ).count() ) ).collect()
 }
 
 fn visit( layers : &[ Document ], layer : usize, open : &mut Vec<usize>, done : &mut Vec<usize> ) -> Result<(), Error>
@@ -77,6 +87,7 @@ struct Walk<'a>
 	layers : &'a [ Document ],
 	registry : &'a mut Registry,
 	models : &'a [ Option<Model> ],
+	buses : Vec<Buses>,
 	elements : Vec<Element>,
 	devices : Vec<Device>,
 	contacts : Vec<OnceLock<Contacts>>,
@@ -105,7 +116,17 @@ impl Walk<'_>
 					_ => element.segment.from,
 				};
 
-				self.elements.push( Element { id : self.registry.id( &key ), kind : element.kind, segment : Segment { from : shift( from, offset ), to : shift( element.segment.to, offset ) }, mirrored : element.mirrored } );
+				let segment = Segment { from : shift( from, offset ), to : shift( element.segment.to, offset ) };
+				let lanes = if element.kind == Kind::Wire { self.buses[ layer ].width( element.segment.from ) } else { 1 };
+
+				self.elements.push( Element { id : self.registry.id( &key ), kind : element.kind, segment, mirrored : element.mirrored } );
+
+				for index in 1 .. lanes
+				{
+					let id = self.registry.id( &[ key.as_slice(), &[ 0, index as u32 ] ].concat() );
+
+					self.elements.push( Element { id, kind : element.kind, segment : Segment { from : lane( segment.from, index ), to : lane( segment.to, index ) }, mirrored : element.mirrored } );
+				}
 
 				if let Kind::Input { high } = element.kind { self.drive( &key, shift( element.segment.to, offset ), high ); }
 
@@ -114,6 +135,7 @@ impl Walk<'_>
 
 			let definition = layers[ inner as usize ].elements();
 			let ends = Outline::of( &layers[ inner as usize ] ).terminals( element.segment.from, rotation );
+			let lanes = stack( &ends );
 
 			self.scopes += 1;
 
@@ -121,12 +143,12 @@ impl Walk<'_>
 
 			if matches!( self.models.get( inner as usize ), Some( Some( _ ) ) ) { self.device( layer, element, &key, offset, scope ); continue; }
 
-			for ( pin, end ) in definition.iter().filter( | part | part.kind.pin() ).zip( ends )
+			for ( ( pin, end ), to ) in definition.iter().filter( | part | part.kind.pin() ).zip( ends ).zip( lanes )
 			{
 				let join = [ key.as_slice(), &[ pin.id ] ].concat();
 				let id = self.registry.id( &join );
 
-				self.elements.push( Element { id, kind : Kind::Switch { closed : true }, segment : Segment { from : shift( pin.segment.to, scope ), to : shift( end, offset ) }, mirrored : false } );
+				self.elements.push( Element { id, kind : Kind::Switch { closed : true }, segment : Segment { from : shift( pin.segment.to, scope ), to : shift( to, offset ) }, mirrored : false } );
 
 				let Kind::Input { high } = pin.kind else { continue; };
 
@@ -147,13 +169,14 @@ impl Walk<'_>
 		let Kind::Symbol { layer : inner, rotation } = symbol.kind else { return; };
 		let inner = inner as usize;
 		let ends = Outline::of( &layers[ inner ] ).terminals( symbol.segment.from, rotation );
+		let lanes = stack( &ends );
 		let mut device = Device { layer : inner, inputs : Vec::new(), outputs : Vec::new(), scopes : self.within.clone() };
 
-		for ( ( pin, end ), index ) in layers[ inner ].elements().iter().filter( | part | part.kind.pin() ).zip( ends ).zip( 0 .. )
+		for ( ( ( pin, end ), to ), index ) in layers[ inner ].elements().iter().filter( | part | part.kind.pin() ).zip( ends ).zip( lanes ).zip( 0 .. )
 		{
 			let join = [ key, &[ pin.id ] ].concat();
 			let hidden = Point { x : scope + index, y : 0 };
-			let segment = Segment { from : hidden, to : shift( end, offset ) };
+			let segment = Segment { from : hidden, to : shift( to, offset ) };
 			let free = matches!( pin.kind, Kind::Input { .. } ) && ! self.driven( layer, symbol.id, end );
 
 			if pin.kind != Kind::Output && ! free
@@ -197,7 +220,8 @@ pub fn flatten( layers : &[ Document ], registry : &mut Registry, models : &[ Op
 
 	for layer in 0 .. layers.len() { visit( layers, layer, &mut Vec::new(), &mut done )?; }
 
-	let mut walk = Walk { layers, registry, models, elements : Vec::new(), devices : Vec::new(), contacts : layers.iter().map( | _ | OnceLock::new() ).collect(), depth : path.len(), scopes : 0, within : Vec::new() };
+	let buses = ( 0 .. layers.len() ).map( | layer | Buses::of( layers, layer ) ).collect::<Result<_, _>>()?;
+	let mut walk = Walk { layers, registry, models, buses, elements : Vec::new(), devices : Vec::new(), contacts : layers.iter().map( | _ | OnceLock::new() ).collect(), depth : path.len(), scopes : 0, within : Vec::new() };
 
 	walk.expand( layer, path, 0 );
 

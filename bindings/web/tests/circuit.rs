@@ -112,6 +112,12 @@ fn it_lists_each_part_with_its_reading()
 }
 
 #[wasm_bindgen_test]
+fn it_gives_each_part_of_a_page_without_a_bus_one_lane()
+{
+	assert_eq!( powered().widths(), [ 1; 5 ] );
+}
+
+#[wasm_bindgen_test]
 fn it_lists_each_piece_of_wire_with_its_reading()
 {
 	let branches = powered().branches( -9, -9, 9, 9 );

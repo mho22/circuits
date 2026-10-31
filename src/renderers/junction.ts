@@ -1,4 +1,4 @@
-import { color } from '../colors/voltage.ts';
+import { bus, color } from '../colors/voltage.ts';
 import { toScreen } from '../grid.ts';
 import type { Junction } from '../types/junction.ts';
 import type { Scale } from '../types/scale.ts';
@@ -13,7 +13,7 @@ export function draw( context : CanvasRenderingContext2D, junctions : Junction[]
 
 	junctions.forEach( junction =>
 	{
-		const fill = color( junction.potential, scale.voltage );
+		const fill = junction.lanes ? bus( junction.potentials, scale.voltage ) : color( junction.potentials[ 0 ], scale.voltage );
 		const group = groups.get( fill ) ?? [];
 
 		group.push( junction );
